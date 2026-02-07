@@ -3,15 +3,7 @@
     <div class="content-container">
       <!-- 左侧插画区域 -->
       <div class="illustration-section">
-        <!-- 这里使用一个占位图，实际开发请替换为 assets 中的图片 -->
-        <div class="illustration-placeholder">
-          <!-- 模拟截图中的盒子和设备插画 -->
-          <div class="box-illustration">
-             <div class="box-body"></div>
-             <div class="device-tablet"></div>
-             <div class="device-phone"></div>
-          </div>
-        </div>
+        <img src="../assets/login.png">
       </div>
 
       <!-- 右侧登录卡片 -->
@@ -26,11 +18,12 @@
 
         <form class="login-form" @submit.prevent>
           <div class="form-group">
-            <label for="username">学号 / 工号</label>
+            <label for="username">{{ currentRole === 'student' ? '学号 / 工号' : '账号' }}</label>
             <input
               type="text"
               id="username"
-              placeholder="请输入学号或工号"
+              v-model="loginForm.username"
+              :placeholder="currentRole === 'student' ? '请输入学号或工号' : '请输入账号'"
               class="input-field"
             />
           </div>
@@ -40,6 +33,7 @@
             <input
               type="password"
               id="password"
+              v-model="loginForm.password"
               placeholder="请输入密码"
               class="input-field"
             />
@@ -53,12 +47,30 @@
             <a href="#" class="forgot-pwd">忘记密码?</a>
           </div>
 
-          <button type="submit" class="submit-btn">登录系统</button>
+          <button type="submit" class="submit-btn" @click="handleLogin">登录系统</button>
 
           <div class="role-selector">
-            <div class="role-item active">学生 / 老师</div>
-            <div class="role-item">失物招领管理员</div>
-            <div class="role-item">系统管理员</div>
+            <div
+              class="role-item"
+              :class="{ active: currentRole === 'student' }"
+              @click="setRole('student', 1)"
+            >
+              学生 / 老师
+            </div>
+            <div
+              class="role-item"
+              :class="{ active: currentRole === 'lost_admin' }"
+              @click="setRole('lost_admin', 2)"
+            >
+              失物招领管理员
+            </div>
+            <div
+              class="role-item"
+              :class="{ active: currentRole === 'system_admin' }"
+              @click="setRole('system_admin', 3)"
+            >
+              系统管理员
+            </div>
           </div>
         </form>
 
@@ -76,7 +88,42 @@
 </template>
 
 <script setup lang="ts">
-// 逻辑部分暂时留空
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { loginApi } from '../api/user.ts'
+import request from '../utils/request.ts'
+import { reactive } from 'vue'
+const loginForm = reactive({
+  role: 1, // 默认角色为学生/老师
+  username: '',
+  password: ''
+})
+// 路由实例
+const router = useRouter()
+const currentRole = ref('student')
+const setRole = (role: string, roleValue: number) => {
+  currentRole.value = role
+  loginForm.role = roleValue
+}
+const handleLogin = async () => {
+  try {
+    const response = await loginApi(loginForm)
+    console.log('后端登录返回的完整数据:', response.data)
+    if (response.data.token) {
+      // 调用新的 action，直接传入后端返回的 data 对象
+
+      ElMessage.success('登录成功！')
+      router.push('/home')
+    }
+    else {
+      ElMessage.error(response.data.msg || '登录失败')
+    }
+
+  } catch (error) {
+    ElMessage.error('账号或密码错误')
+  }
+}
 </script>
 
 <style scoped>
@@ -101,8 +148,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-color: #fbb082;
-  background: linear-gradient(135deg, #ffcba4 0%, #fbb082 100%);
+  background-color: #ffac6c;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
   /* 允许在高度不足时滚动 */
