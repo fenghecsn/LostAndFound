@@ -92,7 +92,6 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { loginApi } from '../api/user.ts'
-import request from '../utils/request.ts'
 import { reactive } from 'vue'
 const loginForm = reactive({
   role: 1, // 默认角色为学生/老师
@@ -110,7 +109,7 @@ const handleLogin = async () => {
   try {
     const response = await loginApi(loginForm)
     console.log('后端登录返回的完整数据:', response.data)
-    if (response.data.token) {
+    if (response.data.code === 200) {
       // 调用新的 action，直接传入后端返回的 data 对象
 
       ElMessage.success('登录成功！')
