@@ -3,7 +3,7 @@
     <div class="content-container">
       <!-- 左侧插画区域 -->
       <div class="illustration-section">
-        <img src="../assets/login.png">
+        <img src="../../public/6.png">
       </div>
 
       <!-- 右侧登录卡片 -->
@@ -155,11 +155,12 @@ const handleLogin = async () => {
   min-width: 1000px; /* 保证最小宽度，不做手机适配 */
 }
 
+
 .content-container {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 15vh; /* 使用视口单位让间距自适应 */
+  justify-content: flex-end; /* 让内容整体向右靠 */
+  gap:0;
   width: 100%;
   max-width: 1400px;
   padding: 0 40px;
@@ -167,11 +168,12 @@ const handleLogin = async () => {
 }
 
 /* 左侧插画简单模拟 */
+
 .illustration-section {
   display: flex;
   justify-content: center;
   align-items: center;
-  /* 适当调整插画所占比例 */
+  margin-right: 10vw; /* 让登录框更靠近中间 */
 }
 
 .illustration-placeholder {
@@ -181,39 +183,6 @@ const handleLogin = async () => {
   /* 这里的样式是为了模拟截图的视觉占位，实际应该放img标签 */
 }
 
-/* 用 CSS 简单画一下那个红色盒子，表示占位 */
-.box-illustration .box-body {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 240px;
-  height: 180px;
-  background-color: #ef5368;
-  border-radius: 12px;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-}
-/* 这里只是示意，实际开发建议用<img>标签引入设计师给的SVG/PNG */
-.box-illustration .device-tablet {
-  position: absolute;
-  left: -20px;
-  top: 40px;
-  width: 120px;
-  height: 160px;
-  background: #333;
-  border-radius: 10px;
-  border: 4px solid #ddd;
-}
-.box-illustration .device-phone {
-  position: absolute;
-  right: -30px;
-  bottom: -40px;
-  width: 60px;
-  height: 110px;
-  background: #333;
-  border-radius: 8px;
-  transform: rotate(-15deg);
-}
 
 /* 右侧登录卡片 */
 .login-card {
