@@ -21,7 +21,13 @@
     </div>
 
     <div class="right-actions">
-      <button class="publish-btn" style="background-color: #f97316; width: 40px;height: 22.4px;border-radius: 15%;">发布</button>
+      <div class="publish-dropdown-wrapper" ref="publishWrapper">
+        <button class="publish-btn" @click="toggleDropdown" style="background-color: #f97316; width: 40px;height: 22.4px;border-radius: 10%;">发布</button>
+        <div v-if="showDropdown" class="publish-dropdown">
+          <div class="dropdown-item" @click="handlePublish('found')">捡到贴</div>
+          <div class="dropdown-item" @click="handlePublish('lost')">失物贴</div>
+        </div>
+      </div>
       <div class="user-info"style= "padding-top: 3px;">
         <img src="../../public/头像框@7.png" style="align-items: center; padding: 0; width: 16px; height: 16px;">
       </div>
@@ -33,6 +39,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
@@ -74,7 +81,7 @@ const navs: NavItem[] = [
     },
   },
 ]
-
+// 判断当前路由是否匹配导航项
 const isActive = (nav: NavItem): boolean => {
   if (nav.path === '/StudentHome') {
     return route.path === '/StudentHome' || route.path === '/StudentHome/'
@@ -88,9 +95,41 @@ const isActive = (nav: NavItem): boolean => {
   }
   return route.path === nav.path
 }
-
+// 导航点击处理
 const handleNavClick = (nav: NavItem) => {
   if (!isActive(nav)) router.push(nav.path)
+}
+
+const showDropdown = ref(false)
+const publishWrapper = ref<HTMLElement | null>(null)
+
+const toggleDropdown = () => {
+  showDropdown.value = !showDropdown.value
+}
+
+const handleClickOutside = (event: MouseEvent) => {
+  const target = event.target as Node
+  if (publishWrapper.value && !publishWrapper.value.contains(target)) {
+    showDropdown.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
+
+const handlePublish = (type: 'found' | 'lost') => {
+  showDropdown.value = false
+  // 跳转到对应的发布页面，或弹窗等
+  if (type === 'found') {
+    router.push('/StudentHome/publish-found')
+  } else {
+    router.push('/StudentHome/publish-lost')
+  }
 }
 </script>
 
@@ -171,5 +210,35 @@ const handleNavClick = (nav: NavItem) => {
 .user-name {
   font-size: 14px;
   color: #666;
+}
+
+.publish-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.publish-dropdown {
+  position: absolute;
+  top: 110%;
+  left: 0;
+  min-width: 90px;
+  background: #fff;
+  border: 1px solid #f6e7d8;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  z-index: 999;
+  padding: 4px 0;
+}
+
+.dropdown-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  color: #f97316;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+  background: #fff7ed;
 }
 </style>
