@@ -21,6 +21,8 @@ import SideBar from '@/components/SideBar.vue'
 <style scoped>
 .main-layout {
   min-height: 100vh;
+  max-width: 1800px; /* 限制最大宽度 */
+
   background-color: #fdf6ec; /* 浅橙色背景*/
   display: flex;
   flex-direction: column;
@@ -29,7 +31,7 @@ import SideBar from '@/components/SideBar.vue'
 .content-wrapper {
   display: flex;
   flex: 1;
-  max-width: 1400px; /* 限制最大宽度 */
+  max-width: 1800px; /* 限制最大宽度 */
   margin: 0 auto;
   width: 100%;
   padding: 20px;
