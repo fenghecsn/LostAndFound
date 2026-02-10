@@ -21,7 +21,7 @@ import SideBar from '@/components/SideBar.vue'
 <style scoped>
 .main-layout {
   min-height: 100vh;
-  background-color: #f7f8fa; /* 浅色背景 */
+  background-color: #fdf6ec; /* 浅橙色背景*/
   display: flex;
   flex-direction: column;
 }
