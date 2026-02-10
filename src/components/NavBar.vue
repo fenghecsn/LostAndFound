@@ -24,8 +24,24 @@
       <div class="publish-dropdown-wrapper" ref="publishWrapper">
         <button class="publish-btn" @click="toggleDropdown" style="background-color: #f97316; width: 40px;height: 22.4px;border-radius: 10%;">发布</button>
         <div v-if="showDropdown" class="publish-dropdown">
-          <div class="dropdown-item" @click="handlePublish('found')">捡到贴</div>
-          <div class="dropdown-item" @click="handlePublish('lost')">失物贴</div>
+          <ConfirmButton
+            class="dropdown-item"
+            label="捡到贴"
+            title="请确认"
+            message="确定发布捡到贴吗？"
+            confirm-text="确认发布"
+            cancel-text="取消"
+            @confirm="handlePublish('found')"
+          />
+          <ConfirmButton
+            class="dropdown-item"
+            label="失物贴"
+            title="请确认"
+            message="确定发布失物贴吗？"
+            confirm-text="确认发布"
+            cancel-text="取消"
+            @confirm="handlePublish('lost')"
+          />
         </div>
       </div>
       <div class="user-info"style= "padding-top: 3px;">
@@ -40,8 +56,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
-import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import ConfirmButton from './ConfirmButton.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -230,15 +246,19 @@ const handlePublish = (type: 'found' | 'lost') => {
   padding: 4px 0;
 }
 
-.dropdown-item {
+.publish-dropdown :deep(.confirm-button) {
+  width: 100%;
   padding: 8px 16px;
-  cursor: pointer;
+  border-radius: 0;
+  background: transparent;
   color: #f97316;
   font-size: 14px;
-  transition: background 0.2s;
+  font-weight: 500;
+  text-align: left;
 }
 
-.dropdown-item:hover {
+.publish-dropdown :deep(.confirm-button:hover) {
   background: #fff7ed;
 }
+
 </style>
