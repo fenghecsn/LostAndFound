@@ -87,6 +87,11 @@ const activeIndex = ref(0)
 
 // 根据当前路由自动高亮
 const updateActiveIndex = () => {
+  // 主页和个人中心时不高亮任何侧栏item
+  if (route.path === '/StudentHome' || route.path === '/StudentHome/' || route.path === '/StudentHome/profile') {
+    activeIndex.value = -1
+    return
+  }
   const idx = menuItems.findIndex(item => route.path.startsWith(item.route))
   activeIndex.value = idx !== -1 ? idx : 0
 }

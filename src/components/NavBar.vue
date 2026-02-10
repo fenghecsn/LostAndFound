@@ -8,17 +8,15 @@
     </div>
 
     <div class="center-nav">
-      <div class="nav-item">
-        <img src="../../public/路径@1x.png" style="width: 16px; height: 16px;"> <!-- 使用公共资源中的图片 -->
-        <span>首页</span>
-      </div>
-      <div class="nav-item">
-        <img src="../../public/路径@2.png" style="width: 16px; height: 16px;"> <!-- 使用公共资源中的图片 -->
-        <span>消息</span>
-      </div>
-      <div class="nav-item">
-        <img src="../../public/路径@3.png" style="width: 16px; height: 16px;"> <!-- 使用公共资源中的图片 -->
-        <span>个人中心</span>
+      <div
+        v-for="nav in navs"
+        :key="nav.label"
+        class="nav-item"
+        :class="{ active: isActive(nav) }"
+        @click="handleNavClick(nav)"
+      >
+        <img :src="isActive(nav) ? nav.icon.active : nav.icon.normal" style="width: 16px; height: 16px;"> <!-- 使用公共资源中的图片 -->
+        <span>{{ nav.label }}</span>
       </div>
     </div>
 
@@ -35,6 +33,65 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+
+const router = useRouter()
+const route = useRoute()
+
+interface NavItem {
+  label: string;
+  path: string;
+  icon: {
+    normal: string;
+    active: string;
+  };
+}
+
+const navs: NavItem[] = [
+  {
+    label: '首页',
+    path: '/StudentHome',
+    icon: {
+      normal: '../../public/路径@1x.png',
+      active: '../../public/路径@13.png',
+    },
+  },
+  {
+    label: '消息',
+    path: '/StudentHome/message/activities',
+    icon: {
+      normal: '../../public/路径@14.png',
+      active: '../../public/路径@2.png',
+    },
+  },
+  {
+    label: '个人中心',
+    path: '/StudentHome/profile',
+    icon: {
+      normal: '../../public/路径@3.png',
+      active: '../../public/路径@15.png',
+    },
+  },
+]
+
+const isActive = (nav: NavItem): boolean => {
+  if (nav.path === '/StudentHome') {
+    return route.path === '/StudentHome' || route.path === '/StudentHome/'
+  }
+  // 只要当前路由包含消息或个人中心的主路径（如 /StudentHome/message 或 /StudentHome/profile）就高亮
+  else if (nav.path === '/StudentHome/message/activities') {
+    return route.path.startsWith('/StudentHome/message')
+  }
+  else if (nav.path === '/StudentHome/profile') {
+    return route.path.startsWith('/StudentHome/profile')
+  }
+  return route.path === nav.path
+}
+
+const handleNavClick = (nav: NavItem) => {
+  if (!isActive(nav)) router.push(nav.path)
+}
 </script>
 
 <style scoped>

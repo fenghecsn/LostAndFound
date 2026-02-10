@@ -1,10 +1,10 @@
 <template>
   <div>
-    Message Announce Page
+    Message Progress Page
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 
 </script>
 
