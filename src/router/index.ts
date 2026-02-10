@@ -20,6 +20,11 @@ const router = createRouter({
           component: () => import('../views/StudentView.vue'),
         },
         {
+          path: 'profile',
+          name: '个人中心',
+          component: () => import('../views/Profile.vue'),
+        },
+        {
           path: 'message',
           name: 'Message',
           children: [
