@@ -25,6 +25,16 @@ const router = createRouter({
           component: () => import('../views/Profile.vue'),
         },
         {
+          path: 'publish-lost',
+          name: 'PublishLost',
+          component: () => import('../views/Publish/Publish_lost.vue'),
+        },
+        {
+          path: 'publish-found',
+          name: 'PublishFound',
+          component: () => import('../views/Publish/Publish_found.vue'),
+        },
+        {
           path: 'message',
           name: 'Message',
           children: [
