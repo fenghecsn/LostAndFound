@@ -113,7 +113,7 @@ const handleLogin = async () => {
       // 调用新的 action，直接传入后端返回的 data 对象
 
       ElMessage.success('登录成功！')
-      router.push('/home')
+      router.push('/StudentHome')
     }
     else {
       ElMessage.error(response.data.msg || '登录失败')

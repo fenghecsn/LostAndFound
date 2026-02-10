@@ -10,8 +10,8 @@ const router = createRouter({
       component: () => import('../views/Login.vue'),
     },
     {
-      path: '/home',
-      name: 'home',
+      path: '/StudentHome',
+      name: 'Student',
       component: () => import('../components/Layout.vue'),
       children: [
         {
@@ -19,6 +19,27 @@ const router = createRouter({
           name: 'StudentHome',
           component: () => import('../views/StudentView.vue'),
         },
+        {
+          path: 'message',
+          name: 'Message',
+          children: [
+            {
+              path: 'activities',
+              name: '帖子动态',
+              component: () => import('../views/Message/MessageActivities.vue'),
+            },
+            {
+              path: 'progress',
+              name: '招领进度',
+              component: () => import('../views/Message/MessageProgress.vue'),
+            },
+            {
+              path: 'announce',
+              name: '系统公告',
+              component: () => import('../views/Message/MessageAnnounce.vue'),
+            }
+          ]
+        }
       ],
     },
   ],
