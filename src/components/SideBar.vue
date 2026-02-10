@@ -11,26 +11,18 @@
         </div>
 
         <div class="menu-list" v-show="isExpanded">
-          <div class="menu-item" :class="{ active: activeIndex === 0 }" @click="activeIndex = 0">
+          <div
+            v-for="(item, idx) in menuItems"
+            :key="item.label"
+            class="menu-item"
+            :class="{ active: activeIndex === idx }"
+            @click="handleMenuClick(idx)"
+          >
             <span class="red-dot-placeholder">
-              <span v-if="showDot.post" class="red-dot"></span>
+              <span v-if="showDot[item.dotKey]" class="red-dot"></span>
             </span>
-            <img src="../../public/路径@4.png" style="width: 16px; height: 16px;">
-            <span>帖子动态</span>
-          </div>
-          <div class="menu-item" :class="{ active: activeIndex === 1 }" @click="activeIndex = 1">
-            <span class="red-dot-placeholder">
-              <span v-if="showDot.progress" class="red-dot"></span>
-            </span>
-            <img src="../../public/路径@5.png" style="width: 16px; height: 16px;">
-            <span>招领进度</span>
-          </div>
-          <div class="menu-item" :class="{ active: activeIndex === 2 }" @click="activeIndex = 2">
-            <span class="red-dot-placeholder">
-              <span v-if="showDot.announce" class="red-dot"></span>
-            </span>
-            <img src="../../public/路径@6.png" style="width: 16px; height: 16px;">
-            <span>系统公告</span>
+            <img :src="`../../public/路径@${4+idx}.png`" style="width: 16px; height: 16px;">
+            <span>{{ item.label }}</span>
           </div>
         </div>
       </div>
@@ -58,15 +50,54 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+const router = useRouter()
+const route = useRoute()
 const isExpanded = ref(true)
-const activeIndex = ref(0)
+
+// 菜单项配置，dotKey加上类型断言
+const menuItems = [
+  {
+    label: '帖子动态',
+    route: '/StudentHome/message/activities',
+    dotKey: 'post' as keyof typeof showDot,
+  },
+  {
+    label: '招领进度',
+    route: '/StudentHome/message/progress',
+    dotKey: 'progress' as keyof typeof showDot,
+  },
+  {
+    label: '系统公告',
+    route: '/StudentHome/message/announce',
+    dotKey: 'announce' as keyof typeof showDot,
+  },
+]
+
 // 控制每个卡片红点显示
 const showDot = reactive({
   post: true,        // 帖子动态
   progress: true,    // 招领进度
   announce: false    // 系统公告
 })
+
+// 当前高亮index
+const activeIndex = ref(0)
+
+// 根据当前路由自动高亮
+const updateActiveIndex = () => {
+  const idx = menuItems.findIndex(item => route.path.startsWith(item.route))
+  activeIndex.value = idx !== -1 ? idx : 0
+}
+
+watch(() => route.path, updateActiveIndex, { immediate: true })
+
+// 点击跳转
+const handleMenuClick = (idx: number) => {
+  activeIndex.value = idx
+  router.push(menuItems[idx]?.route || '/')
+}
 </script>
 
 <style scoped>
