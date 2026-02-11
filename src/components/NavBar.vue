@@ -72,6 +72,7 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import ConfirmButton from './ConfirmButton.vue'
 import {useUserStore} from '@/stores/user'
+import { ElMessage } from 'element-plus'
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -166,6 +167,7 @@ const handlePublish = (type: 'found' | 'lost') => {
 const handleLogout = () => {
   userStore.clearUserData()
   router.push('/')
+  ElMessage.success('退出登录成功')
 }
 </script>
 
