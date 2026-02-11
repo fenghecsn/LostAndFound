@@ -9,6 +9,7 @@ const router = createRouter({
       name: 'login',
       component: () => import('../views/Login.vue'),
     },
+    // --- 学生端 ---
     {
       path: '/StudentHome',
       name: 'Student',
@@ -62,6 +63,45 @@ const router = createRouter({
         },
       ],
     },
+
+    // --- 管理员端 (已补全所有页面) ---
+    {
+      path: '/admin',
+      component: () => import('../views/admin/AdminLayout.vue'),
+      redirect: '/admin/dashboard', // 默认进入数据总览
+      children: [
+        {
+          path: 'dashboard',
+          name: 'AdminDashboard',
+          component: () => import('../views/admin/Dashboard.vue')
+        },
+        {
+          path: 'items', // 物品管理 (对应 ItemManagement.vue)
+          name: 'AdminItems',
+          component: () => import('../views/admin/ItemManagement.vue')
+        },
+        {
+          path: 'audit-posts', // 发布审核 (对应 AuditList.vue)
+          name: 'AdminAuditPosts',
+          component: () => import('../views/admin/AuditList.vue')
+        },
+        {
+          path: 'audit-claims', // 认领审核 (对应 ClaimAudit.vue)
+          name: 'AdminAuditClaims',
+          component: () => import('../views/admin/ClaimAudit.vue')
+        },
+        {
+          path: 'audit-history', // 审核记录 (对应 AuditHistory.vue)
+          name: 'AdminAuditHistory',
+          component: () => import('../views/admin/AuditHistory.vue')
+        },
+        {
+          path: 'notices', // 公告管理 (对应 NoticeList.vue)
+          name: 'AdminNotices',
+          component: () => import('../views/admin/NoticeList.vue')
+        }
+      ]
+    }
   ],
 })
 
