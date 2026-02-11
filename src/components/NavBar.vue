@@ -44,11 +44,24 @@
           />
         </div>
       </div>
-      <div class="user-info"style= "padding-top: 3px;">
-        <img src="../../public/头像框@7.png" style="align-items: center; padding: 0; width: 16px; height: 16px;">
-      </div>
-      <div class="user-info">
-        <span class="user-name">陈某某</span>
+      <div class="user-dropdown-wrapper">
+        <div class="user-trigger">
+          <div class="user-info" style="padding-top: 3px; display: flex; align-items: center;">
+             <img src="../../public/头像框@7.png" style="align-items: center; padding: 0; width: 16px; height: 16px;">
+          </div>
+          <span class="user-name">{{ userStore.username }}</span>
+        </div>
+        <div class="user-dropdown-menu">
+             <ConfirmButton
+                class="dropdown-item"
+                label="退出登录"
+                title="确认退出"
+                message="确定要退出登录吗？"
+                confirm-text="确认"
+                cancel-text="取消"
+                @confirm="handleLogout"
+              />
+        </div>
       </div>
     </div>
   </div>
@@ -58,7 +71,9 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import ConfirmButton from './ConfirmButton.vue'
+import {useUserStore} from '@/stores/user'
 
+const userStore = useUserStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -146,6 +161,11 @@ const handlePublish = (type: 'found' | 'lost') => {
   } else {
     router.push('/StudentHome/publish-lost')
   }
+}
+
+const handleLogout = () => {
+  userStore.clearUserData()
+  router.push('/')
 }
 </script>
 
@@ -259,6 +279,57 @@ const handlePublish = (type: 'found' | 'lost') => {
 
 .publish-dropdown :deep(.confirm-button:hover) {
   background: #fff7ed;
+}
+
+/* User Dropdown Styles */
+.user-dropdown-wrapper {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.user-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+}
+
+.user-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 100px;
+  background: #fff;
+  border: 1px solid #f6e7d8;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 4px 0;
+  z-index: 1000;
+}
+
+.user-dropdown-wrapper:hover .user-dropdown-menu {
+  display: block;
+}
+
+.user-dropdown-menu :deep(.confirm-button) {
+  display: block; /* confirm-button usually fits content, make it block/full width */
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 0;
+  background: transparent;
+  color: #606266;
+  font-size: 14px;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.user-dropdown-menu :deep(.confirm-button:hover) {
+  background-color: #fdf6ec;
+  color: #f97316;
 }
 
 </style>
