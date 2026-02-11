@@ -4,106 +4,107 @@ import { Search } from '@element-plus/icons-vue'
 import { getItems, type Item, type ItemQuery } from '@/api/items'
 import { ElMessage } from 'element-plus'
 
-// --- State ---
+// --- 状态管理 ---
 const loading = ref(false)
 const itemList = ref<Item[]>([])
 const total = ref(0)
 
-// Filters State
+// 筛选参数状态
 const queryParams = reactive<ItemQuery>({
-  page: 1,
-  size: 10,
-  keyword: '',
-  type: undefined,
-  campus: undefined,
-  status: undefined,
-  // These are not strictly in the API spec provided but required by UI
-  time_range: undefined,
-  category: undefined
+    page: 1,
+    size: 10,
+    keyword: '',
+    type: undefined,
+    campus: undefined,
+    status: undefined,
+    time_range: undefined,
+    category: undefined
 })
 
-// --- Constants for Filter Options ---
+// --- 筛选项常量 ---
 const filterOptions = {
-  types: [
-    { label: '全部帖子', value: undefined },
-    { label: '失物帖', value: 1 },
-    { label: '捡到帖', value: 2 },
-  ],
-  campuses: [
-    { label: '全部校区', value: undefined },
-    { label: '朝晖', value: '朝晖' },
-    { label: '屏峰', value: '屏峰' },
-    { label: '莫干山', value: '莫干山' },
-  ],
-  statuses: [
-    { label: '全部状态', value: undefined },
-    { label: '已通过', value: 1 },
-    { label: '已匹配', value: 2 },
-    { label: '已认领', value: 3 },
-  ],
-  times: [
-    { label: '全部时间', value: undefined },
-    { label: '0~3', value: '0-3' },
-    { label: '3~7', value: '3-7' },
-    { label: '7~15', value: '7-15' },
-    { label: '15~30', value: '15-30' },
-    { label: '>30', value: '30+' },
-  ],
-  categories: [
-    { label: '全部类型', value: undefined },
-    { label: '书籍', value: '书籍' },
-    { label: '衣服', value: '衣服' },
-    { label: '电子', value: '电子' },
-    { label: '证件', value: '证件' },
-    { label: '其他', value: '其他' },
-  ]
+    types: [
+        { label: '全部帖子', value: undefined },
+        { label: '失物帖', value: 1 },
+        { label: '捡到帖', value: 2 },
+    ],
+    campuses: [
+        { label: '全部校区', value: undefined },
+        { label: '朝晖', value: '朝晖' },
+        { label: '屏峰', value: '屏峰' },
+        { label: '莫干山', value: '莫干山' },
+    ],
+    statuses: [
+        { label: '全部状态', value: undefined },
+        { label: '已通过', value: 1 },
+        { label: '已匹配', value: 2 },
+        { label: '已认领', value: 3 },
+    ],
+    times: [
+        { label: '全部时间', value: undefined },
+        { label: '0~3', value: '0-3' },
+        { label: '3~7', value: '3-7' },
+        { label: '7~15', value: '7-15' },
+        { label: '15~30', value: '15-30' },
+        { label: '>30', value: '30+' },
+    ],
+    categories: [
+        { label: '全部类型', value: undefined },
+        { label: '书籍', value: '书籍' },
+        { label: '衣服', value: '衣服' },
+        { label: '电子', value: '电子' },
+        { label: '证件', value: '证件' },
+        { label: '其他', value: '其他' },
+    ]
 }
 
-// --- Methods ---
+// --- 方法区 ---
 const fetchData = async () => {
-  loading.value = true
-  try {
-    const res = await getItems(queryParams)
-    // Adjust based on actual axios response structure (usually res.data)
-    if (res.data) {
-        itemList.value = res.data.list
-        total.value = res.data.total
+    loading.value = true
+    try {
+        const res = await getItems(queryParams)
+        // 根据实际axios返回结构调整（通常是res.data）
+        if (res.data) {
+                itemList.value = res.data.data.list
+                total.value = res.data.data.total
+        }
+    } catch (error) {
+        console.error(error)
+        ElMessage.error('获取数据失败')
+    } finally {
+        loading.value = false
     }
-  } catch (error) {
-    console.error(error)
-    ElMessage.error('获取数据失败')
-  } finally {
-    loading.value = false
-  }
 }
 
+// 筛选项变更
 const handleFilterChange = () => {
-  queryParams.page = 1
-  fetchData()
+    queryParams.page = 1
+    fetchData()
 }
 
+// 分页变更
 const handlePageChange = (page: number) => {
-  queryParams.page = page
-  fetchData()
+    queryParams.page = page
+    fetchData()
 }
 
+// 状态文本映射
 const getStatusText = (status: number) => {
-  switch(status) {
-    case 1: return '已通过'
-    case 2: return '已匹配'
-    case 3: return '已认领'
-    default: return '未知'
-  }
+    switch(status) {
+        case 1: return '已通过'
+        case 2: return '已匹配'
+        case 3: return '已认领'
+        default: return '未知'
+    }
 }
 
+// 状态颜色映射
 const getStatusColor = (status: number) => {
-    switch(status) {
-        case 2: return 'rgb(245, 108, 108)' // Red for matched? Design shows red text
-        case 1: return 'rgb(245, 108, 108)' // Design shows red text for passed too? No, usually green or passed is default.
-                                            // Design image shows "已通过" in Red, "已匹配" in Red.
-                                            // Let's stick to a generic red/theme color for status text as per design.
-        default: return 'rgb(245, 108, 108)'
-    }
+        switch(status) {
+                case 2: return 'rgb(245, 108, 108)' // 设计图显示红色
+                case 1: return 'rgb(245, 108, 108)' // 设计图显示红色
+                default: return 'rgb(245, 108, 108)'
+        }
 }
 
 onMounted(() => {
@@ -113,7 +114,7 @@ onMounted(() => {
 
 <template>
   <div class="student-view">
-    <!-- Top: Search -->
+    <!-- 搜索 -->
     <div class="search-container">
         <el-input
             v-model="queryParams.keyword"
@@ -124,12 +125,12 @@ onMounted(() => {
         />
     </div>
 
-    <!-- Middle: Filters + Illustration -->
+    <!-- 过滤器和插图 -->
     <el-row class="filter-illustration-section">
-      <!-- Left: Filters -->
+      <!-- 筛选 -->
       <el-col :span="16">
         <div class="filter-section">
-            <!-- Row 1: Type -->
+            <!-- 第一行: 帖子类型 -->
             <div class="filter-row">
                 <div class="filter-options">
                     <div
@@ -144,7 +145,7 @@ onMounted(() => {
                 </div>
             </div>
 
-            <!-- Row 2: Campus -->
+            <!-- 第二行: 校区 -->
             <div class="filter-row">
                 <div class="filter-options">
                     <div
@@ -159,7 +160,7 @@ onMounted(() => {
                 </div>
             </div>
 
-            <!-- Row 3: Status -->
+            <!-- 第三行: 状态 -->
             <div class="filter-row">
                  <div class="filter-options">
                     <div
@@ -174,7 +175,7 @@ onMounted(() => {
                 </div>
             </div>
 
-             <!-- Row 4: Time -->
+             <!-- 第四行: 时间 -->
              <div class="filter-row">
                  <div class="filter-options">
                     <div
@@ -189,7 +190,7 @@ onMounted(() => {
                 </div>
             </div>
 
-              <!-- Row 5: Category -->
+              <!-- 第五行: 类型 -->
               <div class="filter-row">
                  <div class="filter-options">
                     <div
@@ -206,7 +207,7 @@ onMounted(() => {
         </div>
       </el-col>
 
-      <!-- Right: Illustration -->
+      <!-- 右侧: 插图 -->
       <el-col :span="8">
         <div class="illustration-container" style="max-width: 250px;max-height: 250px;border-radius: 50%;">
             <img src="/6副.png" alt="Illustration" class="side-image" />
@@ -214,7 +215,7 @@ onMounted(() => {
       </el-col>
     </el-row>
 
-    <!-- Bottom: List -->
+    <!-- 帖子列表 -->
     <div class="list-section" v-loading="loading">
         <div v-if="itemList.length === 0" class="empty-state">暂无数据</div>
         <div v-else class="card-grid">
@@ -277,7 +278,7 @@ onMounted(() => {
 <style scoped>
 .student-view {
     padding: 20px;
-    background-color: #FFFDF9; /* Match background color roughly */
+    background-color: #FFFDF9;
     min-height: 100vh;
 }
 
@@ -318,7 +319,7 @@ onMounted(() => {
     background-color: #fff;
     color: #606266;
     font-size: 14px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Soft shadow */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     transition: all 0.3s;
     border: 1px solid #eee;
 }
@@ -328,7 +329,7 @@ onMounted(() => {
 }
 
 .filter-pill.active {
-    background: linear-gradient(90deg, #FFAA6F 0%, #FF8534 100%); /* Orange Gradient */
+    background: linear-gradient(90deg, #FFAA6F 0%, #FF8534 100%);
     color: white;
     box-shadow: 0 2px 6px rgba(255, 133, 52, 0.4);
     border: none;
@@ -378,6 +379,7 @@ onMounted(() => {
     display: flex;
     justify-content: space-between;
     margin-bottom: 10px;
+    align-items: flex-start;
 }
 
 .tags-col {
@@ -385,10 +387,24 @@ onMounted(() => {
     flex-direction: column;
     gap: 6px;
     align-items: flex-start;
+    flex: 1;
+    min-width: 0;
+    margin-right: 10px;
 }
 
 .custom-tag {
     border-radius: 12px;
+    max-width: 100%;
+}
+:deep(.el-tag__content) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+}
+
+.images-col {
+    flex-shrink: 0;
 }
 .location-tag {
     color: #409EFF;

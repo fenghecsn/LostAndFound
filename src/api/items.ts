@@ -28,17 +28,14 @@ export interface ItemQuery {
   reward?: number
 }
 
-export interface PageResult<T> {
-  code: number
-  msg: string
-  data: {
-    total: number
-    list: T[]
-  }
-}
-
 export const getItems = (params: ItemQuery) => {
-  return request.get<any, PageResult<Item>>('/api/v1/items', {
-    params
+  return request ({
+    "headers":{
+      "Content-Type": "application/json",
+    } ,
+    url: '/api/v1/items',
+    method: 'get',
+    params: params
   })
 }
+
