@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-
+import { useUserStore } from '../stores/user'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -54,10 +54,40 @@ const router = createRouter({
               component: () => import('../views/Message/MessageAnnounce.vue'),
             }
           ]
-        }
+        },
+        {
+          path:'/:pathMatch(.*)*',
+          name:'NotFound',
+          component: () => import('@/views/NotFound.vue')
+        },
       ],
     },
   ],
 })
 
+router.beforeEach((to, from, next) => {
+  const whiteList = ['/', '/NotFound']
+  const userStore = useUserStore()
+  const token = userStore.token
+
+  if (token) {
+    // 有 token，访问登录页则重定向到主页
+    if (whiteList.includes(to.path)) {
+      if (to.path === '/') {
+        next('/StudentHome')
+      } else {
+        next()
+      }
+    } else {
+      next()
+    }
+  } else {
+    // 没有 token，白名单页面放行，否则跳转登录页
+    if (whiteList.includes(to.path)) {
+      next()
+    } else {
+      next('/')
+    }
+  }
+})
 export default router
