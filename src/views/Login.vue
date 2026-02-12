@@ -109,21 +109,37 @@ const setRole = (role: string, roleValue: number) => {
 }
 const handleLogin = async () => {
   try {
+    // 1. 使用你定义的 loginApi
     const response = await loginApi(loginForm)
     console.log('后端登录返回的完整数据:', response.data)
+
     if (response.data.code === 200) {
-      // 调用新的 action，直接传入后端返回的 data 对象
+      // 2. 存储 Token (传入 response.data，因为你的 store 内部会自动取 data.token)
       userStore.setToken(response.data)
       userStore.setUsername(loginForm.username)
-      userStore.setRole(loginForm.role)
+      
+      // 3. 获取角色并跳转
+      // 优先取后端返回的 role，如果后端没返回，就用你表单里选的 role
+      const userRole = response.data.data.role || loginForm.role
+      userStore.setRole(userRole)
+
       ElMessage.success('登录成功！')
-      router.push('/StudentHome')
+
+      // 判断跳转路径
+      if (userRole === 2) {
+        // 如果是管理员 (role: 2)，跳转到管理员页面
+        router.push('/admin')
+      } else {
+        // 默认（学生/老师）跳转到学生主页
+        router.push('/StudentHome')
+      }
     }
     else {
       ElMessage.error(response.data.msg || '登录失败')
     }
 
   } catch (error) {
+    console.error('登录出错:', error)
     ElMessage.error('账号或密码错误')
   }
 }
