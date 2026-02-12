@@ -91,7 +91,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { loginApi } from '../api/user.ts'
+import { getUserInfoApi, loginApi } from '../api/user.ts'
 import { reactive } from 'vue'
 import { useUserStore } from '../stores/user.ts'
 const userStore = useUserStore()
@@ -107,6 +107,11 @@ const setRole = (role: string, roleValue: number) => {
   currentRole.value = role
   loginForm.role = roleValue
 }
+
+const getHomePathByRole = (role: number) => {
+  return role === 2 || role === 3 ? '/admin' : '/StudentHome'
+}
+
 const handleLogin = async () => {
   try {
     // 1. 使用你定义的 loginApi
@@ -117,21 +122,27 @@ const handleLogin = async () => {
       // 2. 存储 Token (传入 response.data，因为你的 store 内部会自动取 data.token)
       userStore.setToken(response.data)
       userStore.setUsername(loginForm.username)
-      
+
       // 3. 获取角色并跳转
       // 优先取后端返回的 role，如果后端没返回，就用你表单里选的 role
       const userRole = response.data.data.role || loginForm.role
       userStore.setRole(userRole)
 
+      let isFirstLogin = response.data?.data?.first_login
+      if (isFirstLogin === undefined) {
+        const profileRes = await getUserInfoApi({ username: loginForm.username })
+        isFirstLogin = profileRes?.data?.data?.first_login
+      }
+
+      userStore.setFirstLogin(Boolean(isFirstLogin))
+
       ElMessage.success('登录成功！')
 
-      // 判断跳转路径
-      if (userRole === 2) {
-        // 如果是管理员 (role: 2)，跳转到管理员页面
-        router.push('/admin')
+      if (Boolean(isFirstLogin)) {
+        ElMessage.warning('首次登录请先修改密码')
+        router.push('/change-password')
       } else {
-        // 默认（学生/老师）跳转到学生主页
-        router.push('/StudentHome')
+        router.push(getHomePathByRole(userRole))
       }
     }
     else {

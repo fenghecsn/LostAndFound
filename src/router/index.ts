@@ -9,6 +9,11 @@ const router = createRouter({
       name: 'login',
       component: () => import('../views/Login.vue'),
     },
+    {
+      path: '/change-password',
+      name: 'ChangePassword',
+      component: () => import('../views/Password_change.vue'),
+    },
     // --- 学生端 ---
     {
       path: '/StudentHome',
@@ -23,7 +28,7 @@ const router = createRouter({
         {
           path: 'profile',
           name: '个人中心',
-          component: () => import('../views/Profile.vue'),
+          component: () => import('../views/Password_change.vue'),
         },
         {
           path: 'publish-lost',
@@ -109,12 +114,23 @@ router.beforeEach((to, from, next) => {
   const whiteList = ['/', '/NotFound']
   const userStore = useUserStore()
   const token = userStore.token
+  const getHomePathByRole = (role: number) => (role === 2 || role === 3 ? '/admin' : '/StudentHome')
 
   if (token) {
+    if (userStore.firstLogin && to.path !== '/change-password') {
+      next('/change-password')
+      return
+    }
+
+    if (!userStore.firstLogin && to.path === '/change-password') {
+      next(getHomePathByRole(userStore.role))
+      return
+    }
+
     // 有 token，访问登录页则重定向到主页
     if (whiteList.includes(to.path)) {
       if (to.path === '/') {
-        next('/StudentHome')
+        next(getHomePathByRole(userStore.role))
       } else {
         next()
       }

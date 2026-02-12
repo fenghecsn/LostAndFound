@@ -10,7 +10,13 @@ export interface LoginParams {
 
 // 获取用户信息参数类型
 export interface GetUserInfoParams {
-  username: string}
+  username: string
+}
+
+export interface ChangePasswordParams {
+  old_password: string
+  new_password: string
+}
 // 登录接口
 export const loginApi = (params: LoginParams) => {
   return request ({
@@ -30,5 +36,17 @@ export const getUserInfoApi = (params: GetUserInfoParams) => {
     } ,
     url: '/api/v1/profile',
     method: 'get',
+    params
+  })
+}
+
+export const changePasswordApi = (data: ChangePasswordParams) => {
+  return request ({
+    "headers":{
+      "Content-Type": "application/json",
+    } ,
+    url: '/api/v1/password',
+    method: 'put',
+    data
   })
 }
