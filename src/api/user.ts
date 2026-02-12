@@ -17,7 +17,7 @@ export const loginApi = (params: LoginParams) => {
     "headers":{
       "Content-Type": "application/json",
     } ,
-    url: '/api/v1/login',
+    url: '/api/v1/login?apifoxApiId=418131352',
     method: 'post',
     data: params
   })
