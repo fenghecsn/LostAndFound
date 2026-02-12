@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isForceChange" class="force-wrapper">
+  <div class="force-wrapper">
     <div class="force-card">
       <div class="force-header">
         <div class="logo-circle"></div>
@@ -35,66 +35,18 @@
       </div>
     </div>
   </div>
-
-  <div v-else class="profile-page">
-    <el-card class="profile-card" shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span>修改密码</span>
-        </div>
-      </template>
-
-      <el-descriptions :column="1" border class="mb-16">
-        <el-descriptions-item label="用户名">{{ profile.username || userStore.username }}</el-descriptions-item>
-        <el-descriptions-item label="姓名">{{ profile.name || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="手机号">{{ profile.phone || '-' }}</el-descriptions-item>
-      </el-descriptions>
-
-      <el-form
-        ref="passwordFormRef"
-        :model="passwordForm"
-        :rules="rules"
-        label-width="100px"
-      >
-        <el-form-item label="原密码" prop="old_password">
-          <el-input v-model="passwordForm.old_password" type="password" show-password />
-        </el-form-item>
-        <el-form-item label="新密码" prop="new_password">
-          <el-input v-model="passwordForm.new_password" type="password" show-password />
-        </el-form-item>
-        <el-form-item label="确认新密码" prop="confirm_password">
-          <el-input v-model="passwordForm.confirm_password" type="password" show-password />
-        </el-form-item>
-
-        <el-form-item>
-          <el-button type="primary" :loading="submitting" @click="handleChangePassword">
-            保存新密码
-          </el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
-  </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
-import { changePasswordApi, getUserInfoApi } from '@/api/user'
+import { changePasswordApi } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 
 const userStore = useUserStore()
-const route = useRoute()
 const router = useRouter()
-
-const isForceChange = computed(() => route.path === '/change-password' || userStore.firstLogin)
-
-const profile = reactive({
-  username: '',
-  name: '',
-  phone: ''
-})
 
 const passwordFormRef = ref<FormInstance>()
 const submitting = ref(false)
@@ -129,20 +81,6 @@ const getHomePathByRole = (role: number) => {
   return role === 2 || role === 3 ? '/admin' : '/StudentHome'
 }
 
-const loadProfile = async () => {
-  if (!userStore.username) return
-  const response = await getUserInfoApi({ username: userStore.username })
-  if (response?.data?.code === 200) {
-    profile.username = response.data.data?.username || ''
-    profile.name = response.data.data?.name || ''
-    profile.phone = response.data.data?.phone || ''
-
-    if (typeof response.data.data?.first_login === 'boolean') {
-      userStore.setFirstLogin(response.data.data.first_login)
-    }
-  }
-}
-
 const handleChangePassword = async () => {
   if (!passwordFormRef.value) return
 
@@ -175,14 +113,6 @@ const handleChangePassword = async () => {
     }
   })
 }
-
-onMounted(async () => {
-  try {
-    await loadProfile()
-  } catch {
-    // noop
-  }
-})
 </script>
 
 <style scoped>
@@ -273,21 +203,4 @@ onMounted(async () => {
   line-height: 1.7;
 }
 
-.profile-page {
-  max-width: 720px;
-  margin: 0 auto;
-}
-
-.profile-card {
-  border: none;
-}
-
-.card-header {
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.mb-16 {
-  margin-bottom: 16px;
-}
 </style>

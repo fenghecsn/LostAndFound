@@ -10,8 +10,8 @@ const router = createRouter({
       component: () => import('../views/Login.vue'),
     },
     {
-      path: '/change-password',
-      name: 'ChangePassword',
+      path: '/password_change',
+      name: 'PasswordChange',
       component: () => import('../views/Password_change.vue'),
     },
     // --- 学生端 ---
@@ -28,7 +28,7 @@ const router = createRouter({
         {
           path: 'profile',
           name: '个人中心',
-          component: () => import('../views/Password_change.vue'),
+          component: () => import('../views/Profile.vue'),
         },
         {
           path: 'publish-lost',
@@ -117,12 +117,12 @@ router.beforeEach((to, from, next) => {
   const getHomePathByRole = (role: number) => (role === 2 || role === 3 ? '/admin' : '/StudentHome')
 
   if (token) {
-    if (userStore.firstLogin && to.path !== '/change-password') {
-      next('/change-password')
+    if (userStore.firstLogin && to.path !== '/password_change') {
+      next('/password_change')
       return
     }
 
-    if (!userStore.firstLogin && to.path === '/change-password') {
+    if (!userStore.firstLogin && to.path === '/password_change') {
       next(getHomePathByRole(userStore.role))
       return
     }

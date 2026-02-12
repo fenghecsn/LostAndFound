@@ -140,7 +140,7 @@ const handleLogin = async () => {
 
       if (Boolean(isFirstLogin)) {
         ElMessage.warning('首次登录请先修改密码')
-        router.push('/change-password')
+        router.push('/password_change')
       } else {
         router.push(getHomePathByRole(userRole))
       }
