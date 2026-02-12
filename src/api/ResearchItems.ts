@@ -13,6 +13,9 @@ export interface Item {
   category?: string
   reward?: number
   create_time?: string
+  contact_method?: string//增加弹窗会用到的可选字段
+  contact_person?: string//增加弹窗会用到的可选字段
+  images?: string[]
 }
 
 export interface ItemQuery {

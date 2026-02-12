@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
 import { Search } from '@element-plus/icons-vue'
-import { getItems, type Item, type ItemQuery } from '@/api/items'
+import { getItems, type Item, type ItemQuery } from '@/api/ResearchItems'
 import { ElMessage } from 'element-plus'
+import ItemDetailDialog from '@/components/ItemDetailDialog.vue'
+import ClaimApplyDialog from '@/components/ClaimApplyDialog.vue'
 
 // --- 状态管理 ---
 const loading = ref(false)
 const itemList = ref<Item[]>([])
 const total = ref(0)
+const detailVisible = ref(false)
+const currentItem = ref<Item | null>(null)
+const applyVisible = ref(false)
+const applyMode = ref<'picked' | 'mine'>('picked')
 
 // 筛选参数状态
 const queryParams = reactive<ItemQuery>({
@@ -86,6 +92,32 @@ const handleFilterChange = () => {
 const handlePageChange = (page: number) => {
     queryParams.page = page
     fetchData()
+}
+
+const openDetailDialog = (item: Item) => {
+    currentItem.value = item
+    detailVisible.value = true
+}
+
+const handleDialogAction = (item: Item) => {
+    applyMode.value = item.type === 1 ? 'picked' : 'mine'
+    applyVisible.value = true
+    detailVisible.value = false
+}
+
+const handleApplySubmit = (payload: { content: string; file: File | null; mode: 'picked' | 'mine' }) => {
+    if (!payload.content) {
+        ElMessage.warning('请先填写申请信息')
+        return
+    }
+    if (!payload.file) {
+        ElMessage.warning('请上传证明图片')
+        return
+    }
+
+    const actionText = payload.mode === 'picked' ? '已提交“我捡到了”申请' : '已提交“是我的”申请'
+    ElMessage.success(actionText)
+    applyVisible.value = false
 }
 
 // 状态文本映射
@@ -219,7 +251,7 @@ onMounted(() => {
     <div class="list-section" v-loading="loading">
         <div v-if="itemList.length === 0" class="empty-state">暂无数据</div>
         <div v-else class="card-grid">
-            <div v-for="item in itemList" :key="item.id" class="item-card">
+            <div v-for="item in itemList" :key="item.id" class="item-card" @click="openDetailDialog(item)">
                 <div class="card-header">
                     <div class="info-row">
                         <span class="label">物品名称:</span>
@@ -233,7 +265,7 @@ onMounted(() => {
                         <span class="label">{{ item.type === 1 ? '丢失地点' : '拾取地点' }}:</span>
                         <span class="value">{{ item.location }}</span>
                     </div>
-                        <el-button class="more-btn" circle size="small">...</el-button>
+                        <el-button class="more-btn" circle size="small" @click.stop="openDetailDialog(item)">...</el-button>
                 </div>
 
                 <div class="card-body">
@@ -272,6 +304,18 @@ onMounted(() => {
             style="margin-top: 20px; justify-content: center;"
         />
     </div>
+
+    <ItemDetailDialog
+        v-model="detailVisible"
+        :item="currentItem"
+        @action="handleDialogAction"
+    />
+
+    <ClaimApplyDialog
+        v-model="applyVisible"
+        :mode="applyMode"
+        @submit="handleApplySubmit"
+    />
   </div>
 </template>
 
@@ -348,6 +392,7 @@ onMounted(() => {
     padding: 15px;
     position: relative;
     box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    cursor: pointer;
 }
 
 .card-header {
