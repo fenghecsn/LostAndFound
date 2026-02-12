@@ -8,6 +8,9 @@ export interface LoginParams {
   password: string
 }
 
+// 获取用户信息参数类型
+export interface GetUserInfoParams {
+  username: string}
 // 登录接口
 export const loginApi = (params: LoginParams) => {
   return request ({
@@ -17,5 +20,15 @@ export const loginApi = (params: LoginParams) => {
     url: '/api/v1/login',
     method: 'post',
     data: params
+  })
+}
+// 获取用户信息接口
+export const getUserInfoApi = (params: GetUserInfoParams) => {
+  return request ({
+    "headers":{
+      "Content-Type": "application/json",
+    } ,
+    url: '/api/v1/profile',
+    method: 'get',
   })
 }
