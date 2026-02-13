@@ -1,0 +1,38 @@
+//发布丢失或捡到的帖子
+import request from '@/utils/request'
+
+export type PublishType = 'lost' | 'found'
+
+export interface PublishItemPayload {
+	title: string
+	type: PublishType
+	campus?: string
+	category?: string
+	location?: string
+	time?: string
+	description?: string
+	img1?: string
+	img2?: string
+	img3?: string
+	img4?: string
+	contact_name?: string
+	contact_phone?: string
+	bounty?: number
+}
+
+export interface PublishItemResponse {
+	code: number
+	msg: string
+	data: null
+}
+
+export const publishItemApi = (data: PublishItemPayload) => {
+	return request<PublishItemResponse>({
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		url: '/api/v1/items?apifoxApiId=418131347',
+		method: 'post',
+		data
+	})
+}
