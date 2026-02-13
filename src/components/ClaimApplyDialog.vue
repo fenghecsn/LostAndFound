@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 // 主页认领申请弹窗组件
 
 type ApplyMode = 'picked' | 'mine'
@@ -20,6 +20,14 @@ const emit = defineEmits<{
 
 const content = ref('')
 const uploadFile = ref<File | null>(null)
+const previewUrl = ref('')
+
+const clearPreviewUrl = () => {
+  if (previewUrl.value) {
+    URL.revokeObjectURL(previewUrl.value)
+    previewUrl.value = ''
+  }
+}
 
 const close = () => {
   emit('update:modelValue', false)
@@ -36,13 +44,18 @@ const helperTextTop = computed(() => {
 
 const helperTextBottom = computed(() => {
   if (props.mode === 'picked') {
-    return '必须上传物品清晰照片便于失主确认'
+    return '可选上传物品清晰照片，便于失主确认'
   }
-  return '上传能证明这个物品是你的物品的照片'
+  return '可选上传能证明这个物品属于你的照片'
 })
 
 const handleFileChange = (uploadFileInfo: { raw?: File }) => {
-  uploadFile.value = uploadFileInfo.raw ?? null
+  const file = uploadFileInfo.raw ?? null
+  uploadFile.value = file
+  clearPreviewUrl()
+  if (file) {
+    previewUrl.value = URL.createObjectURL(file)
+  }
 }
 
 const submit = () => {
@@ -59,9 +72,14 @@ watch(
     if (visible) {
       content.value = ''
       uploadFile.value = null
+      clearPreviewUrl()
     }
   },
 )
+
+onBeforeUnmount(() => {
+  clearPreviewUrl()
+})
 </script>
 
 <template>
@@ -93,7 +111,8 @@ watch(
           :on-change="handleFileChange"
           accept="image/*"
         >
-          <div class="plus">+</div>
+          <img v-if="previewUrl" :src="previewUrl" alt="预览图" class="preview-image" />
+          <div v-else class="plus">+</div>
         </el-upload>
 
         <div class="helper-bottom">{{ helperTextBottom }}</div>
@@ -184,6 +203,12 @@ watch(
   font-size: 56px;
   line-height: 1;
   margin-top: -4px;
+}
+
+.preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .helper-bottom {

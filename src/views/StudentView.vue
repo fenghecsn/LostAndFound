@@ -5,7 +5,9 @@ import { getItemDetail, getItems, type Item, type ItemQuery, type RawItemFromApi
 import { ElMessage } from 'element-plus'
 import ItemDetailDialog from '@/components/ItemDetailDialog.vue'
 import ClaimApplyDialog from '@/components/ClaimApplyDialog.vue'
-
+import { claimItemApi } from '@/api/Claim'
+import { uploadImageApi } from '@/api/Img'
+import { extractUploadedUrl } from '@/utils/imageUpload'
 // --- 状态管理 ---
 const loading = ref(false)
 const itemList = ref<Item[]>([])
@@ -166,19 +168,38 @@ const handleDialogAction = (item: Item) => {
     detailVisible.value = false
 }
 
-const handleApplySubmit = (payload: { content: string; file: File | null; mode: 'picked' | 'mine' }) => {
+const handleApplySubmit = async (payload: { content: string; file: File | null; mode: 'picked' | 'mine' }) => {
     if (!payload.content) {
         ElMessage.warning('请先填写申请信息')
         return
     }
-    if (!payload.file) {
-        ElMessage.warning('请上传证明图片')
-        return
-    }
+    try {
+        let imageUrl: string | undefined
 
-    const actionText = payload.mode === 'picked' ? '已提交“我捡到了”申请' : '已提交“是我的”申请'
-    ElMessage.success(actionText)
-    applyVisible.value = false
+        if (payload.file) {
+            const formData = new FormData()
+            formData.append('file', payload.file)
+
+            const uploadRes = await uploadImageApi(formData)
+            imageUrl = extractUploadedUrl(uploadRes)
+            if (!imageUrl) {
+                ElMessage.error('图片上传成功但未返回可用链接')
+                return
+            }
+        }
+
+        await claimItemApi({
+            item_id: currentItem.value?.id ?? 0,
+            proof: payload.content,
+            img: imageUrl,
+        })
+        const actionText = payload.mode === 'picked' ? '已提交“我捡到了”申请' : '已提交“是我的”申请'
+        ElMessage.success(actionText)
+        applyVisible.value = false
+    } catch (error) {
+        console.error(error)
+        ElMessage.error('提交申请失败，请稍后重试')
+    }
 }
 
 // 状态文本映射
