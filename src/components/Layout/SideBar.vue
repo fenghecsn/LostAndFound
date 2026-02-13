@@ -4,7 +4,7 @@
       <div class="menu-group">
         <div class="group-title" @click="isExpanded = !isExpanded">
           <div class="title-left">
-            <img src="../../public/路径@2.png" style="width: 16px; height: 16px;">
+            <img src="../../../public/路径@2.png" style="width: 16px; height: 16px;">
             <span>消息通知</span>
           </div>
           <span :class="['arrow-icon', { 'is-rotated': !isExpanded }]">&#9662;</span>
@@ -21,7 +21,7 @@
             <span class="red-dot-placeholder">
               <span v-if="showDot[item.dotKey]" class="red-dot"></span>
             </span>
-            <img :src="`../../public/路径@${4+idx}.png`" style="width: 16px; height: 16px;">
+            <img :src="`../../../public/路径@${4+idx}.png`" style="width: 16px; height: 16px;">
             <span>{{ item.label }}</span>
           </div>
         </div>
@@ -30,7 +30,7 @@
       <!-- 联系人列表模拟 -->
       <div class="contact-list">
         <div class="contact-card">
-          <img src="../../public/头像框@7.png" style="width: 32px; height: 32px; background-color: #f97316; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></img>
+          <img src="../../../public/头像框@7.png" style="width: 32px; height: 32px; background-color: #f97316; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></img>
           <div class="contact-info">
             <div class="contact-name">张晓明</div>
             <div class="contact-status">在线</div>
@@ -38,7 +38,7 @@
         </div>
 
         <div class="contact-card">
-          <img src="../../public/头像框@7.png" style="width: 32px; height: 32px; background-color: #f97316; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></img>
+          <img src="../../../public/头像框@7.png" style="width: 32px; height: 32px; background-color: #f97316; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></img>
           <div class="contact-info">
             <div class="contact-name">系统</div>
             <div class="contact-status">在线</div>

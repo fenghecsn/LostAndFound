@@ -18,7 +18,7 @@ const router = createRouter({
     {
       path: '/StudentHome',
       name: 'Student',
-      component: () => import('../components/Layout.vue'),
+      component: () => import('../components/Layout/Layout.vue'),
       children: [
         {
           path: '',

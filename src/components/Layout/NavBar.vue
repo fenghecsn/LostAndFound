@@ -2,7 +2,7 @@
   <div class="nav-bar">
     <div class="left-section">
       <div class="logo-circle">
-        <img src="../../public/DIV@1x.png" style="width: 16px; height: 16px;"> <!-- 使用公共资源中的图片 -->
+        <img src="../../../public/DIV@1x.png" style="width: 16px; height: 16px;"> <!-- 使用公共资源中的图片 -->
       </div>
       <span class="system-title">失物招领</span>
     </div>
@@ -47,7 +47,7 @@
       <div class="user-dropdown-wrapper">
         <div class="user-trigger">
           <div class="user-info" style="padding-top: 3px; display: flex; align-items: center;">
-             <img src="../../public/头像框@7.png" style="align-items: center; padding: 0; width: 16px; height: 16px;">
+             <img src="../../../public/头像框@7.png" style="align-items: center; padding: 0; width: 16px; height: 16px;">
           </div>
           <span class="user-name">{{ userStore.nickname}}</span>
         </div>
@@ -70,7 +70,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import ConfirmButton from './ConfirmButton.vue'
+import ConfirmButton from '../ConfirmButton.vue'
 import {useUserStore} from '@/stores/user'
 import { ElMessage } from 'element-plus'
 
