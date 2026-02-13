@@ -116,7 +116,6 @@ const handleLogin = async () => {
   try {
     // 1. 使用你定义的 loginApi
     const response = await loginApi(loginForm)
-    console.log('后端登录返回的完整数据:', response.data)
 
     if (response.data.code === 200) {
       // 2. 存储 Token (传入 response.data，因为你的 store 内部会自动取 data.token)
@@ -132,6 +131,7 @@ const handleLogin = async () => {
       if (isFirstLogin === undefined) {
         const profileRes = await getUserInfoApi({ username: loginForm.username })
         isFirstLogin = profileRes?.data?.data?.first_login
+        userStore.setNickname(profileRes?.data?.data?.nickname || '')
       }
 
       userStore.setFirstLogin(Boolean(isFirstLogin))

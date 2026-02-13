@@ -7,7 +7,7 @@ export const useUserStore = defineStore('user', () => {
   const username = ref<string>(localStorage.getItem('username') || '')
   const role = ref<number>(Number(localStorage.getItem('role')) || 1) //1: 学生/老師，2: 管理员 3.超级管理员
   const firstLogin = ref<boolean>(localStorage.getItem('firstLogin') === 'true')
-
+  const nickname = ref<string>(localStorage.getItem('nickname') || '')
 
   const setRole = (newRole: number) => {
     role.value = newRole
@@ -34,8 +34,12 @@ export const useUserStore = defineStore('user', () => {
     localStorage.removeItem('username')
     localStorage.removeItem('role')
     localStorage.removeItem('firstLogin')
+    localStorage.removeItem('nickname')
   }
-
+  const setNickname = (newNickname: string) => {
+    nickname.value = newNickname
+    localStorage.setItem('nickname', newNickname)
+  }
   return {
     token,
     username,
@@ -46,5 +50,7 @@ export const useUserStore = defineStore('user', () => {
     setFirstLogin,
     setUsername,
     clearUserData,
+    setNickname,
+    nickname
   }
 })

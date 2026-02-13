@@ -49,7 +49,7 @@
           <div class="user-info" style="padding-top: 3px; display: flex; align-items: center;">
              <img src="../../public/头像框@7.png" style="align-items: center; padding: 0; width: 16px; height: 16px;">
           </div>
-          <span class="user-name">{{ userStore.username }}</span>
+          <span class="user-name">{{ userStore.nickname}}</span>
         </div>
         <div class="user-dropdown-menu">
              <ConfirmButton
