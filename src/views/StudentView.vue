@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
 import { Search } from '@element-plus/icons-vue'
-import { getItems, type Item, type ItemQuery } from '@/api/ResearchItems'
+import { getItemDetail, getItems, type Item, type ItemQuery, type RawItemFromApi } from '@/api/ResearchItems'
 import { ElMessage } from 'element-plus'
 import ItemDetailDialog from '@/components/ItemDetailDialog.vue'
 import ClaimApplyDialog from '@/components/ClaimApplyDialog.vue'
@@ -17,13 +17,13 @@ const applyMode = ref<'picked' | 'mine'>('picked')
 
 // 筛选参数状态
 const queryParams = reactive<ItemQuery>({
-    page: 1,
-    size: 10,
-    keyword: '',
-    type: undefined,
+    page_num: 1,
+    page_size: 10,
+    location:"", // 搜索关键词
+    lost_or_found: undefined,
     campus: undefined,
     status: undefined,
-    time_range: undefined,
+    days: undefined,
     category: undefined
 })
 
@@ -65,15 +65,64 @@ const filterOptions = {
 }
 
 // --- 方法区 ---
+const normalizeType = (type: RawItemFromApi['type'], fallback: Item['type'] = 1): Item['type'] => {
+    if (type === 'lost') return 1
+    if (type === 'found') return 2
+    if (type === 1 || type === 2) return type
+    return fallback
+}
+
+const normalizeStatus = (status: RawItemFromApi['status'], fallback: Item['status'] = 1): Item['status'] => {
+    if (status === 'displaying') return 1
+    if (status === 'matched') return 2
+    if (status === 'claimed') return 3
+    if (typeof status === 'number') return status
+    if (status === 'archived') return 'archived'
+    return fallback
+}
+
+const normalizeItem = (raw: RawItemFromApi, fallback?: Item): Item => {
+    const images = [raw?.img1, raw?.img2, raw?.img3, raw?.img4].filter((value): value is string => Boolean(value))
+    const fallbackSafe = fallback || ({} as Item)
+
+    return {
+        ...fallbackSafe,
+        ...raw,
+        id: raw.id ?? raw.ID ?? fallbackSafe.id ?? 0,
+        name: raw.name || raw.title || fallbackSafe.name || '未命名物品',
+        type: normalizeType(raw.type, fallbackSafe.type ?? 1),
+        status: normalizeStatus(raw.status, fallbackSafe.status ?? 1),
+        event_time: raw.event_time || raw.time || fallbackSafe.event_time || '',
+        create_time: raw.create_time || raw.CreatedAt || fallbackSafe.create_time || '',
+        cover_image: raw.cover_image || raw.img1 || fallbackSafe.cover_image || '',
+        reward: raw.reward ?? raw.bounty ?? fallbackSafe.reward,
+        contact_method: raw.contact_method || raw.contact_phone || fallbackSafe.contact_method,
+        contact_person: raw.contact_person || raw.contact_name || fallbackSafe.contact_person,
+        images: raw.images?.filter(Boolean) || (images.length > 0 ? images : (fallbackSafe.images || []))
+    }
+}
+
+const buildQueryParams = (params: ItemQuery): ItemQuery => {
+    const entries = Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
+    return Object.fromEntries(entries) as ItemQuery
+}
+
 const fetchData = async () => {
     loading.value = true
     try {
-        const res = await getItems(queryParams)
-        // 根据实际axios返回结构调整（通常是res.data）
-        if (res.data) {
-                itemList.value = res.data.data.list
-                total.value = res.data.data.total
+    const res = await getItems(buildQueryParams(queryParams))
+        const list = Array.isArray(res.data?.data?.list) ? res.data.data.list : []
+        const totalValue = Number(res.data?.data?.total || 0)
+
+        if (list.length > 0 || totalValue >= 0) {
+            itemList.value = list.map((item) => normalizeItem(item))
+            total.value = totalValue
+            return
         }
+
+        itemList.value = []
+        total.value = 0
+        ElMessage.warning(res.data?.msg || '获取数据失败')
     } catch (error) {
         console.error(error)
         ElMessage.error('获取数据失败')
@@ -84,19 +133,31 @@ const fetchData = async () => {
 
 // 筛选项变更
 const handleFilterChange = () => {
-    queryParams.page = 1
+    queryParams.page_num = 1
     fetchData()
 }
 
 // 分页变更
 const handlePageChange = (page: number) => {
-    queryParams.page = page
+    queryParams.page_num = page
     fetchData()
 }
 
-const openDetailDialog = (item: Item) => {
+const openDetailDialog = async (item: Item) => {
     currentItem.value = item
     detailVisible.value = true
+
+    try {
+        const res = await getItemDetail(item.id)
+        if (res?.data?.data) {
+            currentItem.value = normalizeItem(res.data.data, item)
+            return
+        }
+        ElMessage.warning(res?.data?.msg || '获取详情失败，已显示基础信息')
+    } catch (error) {
+        console.error(error)
+        ElMessage.warning('获取详情失败，已显示基础信息')
+    }
 }
 
 const handleDialogAction = (item: Item) => {
@@ -121,22 +182,39 @@ const handleApplySubmit = (payload: { content: string; file: File | null; mode: 
 }
 
 // 状态文本映射
-const getStatusText = (status: number) => {
+const getStatusText = (status: number | string) => {
     switch(status) {
-        case 1: return '已通过'
-        case 2: return '已匹配'
-        case 3: return '已认领'
-        default: return '未知'
+        case 1:
+        case 'displaying':
+            return '已通过'
+        case 2:
+        case 'matched':
+            return '已匹配'
+        case 3:
+        case 'claimed':
+            return '已认领'
+        case 'archived':
+            return '已归档'
+        default:
+            return '未知'
     }
 }
 
 // 状态颜色映射
-const getStatusColor = (status: number) => {
-        switch(status) {
-                case 2: return 'rgb(245, 108, 108)' // 设计图显示红色
-                case 1: return 'rgb(245, 108, 108)' // 设计图显示红色
-                default: return 'rgb(245, 108, 108)'
-        }
+const getStatusColor = (status: number | string) => {
+    switch(status) {
+        case 2:
+        case 'matched':
+          return 'rgb(245, 108, 108)'
+        case 3:
+        case 'claimed':
+          return 'rgb(103, 194, 58)'
+        case 1:
+        case 'displaying':
+        case 'archived':
+        default:
+          return 'rgb(245, 108, 108)'
+    }
 }
 
 onMounted(() => {
@@ -149,7 +227,7 @@ onMounted(() => {
     <!-- 搜索 -->
     <div class="search-container">
         <el-input
-            v-model="queryParams.keyword"
+            v-model="queryParams.location"
             placeholder="搜索"
             class="search-input"
             :prefix-icon="Search"
@@ -169,8 +247,8 @@ onMounted(() => {
                         v-for="opt in filterOptions.types"
                         :key="String(opt.value)"
                         class="filter-pill"
-                        :class="{ active: queryParams.type === opt.value }"
-                        @click="queryParams.type = opt.value; handleFilterChange()"
+                        :class="{ active: queryParams.lost_or_found === opt.value }"
+                        @click="queryParams.lost_or_found = opt.value; handleFilterChange()"
                     >
                         {{ opt.value === undefined ? '全部帖子' : opt.label }}
                     </div>
@@ -214,8 +292,8 @@ onMounted(() => {
                         v-for="opt in filterOptions.times"
                         :key="String(opt.value)"
                         class="filter-pill"
-                        :class="{ active: queryParams.time_range === opt.value }"
-                        @click="queryParams.time_range = opt.value; handleFilterChange()"
+                        :class="{ active: queryParams.days === opt.value }"
+                        @click="queryParams.days = opt.value; handleFilterChange()"
                     >
                          {{ opt.value === undefined ? '全部时间' : opt.label }}
                     </div>
@@ -290,7 +368,7 @@ onMounted(() => {
                 </div>
 
                 <div class="card-footer">
-                    <span class="date">{{ item.create_time || '2027.1.20 12:00发布' }}</span>
+                    <span class="date">{{ item.create_time || '？？发布' }}</span>
                     <span class="status" :style="{ color: getStatusColor(item.status) }">{{ getStatusText(item.status) }}</span>
                 </div>
             </div>
@@ -299,7 +377,7 @@ onMounted(() => {
             v-if="total > 0"
             layout="prev, pager, next"
             :total="total"
-            :page-size="queryParams.size"
+            :page-size="queryParams.page_size"
             @current-change="handlePageChange"
             style="margin-top: 20px; justify-content: center;"
         />

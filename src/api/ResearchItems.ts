@@ -1,44 +1,107 @@
 import request from '@/utils/request'
 
+export interface RawItemFromApi {
+  id?: number
+  ID?: number
+  name?: string
+  title?: string
+  type?: number | 'lost' | 'found'
+  campus?: string
+  category?: string
+  location?: string
+  event_time?: string
+  time?: string
+  description?: string
+  cover_image?: string
+  img1?: string
+  img2?: string
+  img3?: string
+  img4?: string
+  images?: string[]
+  reward?: number
+  bounty?: number
+  contact_method?: string
+  contact_person?: string
+  contact_name?: string
+  contact_phone?: string
+  status?: number | 'displaying' | 'matched' | 'claimed' | 'archived'
+  create_time?: string
+  CreatedAt?: string
+  UpdatedAt?: string
+  DeletedAt?: string | null
+}
+
 export interface Item {
   id: number
-  type: number // 1: Lost, 2: Found
+  type: number | 'lost' | 'found' // 1/lost: Lost, 2/found: Found
   name: string
   campus: string
   location: string
   event_time: string
   cover_image: string
-  status: number // 1: Displaying, 2: Matched, 3: Claimed
+  status: number | 'displaying' | 'matched' | 'claimed' | 'archived' // 兼容文档字符串状态
   description?: string
   category?: string
   reward?: number
-  create_time?: string
   contact_method?: string//增加弹窗会用到的可选字段
   contact_person?: string//增加弹窗会用到的可选字段
   images?: string[]
+  img1?: string
+  img2?: string
+  img3?: string
+  img4?: string
+  time?: string
+  contact_name?: string
+  contact_phone?: string
+  create_time?: string
+  CreatedAt?: string
+  status_text?: string
+}
+
+export interface ItemDetailResponse {
+  code: number
+  msg: string
+  data: RawItemFromApi
+}
+
+export interface ItemListResponse {
+  code: number
+  msg: string
+  data: {
+    list: RawItemFromApi[]
+    total: number
+  }
 }
 
 export interface ItemQuery {
-  type?: number
-  keyword?: string
+  lost_or_found?: number//1: lost, 2: found
   campus?: string
-  location?: string
+  location?: string//粗略搜索
   status?: number
-  page?: number
-  size?: number
-  time_range?: string
+  page_num?: number
+  page_size?: number
+  days?: string
   category?: string
-  reward?: number
 }
 
 export const getItems = (params: ItemQuery) => {
-  return request ({
+  return request<ItemListResponse>({
     "headers":{
       "Content-Type": "application/json",
     } ,
-    url: '/api/v1/items',
+    url: '/api/v1/items?apifoxApiId=418131343',
     method: 'get',
     params: params
+  })
+}
+
+export const getItemDetail = (id: number) => {
+  return request<ItemDetailResponse>({
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    url: `/api/v1/items/${id}?apifoxApiId=418131344`,
+    method: 'get',
   })
 }
 
