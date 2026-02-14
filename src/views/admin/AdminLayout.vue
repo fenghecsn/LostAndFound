@@ -1,129 +1,374 @@
 <template>
   <div class="admin-layout">
-    <header class="admin-header">
-      <div class="header-left">
-        <div class="logo-box">🔍</div>
-        <span class="logo-text">失物招领后台</span>
+    <!-- 顶部导航栏 -->
+    <header class="top-nav">
+      <div class="nav-left">
+        <div class="logo" @click="router.push('/admin/dashboard')">
+          <img src="/logo.jpg" alt="logo" class="logo-icon" />
+          <span class="logo-text">失物招领</span>
+        </div>
+        <nav class="nav-links">
+          <router-link
+            to="/admin/audit"
+            :class="{ active: route.path.includes('/admin/audit') && !route.path.includes('history') }"
+          >
+            审核管理
+            <el-badge
+              v-if="totalPending > 0"
+              :value="totalPending"
+              :max="99"
+              class="nav-badge"
+            />
+          </router-link>
+          <router-link
+            to="/admin/items"
+            :class="{ active: route.path === '/admin/items' }"
+          >物品管理</router-link>
+          <router-link
+            to="/admin/notices"
+            :class="{ active: route.path === '/admin/notices' }"
+          >公告信息</router-link>
+          <router-link
+            to="/admin/dashboard"
+            :class="{ active: route.path === '/admin/dashboard' }"
+          >数据总览</router-link>
+        </nav>
       </div>
-      
-      <nav class="header-center">
-        <div 
-          v-for="nav in topNavs" 
-          :key="nav.id"
-          class="nav-item"
-          :class="{ active: currentModule === nav.id }"
-          @click="switchModule(nav)"
-        >
-          {{ nav.name }}
-        </div>
-      </nav>
-
-      <div class="header-right">
+      <div class="nav-right">
+        <el-button type="danger" round size="small" @click="handleLogout">退出登录</el-button>
         <div class="user-info">
-          <img src="@/assets/login.png" class="avatar" alt="avatar" />
-          <span class="username">管理员</span>
+          <div class="avatar-wrapper">
+            <img src="/头像框@2.png" alt="avatar-frame" class="avatar-frame" />
+          </div>
+          <span class="user-name">{{ userStore.nickname || userStore.username || '管理员' }}</span>
         </div>
-        <el-button link type="info" @click="handleLogout">退出</el-button>
       </div>
     </header>
 
-    <div class="main-container">
-      <aside class="admin-sidebar" v-if="sidebarMenus.length > 0">
-        <div class="sidebar-group">
-          <div class="group-title">
-             <span>{{ currentModuleName }}</span>
-          </div>
-          <div class="menu-list">
-            <div 
-              v-for="menu in sidebarMenus" 
-              :key="menu.path"
-              class="sub-item"
-              :class="{ active: $route.path === menu.path }"
-              @click="$router.push(menu.path)"
-            >
-              <span class="dot">●</span>
-              <span>{{ menu.name }}</span>
+    <!-- 主内容区 -->
+    <main class="main-content">
+      <router-view v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
+    </main>
+
+    <!-- 登录后系统公告弹窗 -->
+    <el-dialog
+      v-model="noticeDialogVisible"
+      title="📢 系统通知与公告"
+      width="600px"
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+      :show-close="false"
+      top="12vh"
+    >
+      <div class="notice-dialog-body">
+        <div v-if="systemNotices.length === 0" class="notice-empty">
+          <el-empty description="暂无系统公告" :image-size="80" />
+        </div>
+        <div v-else class="notice-scroll">
+          <div
+            v-for="notice in systemNotices"
+            :key="notice.ID || notice.id"
+            class="notice-item"
+          >
+            <div class="notice-item-header">
+              <el-tag v-if="notice.is_top" type="danger" size="small" effect="dark">置顶</el-tag>
+              <h4>{{ notice.title }}</h4>
             </div>
+            <p class="notice-item-content">{{ notice.content }}</p>
+            <span class="notice-item-time">
+              {{ notice.CreatedAt ? new Date(notice.CreatedAt).toLocaleString('zh-CN') : '' }}
+            </span>
           </div>
         </div>
-      </aside>
-
-      <main class="admin-main">
-        <RouterView />
-      </main>
-    </div>
+      </div>
+      <template #footer>
+        <div class="notice-dialog-footer">
+          <span class="notice-count">共 {{ systemNotices.length }} 条公告</span>
+          <el-button type="warning" size="large" @click="confirmNotices">
+            我已知悉，进入系统
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessageBox, ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
+import { getPendingItems, getPendingClaims, getAnnouncements } from '@/api/admin'
 
-type MenuItem = {
-  path: string
-  name: string
-}
-
-const router = useRouter()
 const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
 
-const topNavs = [
-  { id: 'dashboard', name: '数据总览', path: '/admin/dashboard' },
-  { id: 'audit', name: '审核管理', path: '/admin/audit-posts' }, 
-  { id: 'items', name: '物品管理', path: '/admin/items' },
-  { id: 'notices', name: '公告信息', path: '/admin/notices' }
-]
+const pendingItemCount = ref(0)
+const pendingClaimCount = ref(0)
+const totalPending = computed(() => pendingItemCount.value + pendingClaimCount.value)
 
-const currentModule = computed(() => {
-  const path = route.path
-  if (path.includes('/audit')) return 'audit'
-  if (path.includes('/items')) return 'items'
-  if (path.includes('/notices')) return 'notices'
-  return 'dashboard'
-})
+// ==================== 登录后公告弹窗 ====================
+const noticeDialogVisible = ref(false)
+const systemNotices = ref<any[]>([])
 
-const currentModuleName = computed(() => {
-  const nav = topNavs.find(n => n.id === currentModule.value)
-  return nav ? nav.name : '控制台'
-})
+/** 拉取系统公告并弹窗展示 */
+async function fetchAndShowNotices() {
+  try {
+    const res = await getAnnouncements({ page: 1, pageSize: 50 })
+    const resData = res.data?.data ?? res.data ?? {}
+    const list: any[] = resData.list ?? resData.items ?? []
 
-// 移除“审核管理”的侧边栏，因为页面里只有两个功能，无需侧边导航
-const sidebarMenus = computed<MenuItem[]>(() => {
-  // if (currentModule.value === 'audit') {
-  //   return [ ... ] // 已删除
-  // }
-  return [] 
-})
+    // 只显示系统公告 + 已通过的
+    systemNotices.value = list
+      .filter((n: any) => n.type === 'system' && n.status === 'approved')
+      .sort((a: any, b: any) => {
+        // 置顶的排前面
+        if (a.is_top && !b.is_top) return -1
+        if (!a.is_top && b.is_top) return 1
+        return 0
+      })
 
-const switchModule = (nav: any) => {
-  router.push(nav.path)
+    // 用 sessionStorage 标记本次会话已看过公告
+    const hasShown = sessionStorage.getItem('admin_notice_shown')
+    if (!hasShown && systemNotices.value.length > 0) {
+      noticeDialogVisible.value = true
+    }
+  } catch {
+    // 获取失败不阻塞进入系统
+    console.warn('[AdminLayout] 获取系统公告失败')
+  }
 }
 
-const handleLogout = () => {
-  router.push('/')
+function confirmNotices() {
+  noticeDialogVisible.value = false
+  sessionStorage.setItem('admin_notice_shown', 'true')
 }
+
+// ==================== 待审核数量 ====================
+async function fetchPendingCounts() {
+  try {
+    const res = await getPendingItems({ page: 1, pageSize: 1 })
+    const data = res.data?.data ?? res.data ?? {}
+    pendingItemCount.value = data.total ?? 0
+  } catch {
+    pendingItemCount.value = 0
+  }
+  try {
+    const res = await getPendingClaims({ page: 1, pageSize: 1 })
+    const data = res.data?.data ?? res.data ?? {}
+    pendingClaimCount.value = data.total ?? 0
+  } catch {
+    pendingClaimCount.value = 0
+  }
+}
+
+async function handleLogout() {
+  try {
+    await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    userStore.clearUser()
+    sessionStorage.removeItem('admin_notice_shown')
+    router.push('/')
+    ElMessage.success('已安全退出')
+  } catch {
+    // 用户取消
+  }
+}
+
+onMounted(() => {
+  fetchPendingCounts()
+  fetchAndShowNotices()
+})
 </script>
 
 <style scoped>
-/* 样式保持不变 */
-.admin-layout { height: 100vh; display: flex; flex-direction: column; background-color: #fdf6ec; }
-.admin-header { height: 60px; background: #fff; display: flex; align-items: center; padding: 0 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); z-index: 10; }
-.header-left { display: flex; align-items: center; gap: 10px; width: 200px; }
-.logo-box { width: 32px; height: 32px; background: #f97316; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; }
-.logo-text { font-weight: bold; font-size: 18px; color: #333; }
-.header-center { flex: 1; display: flex; justify-content: center; gap: 40px; height: 100%; }
-.nav-item { display: flex; align-items: center; height: 100%; cursor: pointer; color: #666; font-size: 15px; border-bottom: 3px solid transparent; }
-.nav-item.active { color: #f97316; font-weight: bold; border-bottom-color: #f97316; }
-.header-right { display: flex; align-items: center; gap: 15px; }
-.user-info { display: flex; align-items: center; gap: 8px; font-size: 14px; }
-.avatar { width: 30px; height: 30px; border-radius: 50%; background: #eee; }
-.main-container { flex: 1; display: flex; overflow: hidden; }
-.admin-sidebar { width: 220px; background: #fff; border-right: 1px solid #eee; display: flex; flex-direction: column; padding-top: 20px; }
-.sidebar-group { padding: 0 10px; }
-.group-title { padding: 10px 15px; font-size: 13px; color: #999; font-weight: bold; margin-bottom: 5px; }
-.sub-item { display: flex; align-items: center; gap: 10px; padding: 12px 15px; cursor: pointer; color: #666; font-size: 14px; border-radius: 8px; margin-bottom: 5px; transition: all 0.2s; }
-.sub-item:hover { background-color: #fff7ed; color: #f97316; }
-.sub-item.active { background-color: #fff7ed; color: #f97316; font-weight: 500; }
-.dot { font-size: 12px; transform: scale(0.8); }
-.admin-main { flex: 1; padding: 20px; overflow-y: auto; }
+.admin-layout {
+  min-height: 100vh;
+  background: #fdf6ec;
+}
+
+.top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding: 0 24px;
+  background: #fff;
+  border-bottom: 2px solid #e6a23c;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.logo-text {
+  font-size: 18px;
+  font-weight: bold;
+  color: #e6a23c;
+}
+
+.nav-links {
+  display: flex;
+  gap: 24px;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: #333;
+  font-size: 15px;
+  padding: 4px 0;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.nav-links a:hover,
+.nav-links a.active,
+.nav-links a.router-link-active {
+  color: #e6a23c;
+  border-bottom-color: #e6a23c;
+}
+
+.nav-badge {
+  position: absolute;
+  top: -8px;
+  right: -20px;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatar-wrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-frame {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-name {
+  font-size: 14px;
+  color: #333;
+}
+
+.main-content {
+  padding: 24px 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* ===== 公告弹窗 ===== */
+.notice-dialog-body {
+  max-height: 400px;
+  overflow: hidden;
+}
+
+.notice-scroll {
+  max-height: 380px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-right: 8px;
+}
+
+.notice-empty {
+  padding: 40px 0;
+}
+
+.notice-item {
+  background: #fef8ee;
+  border: 1px solid #f5d4a0;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.notice-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.notice-item-header h4 {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.notice-item-content {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  margin: 0 0 8px 0;
+}
+
+.notice-item-time {
+  font-size: 12px;
+  color: #999;
+}
+
+.notice-dialog-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.notice-count {
+  font-size: 13px;
+  color: #999;
+}
 </style>

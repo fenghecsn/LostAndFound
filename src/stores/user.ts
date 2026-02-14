@@ -40,6 +40,16 @@ export const useUserStore = defineStore('user', () => {
     nickname.value = newNickname
     localStorage.setItem('nickname', newNickname)
   }
+  // 如果你没有 clearUser / logout 方法，加上这个：
+  function clearUser() {
+    token.value = ''
+    username.value = ''
+    role.value = 0
+    firstLogin.value = false
+    nickname.value = ''
+    localStorage.removeItem('token')
+  }
+
   return {
     token,
     username,
@@ -51,6 +61,7 @@ export const useUserStore = defineStore('user', () => {
     setUsername,
     clearUserData,
     setNickname,
-    nickname
+    nickname,
+    clearUser
   }
 })

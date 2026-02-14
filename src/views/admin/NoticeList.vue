@@ -1,253 +1,401 @@
 <template>
-  <div class="page-container">
-    <div class="tabs-header">
-      <div 
-        class="tab-item" 
-        :class="{ active: currentTab === 'history' }"
-        @click="currentTab = 'history'"
-      >
-        历史区域公告
-      </div>
-      <div 
-        class="tab-item" 
-        :class="{ active: currentTab === 'publish' }"
-        @click="currentTab = 'publish'"
-      >
-        发布区域公告
-      </div>
-      <div 
-        class="tab-item" 
-        :class="{ active: currentTab === 'system' }"
-        @click="currentTab = 'system'"
-      >
-        系统公告
-      </div>
-    </div>
+  <div class="notice-page">
+    <div class="notice-layout">
+      <!-- 左侧菜单 -->
+      <aside class="notice-sidebar">
+        <div class="sidebar-title">
+          <el-icon color="#e6a23c"><Bell /></el-icon>
+          <span>公告</span>
+          <el-icon><ArrowDown /></el-icon>
+        </div>
+        <div
+          class="sidebar-item"
+          :class="{ active: currentTab === 'region' }"
+          @click="currentTab = 'region'"
+        >
+          <el-icon color="#e6a23c"><FolderOpened /></el-icon>
+          <span>发布区域公告</span>
+        </div>
+        <div
+          class="sidebar-item"
+          :class="{ active: currentTab === 'system' }"
+          @click="currentTab = 'system'"
+        >
+          <span class="dot-red" v-if="hasUnread"></span>
+          <el-icon color="#666"><Flag /></el-icon>
+          <span>系统公告</span>
+        </div>
+      </aside>
 
-    <div class="content-area">
-      
-      <div v-if="currentTab === 'history'" class="history-list">
-        <div class="intro-card">
-          <h3>平台简介</h3>
-          <p class="intro-text">
-            亲爱的老师/同学：为提升失物招领效率，解决传统招领信息分散、响应滞后等问题，我们正式推出失物招领云平台...
-          </p>
-          <div class="intro-footer">
-            <span class="status-pass">已通过</span>
-            <span class="time">发布时间 2026.1.13 13:00</span>
+      <!-- 右侧内容 -->
+      <div class="notice-content">
+        <!-- 区域公告 -->
+        <div v-if="currentTab === 'region'">
+          <div class="tab-header">
+            <el-button
+              :type="regionSubTab === 'history' ? 'warning' : 'default'"
+              round
+              @click="regionSubTab = 'history'"
+            >历史区域公告</el-button>
+            <el-button
+              :type="regionSubTab === 'publish' ? 'warning' : 'default'"
+              round
+              @click="regionSubTab = 'publish'"
+            >发布区域公告</el-button>
+          </div>
+
+          <!-- 历史公告列表 -->
+          <div v-if="regionSubTab === 'history'" class="notice-list" v-loading="loading">
+            <div
+              v-for="notice in noticeList"
+              :key="notice.ID || notice.id || notice._localId"
+              class="notice-card"
+            >
+              <h3 class="notice-title">{{ notice.title }}</h3>
+              <div class="notice-body">{{ notice.content }}</div>
+              <div class="notice-footer">
+                <span class="notice-status" :class="getStatusClass(notice)">
+                  {{ getStatusText(notice) }}
+                </span>
+                <span class="notice-date">发布时间：{{ formatTime(notice.CreatedAt || notice.created_at || notice._localTime) }}</span>
+              </div>
+            </div>
+            <el-empty v-if="noticeList.length === 0" description="暂无公告" />
+          </div>
+
+          <!-- 发布公告表单 -->
+          <div v-if="regionSubTab === 'publish'" class="publish-form">
+            <el-form :model="publishForm" label-width="80px">
+              <el-form-item label="公告标题">
+                <el-input v-model="publishForm.title" placeholder="请输入公告标题" />
+              </el-form-item>
+              <el-form-item label="公告内容">
+                <el-input
+                  v-model="publishForm.content"
+                  type="textarea"
+                  :rows="10"
+                  placeholder="请输入公告内容"
+                />
+              </el-form-item>
+              <el-form-item label="是否置顶">
+                <el-switch v-model="publishForm.is_top" />
+              </el-form-item>
+              <el-form-item>
+                <div style="text-align: right; width: 100%;">
+                  <el-button type="primary" :loading="publishing" @click="handlePublish">发布</el-button>
+                </div>
+              </el-form-item>
+            </el-form>
+          </div>
+        </div>
+
+        <!-- 系统公告 -->
+        <div v-if="currentTab === 'system'">
+          <h2 class="section-title">系统公告</h2>
+          <div class="notice-list">
+            <div
+              v-for="notice in systemNoticeList"
+              :key="notice.ID || notice.id"
+              class="notice-card"
+            >
+              <h3 class="notice-title">{{ notice.title }}</h3>
+              <div class="notice-body">{{ notice.content }}</div>
+              <div class="notice-footer">
+                <span class="notice-date">
+                  发布时间：{{ formatTime(notice.CreatedAt || notice.created_at) }}
+                </span>
+                <el-button
+                  v-if="!notice.confirmed"
+                  type="warning"
+                  size="small"
+                  @click="confirmNotice(notice)"
+                >确认</el-button>
+                <el-button
+                  v-else
+                  type="info"
+                  size="small"
+                  disabled
+                >已确认</el-button>
+              </div>
+            </div>
+            <el-empty v-if="systemNoticeList.length === 0" description="暂无系统公告" />
           </div>
         </div>
       </div>
-
-      <div v-if="currentTab === 'publish'" class="publish-form">
-        <div class="form-item">
-          <label>公告标题</label>
-          <input 
-            v-model="form.title" 
-            type="text" 
-            placeholder="请输入文字" 
-            class="custom-input"
-          />
-        </div>
-        <div class="form-item">
-          <label>公告内容</label>
-          <textarea 
-            v-model="form.content" 
-            rows="8" 
-            placeholder="请输入文字" 
-            class="custom-textarea"
-          ></textarea>
-        </div>
-        <div class="form-actions">
-          <button class="pub-btn" @click="handlePublish">发布</button>
-        </div>
-      </div>
-
-      <div v-if="currentTab === 'system'" class="system-list">
-        <div class="intro-card system-card" v-for="item in systemNotices" :key="item.id">
-          <div class="card-header">
-             <h3>{{ item.title }}</h3>
-             <span class="system-tag">官方</span>
-          </div>
-          <p class="intro-text">{{ item.content }}</p>
-          <div class="intro-footer">
-            <span class="time">发布时间: {{ item.time }}</span>
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Bell, ArrowDown, FolderOpened, Flag } from '@element-plus/icons-vue'
+import {
+  getAnnouncements,
+  createAnnouncement,
+} from '@/api/admin'
 
-const currentTab = ref('history') 
-const form = ref({ title: '', content: '' })
+const currentTab = ref('region')
+const regionSubTab = ref('history')
+const hasUnread = ref(true)
 
-// 系统公告数据 (硬编码)
-const systemNotices = [
-  { 
-    id: 1, 
-    title: '系统维护通知', 
-    content: '为了提供更好的服务，系统将于本周六凌晨 02:00 - 04:00 进行服务器升级维护，届时将无法访问，请大家提前做好安排。', 
-    time: '2026-02-10 10:00' 
-  },
-  { 
-    id: 2, 
-    title: '防诈骗安全提醒', 
-    content: '近期发现有不法分子冒充失主进行诈骗，请各位同学在归还物品时务必核实对方身份（如学生证、身份证），切勿涉及金钱交易。', 
-    time: '2026-01-15 09:00' 
-  },
-  {
-    id: 3,
-    title: '关于“物品有效期”的说明',
-    content: '无人认领的物品将在平台展示 30 天，逾期将由管理处统一回收处理，请大家知悉。',
-    time: '2026-01-01 12:00'
+const loading = ref(false)
+const publishing = ref(false)
+
+// 区域公告列表（包含后端返回的 + 本地刚发布的）
+const noticeList = ref<any[]>([])
+// 系统公告列表
+const systemNoticeList = ref<any[]>([])
+// 本地发布的公告（解决发布接口和获取接口不在同一数据源的问题）
+const localPublished = ref<any[]>([])
+
+let localIdCounter = 0
+
+const publishForm = reactive({
+  title: '',
+  content: '',
+  is_top: false,
+})
+
+function formatTime(t: string | undefined): string {
+  if (!t) return ''
+  return new Date(t).toLocaleString('zh-CN')
+}
+
+function getStatusText(notice: any): string {
+  if (notice._isLocal) return '已发布（本地）'
+  if (notice.status === 'approved') return '已通过'
+  if (notice.status === 'pending') return '待审核'
+  return notice.status || '已发布'
+}
+
+function getStatusClass(notice: any): string {
+  if (notice._isLocal) return 'local'
+  if (notice.status === 'approved') return 'pass'
+  return ''
+}
+
+/** 获取公告列表 - 合并后端数据和本地发布的 */
+async function fetchNoticeList() {
+  loading.value = true
+  try {
+    const res = await getAnnouncements({ page: 1, pageSize: 50 })
+    const resData = res.data?.data ?? res.data ?? {}
+    const list: any[] = resData.list ?? resData.items ?? []
+
+    // 后端返回的按类型分
+    const regionFromApi = list.filter((n: any) => n.type !== 'system')
+    systemNoticeList.value = list.filter((n: any) => n.type === 'system')
+
+    // 合并：本地发布的排在最前面 + 后端返回的
+    // 用 title+content 去重，避免后端已经入库了还重复显示
+    const merged = [...localPublished.value]
+    regionFromApi.forEach(apiItem => {
+      const isDuplicate = localPublished.value.some(
+        local => local.title === apiItem.title && local.content === apiItem.content
+      )
+      if (!isDuplicate) {
+        merged.push(apiItem)
+      }
+    })
+
+    noticeList.value = merged
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : '获取公告失败'
+    ElMessage.error(errMsg)
+    // 即使获取失败，本地发布的也要显示
+    noticeList.value = [...localPublished.value]
+  } finally {
+    loading.value = false
   }
-]
+}
 
-const handlePublish = () => {
-  if (!form.value.title || !form.value.content) {
-    ElMessage.warning('请填写完整')
+async function handlePublish() {
+  if (!publishForm.title.trim() || !publishForm.content.trim()) {
+    ElMessage.warning('请填写标题和内容')
     return
   }
-  ElMessage.success('发布成功')
-  currentTab.value = 'history'
-  form.value = { title: '', content: '' }
+
+  publishing.value = true
+  try {
+    await createAnnouncement({
+      title: publishForm.title,
+      content: publishForm.content,
+      is_top: publishForm.is_top,
+    })
+
+    // 发布成功后，立即把这条公告加到本地列表
+    const newNotice = {
+      _localId: ++localIdCounter,
+      _isLocal: true,
+      _localTime: new Date().toISOString(),
+      title: publishForm.title,
+      content: publishForm.content,
+      status: 'pending',
+      type: 'region',
+    }
+    localPublished.value.unshift(newNotice)
+
+    ElMessage.success('发布成功')
+    publishForm.title = ''
+    publishForm.content = ''
+    regionSubTab.value = 'history'
+
+    // 重新拉取列表（合并本地数据）
+    await fetchNoticeList()
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : '发布失败'
+    ElMessage.error(errMsg)
+  } finally {
+    publishing.value = false
+  }
 }
+
+function confirmNotice(notice: any) {
+  notice.confirmed = true
+  ElMessage.success('已确认')
+}
+
+onMounted(() => {
+  fetchNoticeList()
+})
 </script>
 
 <style scoped>
-.page-container {
-  padding: 20px;
-  background-color: #FFFDF9;
-  min-height: 100%;
-}
+.notice-page { padding: 0; }
 
-.tabs-header {
+.notice-layout {
   display: flex;
-  gap: 10px;
-  margin-bottom: 30px;
+  gap: 24px;
+  min-height: calc(100vh - 120px);
 }
 
-.tab-item {
-  padding: 10px 25px;
-  font-size: 16px;
-  color: #999;
-  cursor: pointer;
-  background-color: transparent;
-  font-weight: bold;
-  border-radius: 20px;
-  transition: all 0.3s;
-}
-
-.tab-item.active {
-  color: white;
-  background-color: #ffac6c;
-}
-
-/* 卡片样式 */
-.intro-card {
-  background: white;
-  padding: 25px;
+/* 左侧菜单 */
+.notice-sidebar {
+  width: 200px;
+  flex-shrink: 0;
+  background: #fff;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-  margin-bottom: 20px;
-  border: 1px solid #eee;
+  padding: 16px;
+  height: fit-content;
 }
 
-.system-card {
-  border-left: 4px solid #f97316; /* 系统公告加个橙色竖条区分 */
-}
-
-.card-header {
+.sidebar-title {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
-}
-
-.intro-card h3 {
-  font-size: 18px;
-  margin: 0;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: bold;
   color: #333;
+  padding: 8px 0;
+  margin-bottom: 8px;
 }
 
-.system-tag {
-  background: #fff7ed;
-  color: #f97316;
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-.intro-text {
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
   font-size: 14px;
   color: #666;
-  line-height: 1.6;
-  margin-bottom: 15px;
+  position: relative;
+  transition: all 0.2s;
 }
 
-.intro-footer {
+.sidebar-item:hover,
+.sidebar-item.active {
+  background: #fdf6ec;
+  color: #e6a23c;
+}
+
+.dot-red {
+  width: 8px;
+  height: 8px;
+  background: #f56c6c;
+  border-radius: 50%;
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* 右侧内容 */
+.notice-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.tab-header {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-size: 22px;
+  font-weight: bold;
+  color: #333;
+  margin: 0 0 20px 0;
+}
+
+.notice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.notice-card {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 20px 24px;
+}
+
+.notice-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+  margin: 0 0 12px 0;
+}
+
+.notice-body {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  margin-bottom: 16px;
+}
+
+.notice-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1px solid #f5f5f5;
-  padding-top: 15px;
 }
 
-.status-pass {
-  color: #409eff;
-  background: #ecf5ff;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-}
-
-.time {
+.notice-status {
+  font-size: 13px;
   color: #999;
-  font-size: 12px;
+}
+.notice-status.pass {
+  color: #67c23a;
+  font-weight: bold;
+}
+.notice-status.local {
+  color: #e6a23c;
+  font-weight: bold;
 }
 
-/* 表单样式 */
+.notice-date {
+  font-size: 13px;
+  color: #999;
+}
+
+/* 发布表单 */
 .publish-form {
-  background: white;
-  padding: 40px;
+  background: #fff;
   border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-  max-width: 800px;
-}
-
-.form-item {
-  display: flex;
-  align-items: flex-start;
-  margin-bottom: 25px;
-}
-
-.form-item label {
-  width: 80px;
-  font-size: 14px;
-  color: #333;
-  padding-top: 10px;
-}
-
-.custom-input, 
-.custom-textarea {
-  flex: 1;
-  background-color: #f2f3f5;
-  border: none;
-  padding: 12px;
-  border-radius: 4px;
-  font-size: 14px;
-  outline: none;
-}
-
-.form-actions { text-align: right; margin-top: 30px; }
-.pub-btn {
-  background-color: #3b82f6; color: white; border: none;
-  padding: 10px 30px; border-radius: 4px; cursor: pointer;
+  padding: 24px;
 }
 </style>

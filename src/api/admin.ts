@@ -1,36 +1,140 @@
 import request from '@/utils/request'
 
-// 1. 定义数据结构 (跟 Apifox 返回的一样)
-export interface AuditItem {
-  id: number
-  type: number // 1:失物 2:招领
-  title: string // 注意：Apifox 里定义的叫 title 还是 name？保持一致
-  content: string
-  images: string[]
-  location: string
-  event_time: string
-  username: string
-  contact: string
-  status: number // 0:待审核 1:通过 2:驳回
-  create_time: string
+// ==================== 类型定义 ====================
+
+/** 驳回审核请求 - internal_controllers.RejectRecordRequest */
+export interface RejectRecordRequest {
+  reject_reason: string
 }
 
-// 2. 获取审核列表
-// 对应 Apifox: GET /api/admin/posts?status=0
-export const getAuditList = (params: { status: number, page?: number, size?: number }) => {
-  return request({
-    url: '/api/admin/posts', // 确保这个路径跟你 Apifox 里的“管理员获取列表”一致
-    method: 'get',
-    params
+/** 归档帖子请求 - internal_controllers.ArchiveRecordRequest */
+export interface ArchiveRecordRequest {
+  process_method: string
+}
+
+/** 分页参数 */
+export interface PaginationParams {
+  page?: number
+  pageSize?: number
+}
+
+/** 物品列表筛选参数 */
+export interface ItemListParams extends PaginationParams {
+  status?: string
+  type?: string
+  keyword?: string
+  time_range?: string
+  lost_or_found?: string | number
+  campus?: string
+  category?: string
+}
+
+/** 管理员更新物品请求 - 与 UpdateRecordRequest 字段一致 */
+export interface AdminUpdateItemRequest {
+  title?: string
+  category?: string
+  campus?: string
+  location?: string
+  time?: string
+  description?: string
+  contact_name?: string
+  contact_phone?: string
+  img1?: string
+  img2?: string
+  img3?: string
+  img4?: string
+  status?: string
+  process_method?: string
+}
+
+// ==================== 物品管理 ====================
+
+/** 管理员获取物品列表 */
+export function getAllItems(params?: ItemListParams) {
+  return request.get('/api/v1/admin/items', {
+    params: {
+      page_num: params?.page || 1,
+      page_size: params?.pageSize || 10,
+      status: params?.status,
+      lost_or_found: params?.lost_or_found,
+      campus: params?.campus,
+      category: params?.category,
+      keyword: params?.keyword,
+      time_range: params?.time_range,
+    }
   })
 }
 
-// 3. 审核操作 (通过/驳回)
-// 对应 Apifox: POST /api/admin/audit
-export const auditItem = (data: { id: number, status: number, reason?: string }) => {
-  return request({
-    url: '/api/admin/audit', // 确保这个路径一致
-    method: 'post',
-    data
+/** 管理员获取待审核物品 */
+export function getPendingItems(params?: PaginationParams) {
+  return request.get('/api/v1/admin/items/pending', {
+    params: { page_num: params?.page || 1, page_size: params?.pageSize || 10 }
+  })
+}
+
+/** 通过审核 */
+export function approveItem(id: number) {
+  return request.put(`/api/v1/admin/items/${id}/approve`)
+}
+
+/** 驳回审核 */
+export function rejectItem(id: number, data: RejectRecordRequest) {
+  return request.put(`/api/v1/admin/items/${id}/reject`, data)
+}
+
+/** 归档物品 */
+export function archiveItem(id: number, data: ArchiveRecordRequest) {
+  return request.put(`/api/v1/admin/items/${id}/archive`, data)
+}
+
+/** 管理员更新物品 */
+export function updateItem(id: number, data: AdminUpdateItemRequest) {
+  return request.put(`/api/v1/admin/items/${id}`, data)
+}
+
+// ==================== 认领管理 ====================
+
+/** 管理员获取待审核认领 */
+export function getPendingClaims(params?: PaginationParams) {
+  return request.get('/api/v1/admin/claims/pending', {
+    params: { page_num: params?.page || 1, page_size: params?.pageSize || 10 }
+  })
+}
+
+/** 通过认领 */
+export function approveClaim(id: number) {
+  return request.put(`/api/v1/admin/claims/${id}/approve`)
+}
+
+/** 驳回认领（文档中 requestBody 为 none，不传 Body） */
+export function rejectClaim(id: number) {
+  return request.put(`/api/v1/admin/claims/${id}/reject`)
+}
+
+// ==================== 公告管理 ====================
+
+/** 获取公告列表（SuperAdmin 接口，Admin 也调用） */
+export function getAnnouncements(params?: PaginationParams) {
+  return request.get('/api/v1/super/announcements', {
+    params: { page_num: params?.page || 1, page_size: params?.pageSize || 50 }
+  })
+}
+
+/** 管理员发布区域公告 */
+export function createAnnouncement(data: { title: string; content: string; is_top?: boolean }) {
+  return request.post('/api/v1/admin/announcements', data)
+}
+
+// ==================== 数据统计 ====================
+
+/** 获取系统统计数据 */
+export function getDashboardStats() {
+  return request.get('/api/v1/admin/stats')
+}
+
+/** 导出统计数据 (CSV) */
+export function exportStatsCSV() {
+  return request.get('/api/v1/admin/export', {
+    responseType: 'blob'  // CSV 文件需要 blob 类型
   })
 }

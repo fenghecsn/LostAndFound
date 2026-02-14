@@ -73,7 +73,7 @@ const router = createRouter({
     {
       path: '/admin',
       component: () => import('../views/admin/AdminLayout.vue'),
-      redirect: '/admin/dashboard', // 默认进入数据总览
+      redirect: '/admin/dashboard',
       children: [
         {
           path: 'dashboard',
@@ -81,29 +81,63 @@ const router = createRouter({
           component: () => import('../views/admin/Dashboard.vue')
         },
         {
-          path: 'items', // 物品管理 (对应 ItemManagement.vue)
+          path: 'items',
           name: 'AdminItems',
           component: () => import('../views/admin/ItemManagement.vue')
         },
         {
-          path: 'audit-posts', // 发布审核 (对应 AuditList.vue)
+          path: 'audit',
           name: 'AdminAuditPosts',
           component: () => import('../views/admin/AuditList.vue')
         },
         {
-          path: 'audit-claims', // 认领审核 (对应 ClaimAudit.vue)
+          path: 'claim-audit',
           name: 'AdminAuditClaims',
           component: () => import('../views/admin/ClaimAudit.vue')
         },
         {
-          path: 'audit-history', // 审核记录 (对应 AuditHistory.vue)
+          path: 'audit-history',
           name: 'AdminAuditHistory',
           component: () => import('../views/admin/AuditHistory.vue')
         },
         {
-          path: 'notices', // 公告管理 (对应 NoticeList.vue)
+          path: 'notices',
           name: 'AdminNotices',
           component: () => import('../views/admin/NoticeList.vue')
+        }
+      ]
+    },
+
+    // --- 超级管理员端 ---
+    {
+      path: '/super',
+      component: () => import('../views/super/SuperLayout.vue'),
+      redirect: '/super/dashboard',
+      children: [
+        {
+          path: 'dashboard',
+          name: 'SuperDashboard',
+          component: () => import('../views/super/SuperDashboard.vue')
+        },
+        {
+          path: 'users',
+          name: 'SuperUsers',
+          component: () => import('../views/super/UserManagement.vue')
+        },
+        {
+          path: 'notices',
+          name: 'SuperNotices',
+          component: () => import('../views/super/SuperNotice.vue')
+        },
+        {
+          path: 'settings',
+          name: 'SuperSettings',
+          component: () => import('../views/super/SystemSettings.vue')
+        },
+        {
+          path: 'feedback',
+          name: 'SuperFeedback',
+          component: () => import('../views/super/FeedbackCenter.vue')
         }
       ]
     }
@@ -114,7 +148,11 @@ router.beforeEach((to, from, next) => {
   const whiteList = ['/', '/NotFound']
   const userStore = useUserStore()
   const token = userStore.token
-  const getHomePathByRole = (role: number) => (role === 2 || role === 3 ? '/admin' : '/StudentHome')
+  const getHomePathByRole = (role: number) => {
+    if (role === 3) return '/super'
+    if (role === 2) return '/admin'
+    return '/StudentHome'
+  }
 
   if (token) {
     if (userStore.firstLogin && to.path !== '/password_change') {

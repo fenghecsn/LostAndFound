@@ -1,283 +1,694 @@
 <template>
-  <div class="item-mgmt">
-    <div class="top-bar">
-      <div class="search-wrapper">
-        <el-icon class="search-icon"><Search /></el-icon>
-        <input v-model="search" placeholder="搜索" class="clean-input" />
-      </div>
-      <button class="batch-btn">批量管理</button>
+  <div class="item-page">
+    <!-- 顶部搜索栏 -->
+    <div class="search-bar">
+      <el-input
+        v-model="searchKeyword"
+        placeholder="搜索"
+        :prefix-icon="Search"
+        clearable
+        class="search-input"
+        @keyup.enter="handleSearch"
+      />
+      <el-button plain @click="toggleBatchMode">
+        {{ batchMode ? '退出批量' : '批量管理' }}
+      </el-button>
     </div>
 
-    <div class="filter-section">
-      <div class="filters">
+    <!-- 批量操作栏 -->
+    <div v-if="batchMode" class="batch-bar">
+      <el-checkbox
+        v-model="selectAll"
+        :indeterminate="isIndeterminate"
+        @change="handleSelectAll"
+      >全选</el-checkbox>
+      <span class="batch-count">已选 {{ selectedIds.length }} 项</span>
+      <el-button type="success" size="small" :disabled="selectedIds.length === 0" :loading="batchLoading" @click="handleBatchArchive">
+        批量归档
+      </el-button>
+      <el-button type="danger" size="small" :disabled="selectedIds.length === 0" :loading="batchLoading" @click="handleBatchCancel">
+        批量作废
+      </el-button>
+    </div>
+
+    <!-- 筛选按钮组 -->
+    <div class="filter-area">
+      <div class="filter-groups">
         <div class="filter-row">
-          <div 
-            v-for="opt in typeOpts" 
-            :key="opt" 
-            class="pill" 
-            :class="{ active: filters.type === opt }"
-            @click="filters.type = opt"
-          >
-            {{ opt }}
-          </div>
+          <el-button
+            v-for="opt in typeOptions"
+            :key="opt.value"
+            :type="filterType === opt.value ? 'warning' : 'default'"
+            round size="small"
+            @click="filterType = opt.value; fetchItemList()"
+          >{{ opt.label }}</el-button>
         </div>
         <div class="filter-row">
-          <div 
-            v-for="opt in statusOpts" 
-            :key="opt" 
-            class="pill" 
-            :class="{ active: filters.status === opt }"
-            @click="filters.status = opt"
-          >
-            {{ opt }}
-          </div>
+          <el-button
+            v-for="opt in statusOptions"
+            :key="opt.value"
+            :type="filterStatus === opt.value ? 'warning' : 'default'"
+            round size="small"
+            @click="filterStatus = opt.value; fetchItemList()"
+          >{{ opt.label }}</el-button>
         </div>
         <div class="filter-row">
-          <div 
-            v-for="opt in timeOpts" 
-            :key="opt" 
-            class="pill" 
-            :class="{ active: filters.time === opt }"
-            @click="filters.time = opt"
-          >
-            {{ opt }}
-          </div>
+          <el-button
+            v-for="opt in timeOptions"
+            :key="opt.value"
+            :type="filterTime === opt.value ? 'warning' : 'default'"
+            round size="small"
+            @click="filterTime = opt.value; fetchItemList()"
+          >{{ opt.label }}</el-button>
         </div>
-      </div>
-      
-      <div class="illustration-box">
-        <img src="@/assets/login.png" alt="Box Illustration" />
       </div>
     </div>
 
-    <div class="card-grid">
-      <div v-for="i in 6" :key="i" class="item-card">
-        <div class="card-content">
-          <div class="info-row">
-            <span class="label">物品名称：</span>
-            <span class="val">校园卡</span>
-          </div>
-          <div class="info-row">
-            <span class="label">丢失时间：</span>
-            <span class="val">2027.1.19 下午三点</span>
-          </div>
-          <div class="info-row">
-            <span class="label">丢失地点：</span>
-            <span class="val">新教301</span>
-          </div>
-          
-          <div class="tags">
-            <span class="tag tag-blue">校区: 朝晖</span>
-            <span class="tag tag-orange">物品类型: 证件</span>
-            <span class="tag tag-yellow">悬赏: 10元</span>
-          </div>
-          
-          <div class="pub-time">2027.1.20 12:00发布</div>
+    <!-- 卡片列表 -->
+    <div class="card-grid" v-loading="loading">
+      <div
+        v-for="item in itemList"
+        :key="item.id ?? item.ID"
+        class="item-card"
+        :class="{ 'card-selected': batchMode && selectedIds.includes(item.id ?? item.ID) }"
+        @click="batchMode ? toggleSelect(item) : showItemDetail(item)"
+      >
+        <!-- 批量模式勾选框 -->
+        <div v-if="batchMode" class="card-checkbox" @click.stop>
+          <el-checkbox
+            :model-value="selectedIds.includes(item.id ?? item.ID)"
+            @change="toggleSelect(item)"
+          />
         </div>
 
-        <div class="card-imgs">
-          <div class="img-box"></div>
-          <div class="img-box"></div>
+        <div class="card-body">
+          <div class="card-info">
+            <p class="card-title">物品名称：{{ item.title || item.category || '--' }}</p>
+            <p>{{ item.lost_or_found === 1 ? '丢失' : '拾取' }}时间：{{ item.time || '--' }}</p>
+            <p>{{ item.lost_or_found === 1 ? '丢失' : '拾取' }}地点：{{ item.location || '--' }}</p>
+          </div>
+          <el-icon class="card-more" :size="20" color="#999"><MoreFilled /></el-icon>
         </div>
 
-        <div class="status-badge">已通过</div>
-        
-        <div class="more-options">...</div>
+        <div class="card-tags">
+          <div class="tag-item" v-if="item.campus">
+            <span class="tag-dot blue"></span>
+            <el-tag size="small" type="info" effect="plain" round>校区：{{ item.campus }}</el-tag>
+          </div>
+          <div class="tag-item" v-if="item.category">
+            <span class="tag-dot orange"></span>
+            <el-tag size="small" type="warning" effect="plain" round>物品类型：{{ item.category }}</el-tag>
+          </div>
+          <div class="tag-item" v-if="item.is_bounty">
+            <span class="tag-dot yellow"></span>
+            <el-tag size="small" type="warning" effect="plain" round>悬赏：10元</el-tag>
+          </div>
+        </div>
+
+        <div class="card-images">
+          <el-image
+            v-for="(img, idx) in [item.img1, item.img2].filter(Boolean)"
+            :key="idx"
+            :src="img"
+            fit="cover"
+            class="card-img"
+            @click.stop
+          />
+          <div v-if="![item.img1, item.img2].filter(Boolean).length" class="card-img-placeholder">
+            <el-icon :size="30" color="#ccc"><Picture /></el-icon>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <span class="card-date">{{ item.CreatedAt ? new Date(item.CreatedAt).toLocaleString('zh-CN') : '' }}发布</span>
+          <span class="card-status" :class="getStatusClass(item.status)">
+            {{ getStatusLabel(item.status) }}
+          </span>
+        </div>
+      </div>
+
+      <div v-if="!loading && itemList.length === 0" class="empty-state">
+        <el-empty description="暂无物品数据" />
       </div>
     </div>
+
+    <!-- 分页 -->
+    <div class="pagination-wrapper">
+      <el-pagination
+        v-model:current-page="currentPage"
+        :page-size="pageSize"
+        :total="total"
+        layout="prev, pager, next"
+        @current-change="fetchItemList"
+      />
+    </div>
+
+    <!-- 物品详情弹窗（支持编辑信息 + 改状态） -->
+    <el-dialog v-model="detailVisible" width="720px" :show-close="true" top="6vh" @closed="resetDetail">
+      <div class="item-detail" v-if="currentItem">
+        <!-- 模式切换 -->
+        <div class="detail-mode-bar">
+          <el-radio-group v-model="editMode" size="small">
+            <el-radio-button value="view">查看</el-radio-button>
+            <el-radio-button value="editInfo">编辑信息</el-radio-button>
+            <el-radio-button value="editStatus">更改状态</el-radio-button>
+          </el-radio-group>
+        </div>
+
+        <!-- 查看模式 -->
+        <div v-if="editMode === 'view'">
+          <div class="detail-top">
+            <div class="detail-info">
+              <p><strong>物品名称：</strong>{{ currentItem.title || currentItem.category }}</p>
+              <p><strong>{{ currentItem.lost_or_found === 1 ? '丢失' : '拾取' }}时间：</strong>{{ currentItem.time || '--' }}</p>
+              <p><strong>{{ currentItem.lost_or_found === 1 ? '丢失' : '拾取' }}地点：</strong>{{ currentItem.location || '--' }}</p>
+              <p><strong>联系方式：</strong>{{ currentItem.contact_phone || '--' }}</p>
+              <p><strong>联系人：</strong>{{ currentItem.contact_name || '--' }}</p>
+              <p><strong>物品特征：</strong>{{ currentItem.description || '--' }}</p>
+            </div>
+            <div class="detail-right-btns">
+              <el-button type="primary" @click="detailVisible = false">返回</el-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 编辑信息模式 -->
+        <div v-if="editMode === 'editInfo'">
+          <el-form :model="editForm" label-width="90px" class="edit-form">
+            <el-form-item label="物品名称">
+              <el-input v-model="editForm.title" />
+            </el-form-item>
+            <el-form-item label="校区">
+              <el-input v-model="editForm.campus" />
+            </el-form-item>
+            <el-form-item label="存放地点">
+              <el-input v-model="editForm.location" placeholder="更新物品当前存放地点" />
+            </el-form-item>
+            <el-form-item label="物品类型">
+              <el-input v-model="editForm.category" />
+            </el-form-item>
+            <el-form-item label="时间">
+              <el-input v-model="editForm.time" />
+            </el-form-item>
+            <el-form-item label="物品描述">
+              <el-input v-model="editForm.description" type="textarea" :rows="3" />
+            </el-form-item>
+            <el-form-item label="联系人">
+              <el-input v-model="editForm.contact_name" />
+            </el-form-item>
+            <el-form-item label="联系电话">
+              <el-input v-model="editForm.contact_phone" />
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" :loading="saveLoading" @click="handleSaveInfo">保存修改</el-button>
+              <el-button @click="editMode = 'view'">取消</el-button>
+            </el-form-item>
+          </el-form>
+        </div>
+
+        <!-- 更改状态模式 -->
+        <div v-if="editMode === 'editStatus'">
+          <div class="detail-top">
+            <div class="detail-info">
+              <p><strong>物品名称：</strong>{{ currentItem.title || currentItem.category }}</p>
+              <p><strong>当前状态：</strong>
+                <el-tag :type="getStatusTagType(currentItem.status)">{{ getStatusLabel(currentItem.status) }}</el-tag>
+              </p>
+            </div>
+          </div>
+
+          <div class="status-change-row">
+            <span class="status-label">更改为：</span>
+            <el-select v-model="editStatus" size="small" style="width: 140px;">
+              <el-option label="已归档" value="archived" />
+              <el-option label="已匹配" value="matched" />
+              <el-option label="已认领" value="claimed" />
+              <el-option label="无效（作废）" value="cancelled" />
+            </el-select>
+          </div>
+
+          <div class="handle-area">
+            <p class="handle-label">物品处理方式 / 备注</p>
+            <el-input
+              v-model="handleNote"
+              type="textarea"
+              :rows="3"
+              placeholder="请输入处理方式说明"
+            />
+          </div>
+
+          <div style="text-align: right; margin-top: 16px;">
+            <el-button type="primary" :loading="saveLoading" @click="handleSaveStatus">确认更改</el-button>
+            <el-button @click="editMode = 'view'">取消</el-button>
+          </div>
+        </div>
+
+        <!-- 公共部分：标签 + 图片（所有模式都展示） -->
+        <div class="detail-tags">
+          <div class="tag-item">
+            <span class="tag-dot blue"></span>
+            <el-tag type="warning" effect="plain" round>校区：{{ currentItem.campus || '--' }}</el-tag>
+          </div>
+          <div class="tag-item">
+            <span class="tag-dot orange"></span>
+            <el-tag type="warning" effect="plain" round>物品类型：{{ currentItem.category || '--' }}</el-tag>
+          </div>
+          <div class="tag-item" v-if="currentItem.is_bounty">
+            <span class="tag-dot yellow"></span>
+            <el-tag type="warning" effect="plain" round>悬赏：10元</el-tag>
+          </div>
+        </div>
+
+        <div class="detail-images">
+          <el-image
+            v-for="(img, idx) in [currentItem.img1, currentItem.img2, currentItem.img3, currentItem.img4].filter(Boolean)"
+            :key="idx"
+            :src="img"
+            fit="cover"
+            class="detail-img"
+            :preview-src-list="[currentItem.img1, currentItem.img2, currentItem.img3, currentItem.img4].filter(Boolean)"
+          />
+        </div>
+
+        <p class="detail-time">{{ currentItem.CreatedAt ? new Date(currentItem.CreatedAt).toLocaleString('zh-CN') : '' }}发布</p>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
-import { Search } from '@element-plus/icons-vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, Picture, MoreFilled } from '@element-plus/icons-vue'
+import { getAllItems, archiveItem, updateItem } from '@/api/admin'
 
-const search = ref('')
-const filters = reactive({
-  type: '全部帖子',
-  status: '全部状态',
-  time: '全部时间'
+const loading = ref(false)
+const saveLoading = ref(false)
+const itemList = ref<any[]>([])
+const currentPage = ref(1)
+const pageSize = ref(6)
+const total = ref(0)
+const searchKeyword = ref('')
+const batchMode = ref(false)
+const selectedIds = ref<number[]>([])
+
+const filterType = ref('')
+const filterStatus = ref('')
+const filterTime = ref('')
+
+const typeOptions = [
+  { label: '全部帖子', value: '' },
+  { label: '失物帖', value: '1' },
+  { label: '捡到帖', value: '2' },
+]
+const statusOptions = [
+  { label: '全部状态', value: '' },
+  { label: '已通过', value: 'approved' },
+  { label: '已匹配', value: 'matched' },
+  { label: '已认领', value: 'claimed' },
+]
+const timeOptions = [
+  { label: '全部时间', value: '' },
+  { label: '0~3', value: '0-3' },
+  { label: '3~7', value: '3-7' },
+  { label: '7~15', value: '7-15' },
+  { label: '15~30', value: '15-30' },
+  { label: '>30', value: '30+' },
+]
+
+const detailVisible = ref(false)
+const currentItem = ref<any>(null)
+const editMode = ref<'view' | 'editInfo' | 'editStatus'>('view')
+const editStatus = ref('archived')
+const handleNote = ref('')
+
+// 编辑信息表单
+const editForm = reactive({
+  title: '',
+  campus: '',
+  location: '',
+  category: '',
+  time: '',
+  description: '',
+  contact_name: '',
+  contact_phone: '',
 })
 
-const typeOpts = ['全部帖子', '失物帖', '捡到帖']
-const statusOpts = ['全部状态', '已通过', '已匹配', '已认领']
-const timeOpts = ['全部时间', '0~3', '3~7', '7~15', '15~30', '>30']
+// ==================== 批量管理 ====================
+
+const selectAll = computed({
+  get: () => itemList.value.length > 0 && selectedIds.value.length === itemList.value.length,
+  set: () => {}
+})
+
+const isIndeterminate = computed(() => {
+  return selectedIds.value.length > 0 && selectedIds.value.length < itemList.value.length
+})
+
+function toggleBatchMode() {
+  batchMode.value = !batchMode.value
+  selectedIds.value = []
+}
+
+function handleSelectAll(val: boolean) {
+  if (val) {
+    selectedIds.value = itemList.value.map(item => item.id ?? item.ID)
+  } else {
+    selectedIds.value = []
+  }
+}
+
+function toggleSelect(item: any) {
+  const id = item.id ?? item.ID
+  const idx = selectedIds.value.indexOf(id)
+  if (idx === -1) {
+    selectedIds.value.push(id)
+  } else {
+    selectedIds.value.splice(idx, 1)
+  }
+}
+
+const batchLoading = ref(false)
+
+async function handleBatchArchive() {
+  if (batchLoading.value) return
+  try {
+    await ElMessageBox.confirm(
+      `确定要归档选中的 ${selectedIds.value.length} 条帖子吗？`,
+      '批量归档',
+      { type: 'warning' }
+    )
+    batchLoading.value = true
+    loading.value = true
+    let success = 0
+    let fail = 0
+    for (const id of selectedIds.value) {
+      try {
+        await archiveItem(id, { process_method: '批量归档' })
+        success++
+      } catch {
+        fail++
+      }
+    }
+    ElMessage.success(`归档完成：成功 ${success} 条${fail > 0 ? `，失败 ${fail} 条` : ''}`)
+    selectedIds.value = []
+    batchMode.value = false
+    fetchItemList()
+  } catch {
+    // 用户取消
+  } finally {
+    batchLoading.value = false
+    loading.value = false
+  }
+}
+
+async function handleBatchCancel() {
+  if (batchLoading.value) return
+  try {
+    await ElMessageBox.confirm(
+      `确定要作废选中的 ${selectedIds.value.length} 条帖子吗？`,
+      '批量作废',
+      { type: 'warning' }
+    )
+    batchLoading.value = true
+    loading.value = true
+    let success = 0
+    let fail = 0
+    for (const id of selectedIds.value) {
+      try {
+        await updateItem(id, { status: 'cancelled' })
+        success++
+      } catch {
+        fail++
+      }
+    }
+    ElMessage.success(`作废完成：成功 ${success} 条${fail > 0 ? `，失败 ${fail} 条` : ''}`)
+    selectedIds.value = []
+    batchMode.value = false
+    fetchItemList()
+  } catch {
+    // 用户取消
+  } finally {
+    batchLoading.value = false
+    loading.value = false
+  }
+}
+
+// ==================== 原有功能 ====================
+
+function getStatusLabel(status: string) {
+  const map: Record<string, string> = {
+    pending: '待审核', approved: '已通过', matched: '已匹配',
+    claimed: '已认领', rejected: '已驳回', cancelled: '无效', archived: '已归档'
+  }
+  return map[status] || status
+}
+
+function getStatusClass(status: string) {
+  if (status === 'approved') return 'status-pass'
+  if (status === 'matched') return 'status-match'
+  if (status === 'claimed') return 'status-claim'
+  return 'status-default'
+}
+
+function getStatusTagType(status: string) {
+  const map: Record<string, string> = {
+    approved: 'success', matched: '', claimed: 'success',
+    rejected: 'danger', cancelled: 'info', archived: 'info', pending: 'warning'
+  }
+  return map[status] || 'info'
+}
+
+async function fetchItemList() {
+  loading.value = true
+  try {
+    const params: any = {
+      page: currentPage.value,
+      pageSize: pageSize.value,
+    }
+    if (filterType.value) params.lost_or_found = filterType.value
+    if (filterStatus.value) {
+      params.status = filterStatus.value
+    } else {
+      params.status = 'approved,matched,claimed,archived,cancelled'
+    }
+    if (searchKeyword.value) params.keyword = searchKeyword.value
+    if (filterTime.value) params.time_range = filterTime.value
+
+    const res = await getAllItems(params)
+    const resData = res.data?.data ?? res.data ?? {}
+    itemList.value = (resData.list ?? resData.items ?? []).map((item: any) => ({
+      ...item,
+      id: item.id ?? item.ID,
+    }))
+    total.value = resData.total ?? 0
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : '获取物品列表失败'
+    ElMessage.error(errMsg)
+    itemList.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+function handleSearch() {
+  currentPage.value = 1
+  fetchItemList()
+}
+
+function showItemDetail(item: any) {
+  currentItem.value = { ...item }
+  editMode.value = 'view'
+  editStatus.value = item.status || 'archived'
+  handleNote.value = ''
+  // 填充编辑表单
+  editForm.title = item.title || ''
+  editForm.campus = item.campus || ''
+  editForm.location = item.location || ''
+  editForm.category = item.category || ''
+  editForm.time = item.time || ''
+  editForm.description = item.description || ''
+  editForm.contact_name = item.contact_name || ''
+  editForm.contact_phone = item.contact_phone || ''
+  detailVisible.value = true
+}
+
+/** 保存编辑的物品信息（存放地点、联系方式等） */
+async function handleSaveInfo() {
+  if (saveLoading.value) return
+  try {
+    await ElMessageBox.confirm('确定要保存修改的信息吗？', '确认', { type: 'warning' })
+    saveLoading.value = true
+    const id = currentItem.value.id ?? currentItem.value.ID
+
+    // 只传被修改过的字段
+    const data: Record<string, string> = {}
+    if (editForm.title !== (currentItem.value.title || '')) data.title = editForm.title
+    if (editForm.campus !== (currentItem.value.campus || '')) data.campus = editForm.campus
+    if (editForm.location !== (currentItem.value.location || '')) data.location = editForm.location
+    if (editForm.category !== (currentItem.value.category || '')) data.category = editForm.category
+    if (editForm.time !== (currentItem.value.time || '')) data.time = editForm.time
+    if (editForm.description !== (currentItem.value.description || '')) data.description = editForm.description
+    if (editForm.contact_name !== (currentItem.value.contact_name || '')) data.contact_name = editForm.contact_name
+    if (editForm.contact_phone !== (currentItem.value.contact_phone || '')) data.contact_phone = editForm.contact_phone
+
+    if (Object.keys(data).length === 0) {
+      ElMessage.info('没有修改任何内容')
+      return
+    }
+
+    await updateItem(id, data)
+    ElMessage.success('信息更新成功')
+    detailVisible.value = false
+    fetchItemList()
+  } catch (error: unknown) {
+    if (error === 'cancel' || error === 'close') return
+    const errMsg = error instanceof Error ? error.message : '更新失败'
+    ElMessage.error(errMsg)
+  } finally {
+    saveLoading.value = false
+  }
+}
+
+/** 保存状态更改（归档/匹配/认领/作废） */
+async function handleSaveStatus() {
+  if (saveLoading.value) return
+  try {
+    const id = currentItem.value.id ?? currentItem.value.ID
+    const statusLabel = editStatus.value === 'archived' ? '归档' :
+                        editStatus.value === 'matched' ? '标记为已匹配' :
+                        editStatus.value === 'claimed' ? '标记为已认领' : '标记为无效'
+
+    await ElMessageBox.confirm(
+      `确定要将该帖子${statusLabel}吗？`,
+      '确认操作',
+      { type: 'warning' }
+    )
+
+    saveLoading.value = true
+    if (editStatus.value === 'archived') {
+      await archiveItem(id, { process_method: handleNote.value || '管理员归档' })
+    } else {
+      await updateItem(id, { status: editStatus.value, process_method: handleNote.value })
+    }
+    ElMessage.success('状态更新成功')
+    detailVisible.value = false
+    fetchItemList()
+  } catch (error: unknown) {
+    if (error === 'cancel' || error === 'close') return
+    const errMsg = error instanceof Error ? error.message : '更新失败'
+    ElMessage.error(errMsg)
+  } finally {
+    saveLoading.value = false
+  }
+}
+
+function resetDetail() {
+  currentItem.value = null
+  editMode.value = 'view'
+  editStatus.value = 'archived'
+  handleNote.value = ''
+}
+
+onMounted(() => {
+  fetchItemList()
+})
 </script>
 
 <style scoped>
-.item-mgmt {
-  padding: 10px;
-}
+.item-page { padding: 0; }
 
-/* 顶部搜索 */
-.top-bar {
+.search-bar { display: flex; justify-content: center; gap: 12px; margin-bottom: 20px; }
+.search-input { width: 400px; }
+
+/* 批量操作栏 */
+.batch-bar {
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 15px;
-  margin-bottom: 25px;
+  gap: 16px;
+  padding: 12px 16px;
+  background: #fef0c7;
+  border-radius: 8px;
+  margin-bottom: 16px;
 }
-
-.search-wrapper {
-  position: relative;
-  width: 400px;
-}
-
-.search-icon {
-  position: absolute;
-  left: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #999;
-  font-size: 18px;
-}
-
-.clean-input {
-  width: 100%;
-  padding: 10px 10px 10px 40px;
-  border: 1px solid #ddd;
-  border-radius: 20px;
-  outline: none;
+.batch-count {
   font-size: 14px;
-}
-
-.batch-btn {
-  background: white;
-  border: 1px solid #ddd;
-  padding: 8px 20px;
-  border-radius: 20px;
-  color: #333;
-  cursor: pointer;
-}
-
-/* 筛选区 */
-.filter-section {
-  display: flex;
-  justify-content: space-between;
-  background-color: #FFFDF9; /* 米色背景 */
-  padding: 20px;
-  border-radius: 10px;
-  margin-bottom: 20px;
-}
-
-.filters {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.filter-row {
-  display: flex;
-  gap: 15px;
-}
-
-.pill {
-  background: white;
-  padding: 5px 20px;
-  border-radius: 15px;
-  font-size: 13px;
   color: #666;
-  cursor: pointer;
-  border: 1px solid #eee;
-  transition: all 0.2s;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  margin-right: auto;
 }
 
-.pill.active {
-  background-color: #ffac6c;
-  color: white;
-  border-color: #ffac6c;
-}
+.filter-area { display: flex; justify-content: space-between; margin-bottom: 20px; }
+.filter-groups { flex: 1; }
+.filter-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
 
-.illustration-box img {
-  width: 200px;
-  object-fit: contain;
-}
-
-/* 卡片网格 */
-.card-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-}
+.card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 
 .item-card {
-  background: white;
-  border: 1px solid #FFD6A8; /* 橙色边框 */
-  border-radius: 8px;
-  padding: 15px;
-  display: flex;
+  background: #fff;
+  border: 2px solid #f5d4a0;
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
   position: relative;
 }
-
-.card-content {
-  flex: 1;
+.item-card:hover { box-shadow: 0 4px 16px rgba(230, 162, 60, 0.2); }
+.item-card.card-selected {
+  border-color: #e6a23c;
+  background: #fef9f0;
+  box-shadow: 0 0 0 2px rgba(230, 162, 60, 0.3);
 }
 
-.info-row {
-  font-size: 13px;
-  margin-bottom: 5px;
-  color: #333;
-}
-
-.label {
-  color: #666;
-}
-
-.val {
-  font-weight: 500;
-}
-
-.tags {
-  display: flex;
-  gap: 5px;
-  margin: 10px 0;
-  flex-wrap: wrap;
-}
-
-.tag {
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.tag-blue { background: #e0f2fe; color: #0ea5e9; }
-.tag-orange { background: #ffedd5; color: #f97316; }
-.tag-yellow { background: #fef9c3; color: #eab308; }
-
-.pub-time {
-  font-size: 10px;
-  color: #aaa;
-  margin-top: 15px;
-}
-
-.card-imgs {
-  display: flex;
-  gap: 5px;
-  margin-left: 10px;
-}
-
-.img-box {
-  width: 70px;
-  height: 70px;
-  background-color: #f0f0f0;
-  border-radius: 4px;
-}
-
-.status-badge {
+.card-checkbox {
   position: absolute;
-  right: 15px;
-  bottom: 15px;
-  color: #f56c6c; /* 红色字体 */
-  font-size: 12px;
-}
-
-.more-options {
-  position: absolute;
-  right: 15px;
   top: 10px;
-  color: #ffac6c;
-  cursor: pointer;
-  font-weight: bold;
+  right: 10px;
+  z-index: 2;
 }
+
+.card-body { display: flex; justify-content: space-between; align-items: flex-start; }
+.card-info p { margin: 4px 0; font-size: 14px; color: #333; }
+.card-title { font-weight: bold; }
+
+.card-tags { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+.tag-item { display: flex; align-items: center; gap: 4px; }
+.tag-dot { width: 8px; height: 8px; border-radius: 50%; }
+.tag-dot.blue { background: #409eff; }
+.tag-dot.orange { background: #e6a23c; }
+.tag-dot.yellow { background: #f5c242; }
+
+.card-images { display: flex; gap: 8px; }
+.card-img { width: 120px; height: 90px; border-radius: 6px; background: #f5f5f5; }
+.card-img-placeholder { width: 120px; height: 90px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; border-radius: 6px; }
+
+.card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+.card-date { font-size: 12px; color: #999; }
+.card-status { font-size: 13px; font-weight: bold; }
+.status-pass { color: #e6a23c; }
+.status-match { color: #409eff; }
+.status-claim { color: #67c23a; }
+.status-default { color: #999; }
+
+.empty-state { grid-column: 1 / -1; padding: 60px 0; }
+.pagination-wrapper { display: flex; justify-content: center; margin-top: 24px; }
+
+/* ===== 弹窗详情 ===== */
+.item-detail { padding: 0 8px; }
+.detail-mode-bar { margin-bottom: 20px; }
+.detail-top { display: flex; justify-content: space-between; }
+.detail-info p { margin: 8px 0; font-size: 15px; color: #333; }
+.detail-right-btns { display: flex; flex-direction: column; gap: 10px; }
+.detail-tags { display: flex; gap: 16px; margin: 16px 0; flex-wrap: wrap; }
+.detail-images { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 16px 0; }
+.detail-img { width: 100%; height: 200px; border-radius: 8px; background: #f5f5f5; }
+
+.status-change-row { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
+.status-label { background: #fef0c7; padding: 4px 12px; border-radius: 4px; font-size: 14px; color: #333; }
+
+.handle-area { margin: 16px 0; }
+.handle-label { font-size: 14px; color: #666; margin-bottom: 8px; }
+.detail-time { text-align: center; color: #999; font-size: 13px; margin-top: 12px; }
+
+/* 编辑表单 */
+.edit-form { margin-top: 8px; }
 </style>

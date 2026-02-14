@@ -1,91 +1,610 @@
 <template>
-  <div class="dashboard">
-    <h2 class="page-title">数据总览</h2>
-    
-    <div class="stats-grid">
-      <div class="stat-card orange">
-        <div class="label">发布总量</div>
-        <div class="value">10,086</div>
-        <div class="trend">↑ 较上周 +12%</div>
+  <div class="dashboard-page" v-loading="loading">
+    <!-- 顶部三张统计卡 -->
+    <div class="stat-cards">
+      <div class="stat-card">
+        <div class="stat-card-body">
+          <div>
+            <p class="stat-label">发布总量</p>
+            <p class="stat-number">{{ formatNum(stats.total_items) }}</p>
+          </div>
+          <div class="stat-icon green">
+            <el-icon :size="28"><CirclePlus /></el-icon>
+          </div>
+        </div>
+        <p class="stat-sub green-text">
+          丢失帖 {{ formatNum(stats.lost_items) }} · 拾取帖 {{ formatNum(stats.found_items) }}
+        </p>
       </div>
-      <div class="stat-card green">
-        <div class="label">匹配成功数</div>
-        <div class="value">1,086</div>
-        <div class="trend">● 成功率 10.7%</div>
+
+      <div class="stat-card">
+        <div class="stat-card-body">
+          <div>
+            <p class="stat-label">匹配成功数</p>
+            <p class="stat-number">{{ formatNum(stats.matched_items) }}</p>
+          </div>
+          <div class="stat-icon yellow">
+            <el-icon :size="28"><Connection /></el-icon>
+          </div>
+        </div>
+        <p class="stat-sub green-text">✅ 成功率 {{ safePercent(stats.matched_items, stats.total_items) }}%</p>
       </div>
-      <div class="stat-card yellow">
-        <div class="label">待审核</div>
-        <div class="value">245</div>
-        <div class="trend">需尽快处理</div>
+
+      <div class="stat-card">
+        <div class="stat-card-body">
+          <div>
+            <p class="stat-label">认领成功数</p>
+            <p class="stat-number">{{ formatNum(stats.claimed_items) }}</p>
+          </div>
+          <div class="stat-icon orange">
+            <el-icon :size="28"><CircleCheck /></el-icon>
+          </div>
+        </div>
+        <p class="stat-sub green-text">✔ 认领率 {{ safePercent(stats.claimed_items, stats.total_items) }}%</p>
       </div>
     </div>
 
-    <div class="chart-section">
-      <div class="chart-card">
-        <h3>物品类型分布</h3>
-        <div class="bar-group">
-          <div class="bar-item">
-            <span class="bar-label">电子产品</span>
-            <div class="bar-track"><div class="bar-fill" style="width: 40%"></div></div>
-            <span class="bar-num">40%</span>
+    <!-- 状态分布卡片 -->
+    <div class="stat-cards">
+      <div class="stat-card small">
+        <div class="stat-card-body">
+          <div>
+            <p class="stat-label">待审核</p>
+            <p class="stat-number warn">{{ formatNum(stats.pending_items) }}</p>
           </div>
-          <div class="bar-item">
-            <span class="bar-label">证件类</span>
-            <div class="bar-track"><div class="bar-fill" style="width: 30%"></div></div>
-            <span class="bar-num">30%</span>
-          </div>
-          <div class="bar-item">
-            <span class="bar-label">书籍/文具</span>
-            <div class="bar-track"><div class="bar-fill" style="width: 20%"></div></div>
-            <span class="bar-num">20%</span>
+          <div class="stat-icon red">
+            <el-icon :size="24"><Warning /></el-icon>
           </div>
         </div>
       </div>
-      
-      <div class="chart-card">
-        <h3>丢失地点排行</h3>
-        <ul class="rank-list">
-          <li><span class="rank">1</span> 屏峰校区 - 图书馆</li>
-          <li><span class="rank">2</span> 朝晖校区 - 食堂</li>
-          <li><span class="rank">3</span> 莫干山校区 - 教学楼</li>
-        </ul>
+      <div class="stat-card small">
+        <div class="stat-card-body">
+          <div>
+            <p class="stat-label">已通过</p>
+            <p class="stat-number">{{ formatNum(stats.approved_items) }}</p>
+          </div>
+          <div class="stat-icon green">
+            <el-icon :size="24"><Select /></el-icon>
+          </div>
+        </div>
       </div>
+      <div class="stat-card small">
+        <div class="stat-card-body">
+          <div>
+            <p class="stat-label">已驳回</p>
+            <p class="stat-number">{{ formatNum(stats.rejected_items) }}</p>
+          </div>
+          <div class="stat-icon red">
+            <el-icon :size="24"><CloseBold /></el-icon>
+          </div>
+        </div>
+      </div>
+      <div class="stat-card small">
+        <div class="stat-card-body">
+          <div>
+            <p class="stat-label">已归档</p>
+            <p class="stat-number">{{ formatNum(stats.archived_items) }}</p>
+          </div>
+          <div class="stat-icon grey">
+            <el-icon :size="24"><FolderChecked /></el-icon>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 三列排行卡片 -->
+    <div class="rank-cards">
+      <div class="rank-card">
+        <h3><el-icon color="#f56c6c"><Location /></el-icon> 最多丢失/拾取地点</h3>
+        <div class="rank-list">
+          <div class="rank-item" v-for="(item, idx) in topLocations" :key="idx">
+            <span class="rank-index" :class="'top' + (idx + 1)">{{ idx + 1 }}</span>
+            <span class="rank-name">{{ item.name }}</span>
+            <el-progress
+              :percentage="item.count / (topLocations[0]?.count || 1) * 100"
+              :show-text="false"
+              :stroke-width="8"
+              color="#e6a23c"
+              style="flex: 1; margin: 0 12px;"
+            />
+            <span class="rank-num">{{ formatNum(item.count) }}</span>
+          </div>
+          <el-empty v-if="topLocations.length === 0" description="暂无数据" :image-size="60" />
+        </div>
+      </div>
+
+      <div class="rank-card">
+        <h3><el-icon color="#e6a23c"><OfficeBuilding /></el-icon> 校区分布</h3>
+        <div class="rank-list">
+          <div class="rank-item" v-for="(item, idx) in topCampuses" :key="idx">
+            <span class="rank-index" :class="'top' + (idx + 1)">{{ idx + 1 }}</span>
+            <span class="rank-name">{{ item.name }}</span>
+            <el-progress
+              :percentage="item.count / (topCampuses[0]?.count || 1) * 100"
+              :show-text="false"
+              :stroke-width="8"
+              color="#409eff"
+              style="flex: 1; margin: 0 12px;"
+            />
+            <span class="rank-num">{{ formatNum(item.count) }}</span>
+          </div>
+          <el-empty v-if="topCampuses.length === 0" description="暂无数据" :image-size="60" />
+        </div>
+      </div>
+
+      <div class="rank-card">
+        <h3><el-icon color="#67c23a"><PriceTag /></el-icon> 物品类型分布</h3>
+        <div class="rank-list">
+          <div class="rank-item" v-for="(item, idx) in topCategories" :key="idx">
+            <span class="rank-index" :class="'top' + (idx + 1)">{{ idx + 1 }}</span>
+            <span class="rank-name">{{ item.name }}</span>
+            <el-progress
+              :percentage="item.count / (topCategories[0]?.count || 1) * 100"
+              :show-text="false"
+              :stroke-width="8"
+              color="#67c23a"
+              style="flex: 1; margin: 0 12px;"
+            />
+            <span class="rank-num">{{ formatNum(item.count) }}</span>
+          </div>
+          <el-empty v-if="topCategories.length === 0" description="暂无数据" :image-size="60" />
+        </div>
+      </div>
+    </div>
+
+    <!-- 详细统计表格 -->
+    <div class="detail-table-card">
+      <div class="table-header">
+        <h3><el-icon color="#409eff"><Memo /></el-icon> 详细统计信息</h3>
+        <div class="manage-btns">
+          <el-button type="warning" :loading="exportLoading" @click="handleExport">
+            <el-icon><Download /></el-icon> 导出报表
+          </el-button>
+          <el-button plain @click="refreshData">
+            <el-icon><Refresh /></el-icon> 刷新数据
+          </el-button>
+        </div>
+      </div>
+      <el-table :data="detailStats" :header-cell-style="{ background: '#fdf6ec' }" style="width: 100%">
+        <el-table-column prop="name" label="统计项目" min-width="200" />
+        <el-table-column prop="count" label="数量" width="120" align="center">
+          <template #default="{ row }">
+            <span style="font-weight: bold; color: #e6a23c;">{{ formatNum(row.count) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="percent" label="占比" width="150" align="center">
+          <template #default="{ row }">
+            <el-progress
+              :percentage="parseFloat(row.percent)"
+              :stroke-width="14"
+              :text-inside="true"
+              color="#e6a23c"
+              style="width: 100px; display: inline-flex;"
+            />
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+
+    <!-- 最近7天趋势 -->
+    <div class="trend-card">
+      <h3><el-icon color="#409eff"><TrendCharts /></el-icon> 最近7天发布趋势</h3>
+      <div class="trend-chart">
+        <div class="trend-bar-group" v-for="(day, idx) in trendData" :key="idx">
+          <div class="trend-bar-wrapper">
+            <div
+              class="trend-bar lost"
+              :style="{ height: (day.lost / maxTrend * 120) + 'px' }"
+            >
+              <span class="bar-num" v-if="day.lost">{{ day.lost }}</span>
+            </div>
+            <div
+              class="trend-bar found"
+              :style="{ height: (day.found / maxTrend * 120) + 'px' }"
+            >
+              <span class="bar-num" v-if="day.found">{{ day.found }}</span>
+            </div>
+          </div>
+          <span class="trend-label">{{ day.label }}</span>
+        </div>
+      </div>
+      <div class="trend-legend">
+        <span class="legend-item"><span class="legend-dot lost"></span>丢失帖</span>
+        <span class="legend-item"><span class="legend-dot found"></span>拾取帖</span>
+      </div>
+    </div>
+
+    <!-- 底部 -->
+    <div class="dashboard-footer">
+      数据更新时间：{{ lastUpdateTime }} · © 失物招领系统 · 数据统计中心
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-// 这是一个纯展示页面，暂时不需要逻辑
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import {
+  CirclePlus, Connection, CircleCheck, Location, OfficeBuilding,
+  PriceTag, Download, Refresh, Memo, Warning, Select,
+  CloseBold, FolderChecked, TrendCharts
+} from '@element-plus/icons-vue'
+import { getDashboardStats, getAllItems, exportStatsCSV } from '@/api/admin'
+
+const loading = ref(false)
+const exportLoading = ref(false)
+const lastUpdateTime = ref('')
+
+// ==================== 统计数据（来自 /api/v1/admin/stats 接口） ====================
+const stats = ref({
+  total_items: 0,
+  lost_items: 0,
+  found_items: 0,
+  pending_items: 0,
+  approved_items: 0,
+  matched_items: 0,
+  claimed_items: 0,
+  rejected_items: 0,
+  archived_items: 0,
+})
+
+// ==================== 排行榜数据（前端从物品列表计算） ====================
+const topLocations = ref<{ name: string; count: number }[]>([])
+const topCampuses = ref<{ name: string; count: number }[]>([])
+const topCategories = ref<{ name: string; count: number }[]>([])
+
+// ==================== 趋势数据（前端从物品列表计算） ====================
+const trendData = ref<{ label: string; lost: number; found: number }[]>([])
+
+const maxTrend = computed(() => {
+  let max = 1
+  trendData.value.forEach(d => {
+    if (d.lost > max) max = d.lost
+    if (d.found > max) max = d.found
+  })
+  return max
+})
+
+// ==================== 详细统计（从 stats 接口数据生成表格） ====================
+const detailStats = computed(() => {
+  const total = stats.value.total_items || 1
+  return [
+    { name: '丢失帖', count: stats.value.lost_items, percent: (stats.value.lost_items / total * 100).toFixed(1) },
+    { name: '拾取帖', count: stats.value.found_items, percent: (stats.value.found_items / total * 100).toFixed(1) },
+    { name: '待审核', count: stats.value.pending_items, percent: (stats.value.pending_items / total * 100).toFixed(1) },
+    { name: '已通过', count: stats.value.approved_items, percent: (stats.value.approved_items / total * 100).toFixed(1) },
+    { name: '已匹配', count: stats.value.matched_items, percent: (stats.value.matched_items / total * 100).toFixed(1) },
+    { name: '已认领', count: stats.value.claimed_items, percent: (stats.value.claimed_items / total * 100).toFixed(1) },
+    { name: '已驳回', count: stats.value.rejected_items, percent: (stats.value.rejected_items / total * 100).toFixed(1) },
+    { name: '已归档', count: stats.value.archived_items, percent: (stats.value.archived_items / total * 100).toFixed(1) },
+  ]
+})
+
+// ==================== 工具函数 ====================
+function formatNum(n: number) {
+  if (!n) return '0'
+  return n.toLocaleString()
+}
+
+function safePercent(part: number, total: number): string {
+  if (!total || total === 0) return '0.0'
+  return Math.min(100, (part / total) * 100).toFixed(1)
+}
+
+/** 统计数组中某个字段的 top N */
+function countTop(items: any[], field: string, topN = 5): { name: string; count: number }[] {
+  const map: Record<string, number> = {}
+  items.forEach(item => {
+    const val = (item[field] || '').toString().trim()
+    if (val) {
+      map[val] = (map[val] || 0) + 1
+    }
+  })
+  return Object.entries(map)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, topN)
+}
+
+/** 统计最近7天趋势 */
+function calcTrend(items: any[]): { label: string; lost: number; found: number }[] {
+  const result: { label: string; lost: number; found: number }[] = []
+  const now = new Date()
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(now)
+    date.setDate(date.getDate() - i)
+    const dateStr = `${date.getMonth() + 1}/${date.getDate()}`
+    const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+    const dayEnd = dayStart + 86400000
+
+    let lost = 0
+    let found = 0
+    items.forEach(item => {
+      const t = new Date(item.CreatedAt || item.created_at).getTime()
+      if (t >= dayStart && t < dayEnd) {
+        if (item.lost_or_found === 1) lost++
+        else found++
+      }
+    })
+    result.push({ label: dateStr, lost, found })
+  }
+  return result
+}
+
+// ==================== 数据获取 ====================
+
+/** 获取统计接口数据 */
+async function fetchStats() {
+  try {
+    const res = await getDashboardStats()
+    const d = res.data?.data ?? res.data ?? {}
+    stats.value = {
+      total_items: d.total ?? d.total_items ?? 0,
+      lost_items: d.lost ?? d.lost_items ?? 0,
+      found_items: d.found ?? d.found_items ?? 0,
+      pending_items: d.pending ?? d.pending_items ?? 0,
+      approved_items: d.approved ?? d.approved_items ?? 0,
+      matched_items: d.matched ?? d.matched_items ?? 0,
+      claimed_items: d.claimed ?? d.claimed_items ?? 0,
+      rejected_items: d.rejected ?? d.rejected_items ?? 0,
+      archived_items: d.archived ?? d.archived_items ?? 0,
+    }
+    return true
+  } catch {
+    console.warn('[Dashboard] 统计接口未通，将从物品列表兜底计算')
+    return false
+  }
+}
+
+/** 获取物品列表 → 计算排行榜 + 趋势（如果统计接口失败也兜底算统计） */
+async function fetchItemsForCharts(needStatsFallback: boolean) {
+  try {
+    const res = await getAllItems({ page: 1, pageSize: 9999 })
+    const resData = res.data?.data ?? res.data ?? {}
+    const allItems: any[] = resData.list ?? resData.items ?? []
+
+    // 如果统计接口没返回数据，前端兜底自己算
+    if (needStatsFallback) {
+      const total = allItems.length
+      stats.value = {
+        total_items: total,
+        lost_items: allItems.filter(i => i.lost_or_found === 1).length,
+        found_items: allItems.filter(i => i.lost_or_found !== 1).length,
+        pending_items: allItems.filter(i => i.status === 'pending').length,
+        approved_items: allItems.filter(i => i.status === 'approved').length,
+        matched_items: allItems.filter(i => i.status === 'matched').length,
+        claimed_items: allItems.filter(i => i.status === 'claimed').length,
+        rejected_items: allItems.filter(i => i.status === 'rejected').length,
+        archived_items: allItems.filter(i => i.status === 'archived').length,
+      }
+    }
+
+    // 排行榜（前端计算，接口没有这个数据）
+    topLocations.value = countTop(allItems, 'location', 5)
+    topCampuses.value = countTop(allItems, 'campus', 5)
+    topCategories.value = countTop(allItems, 'category', 5)
+
+    // 趋势图（前端计算，接口没有这个数据）
+    trendData.value = calcTrend(allItems)
+  } catch {
+    console.warn('[Dashboard] 物品列表获取失败')
+  }
+}
+
+/** 主入口：并行调用统计接口 + 物品列表 */
+async function fetchDashboard() {
+  loading.value = true
+  try {
+    // 第一步：调统计接口
+    const statsOk = await fetchStats()
+
+    // 第二步：调物品列表（排行榜+趋势必须从列表算，如果统计接口失败也兜底算统计）
+    await fetchItemsForCharts(!statsOk)
+
+    lastUpdateTime.value = new Date().toLocaleString('zh-CN')
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : '获取数据失败'
+    ElMessage.error(errMsg)
+  } finally {
+    loading.value = false
+  }
+}
+
+/** 导出统计报表（CSV） */
+async function handleExport() {
+  if (exportLoading.value) return
+  exportLoading.value = true
+  try {
+    const res = await exportStatsCSV()
+    const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `统计报表_${new Date().toLocaleDateString('zh-CN')}.csv`
+    link.click()
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch {
+    ElMessage.error('导出失败')
+  } finally {
+    exportLoading.value = false
+  }
+}
+
+/** 刷新数据 */
+function refreshData() {
+  fetchDashboard()
+}
+
+onMounted(() => {
+  fetchDashboard()
+})
 </script>
 
 <style scoped>
-.dashboard { padding: 10px; }
-.page-title { font-size: 20px; font-weight: bold; margin-bottom: 20px; }
+.dashboard-page { padding: 0; }
 
-.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
-.stat-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); color: white; }
-.stat-card.orange { background: linear-gradient(135deg, #FF9E5E, #f97316); }
-.stat-card.green { background: linear-gradient(135deg, #81C784, #4CAF50); }
-.stat-card.yellow { background: linear-gradient(135deg, #FFD54F, #FFC107); }
+/* ===== 统计卡片 ===== */
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.stat-cards:has(.small) {
+  grid-template-columns: repeat(4, 1fr);
+}
+.stat-card {
+  background: #fff;
+  border: 2px solid #f5d4a0;
+  border-radius: 12px;
+  padding: 20px 24px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(230, 162, 60, 0.15);
+}
+.stat-card.small { padding: 16px 20px; }
+.stat-card-body { display: flex; justify-content: space-between; align-items: center; }
+.stat-label { font-size: 14px; color: #999; margin: 0 0 8px 0; }
+.stat-number { font-size: 36px; font-weight: bold; color: #333; margin: 0; }
+.stat-number.warn { color: #e6a23c; }
+.stat-card.small .stat-number { font-size: 28px; }
 
-.label { font-size: 14px; opacity: 0.9; margin-bottom: 5px; }
-.value { font-size: 32px; font-weight: bold; margin-bottom: 10px; }
-.trend { font-size: 12px; opacity: 0.8; }
+.stat-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+.stat-icon.green { background: #e8f5e9; color: #4caf50; }
+.stat-icon.yellow { background: #fff8e1; color: #ff9800; }
+.stat-icon.orange { background: #fff3e0; color: #e6a23c; }
+.stat-icon.red { background: #fde8e8; color: #f56c6c; }
+.stat-icon.grey { background: #f0f0f0; color: #909399; }
 
-.chart-section { display: flex; gap: 20px; }
-.chart-card { flex: 1; background: white; padding: 20px; border-radius: 12px; border: 1px solid #eee; }
-.chart-card h3 { font-size: 16px; margin-bottom: 20px; border-left: 4px solid #f97316; padding-left: 10px; }
+.stat-sub { margin: 8px 0 0 0; font-size: 13px; }
+.green-text { color: #67c23a; }
 
-.bar-item { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
-.bar-label { width: 70px; font-size: 13px; color: #666; }
-.bar-track { flex: 1; height: 10px; background: #f0f0f0; border-radius: 5px; overflow: hidden; }
-.bar-fill { height: 100%; background: #FF9E5E; border-radius: 5px; }
-.bar-num { width: 40px; font-size: 12px; color: #999; }
+/* ===== 排行卡片 ===== */
+.rank-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.rank-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.rank-card h3 {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 16px; color: #333; margin: 0 0 16px 0;
+}
+.rank-list { display: flex; flex-direction: column; gap: 14px; }
+.rank-item { display: flex; align-items: center; font-size: 14px; color: #333; }
+.rank-index {
+  width: 22px; height: 22px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: bold; color: #999;
+  background: #f5f5f5; margin-right: 10px; flex-shrink: 0;
+}
+.rank-index.top1 { background: #fef0c7; color: #e6a23c; }
+.rank-index.top2 { background: #e8f5e9; color: #67c23a; }
+.rank-index.top3 { background: #e6f1fc; color: #409eff; }
+.rank-name { width: 80px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-num { font-weight: bold; color: #e6a23c; min-width: 40px; text-align: right; }
 
-.rank-list { list-style: none; padding: 0; }
-.rank-list li { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f9f9f9; font-size: 14px; color: #555; }
-.rank { display: inline-block; width: 24px; height: 24px; background: #f5f5f5; color: #999; text-align: center; line-height: 24px; border-radius: 50%; margin-right: 15px; font-weight: bold; font-size: 12px; }
-.rank-list li:nth-child(1) .rank { background: #FFE4BA; color: #f97316; }
-.rank-list li:nth-child(2) .rank { background: #E0E0E0; color: #666; }
-.rank-list li:nth-child(3) .rank { background: #EAD6C6; color: #8D6E63; }
+/* ===== 详细统计表格 ===== */
+.detail-table-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.table-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 16px;
+}
+.table-header h3 {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 16px; color: #333; margin: 0;
+}
+.manage-btns { display: flex; gap: 12px; }
+
+/* ===== 趋势图 ===== */
+.trend-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.trend-card h3 {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 16px; color: #333; margin: 0 0 20px 0;
+}
+.trend-chart {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  height: 160px;
+  padding: 0 20px;
+}
+.trend-bar-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.trend-bar-wrapper {
+  display: flex;
+  gap: 4px;
+  align-items: flex-end;
+  height: 130px;
+}
+.trend-bar {
+  width: 28px;
+  border-radius: 4px 4px 0 0;
+  min-height: 4px;
+  position: relative;
+  transition: height 0.5s ease;
+}
+.trend-bar.lost { background: linear-gradient(180deg, #e6a23c, #f5d4a0); }
+.trend-bar.found { background: linear-gradient(180deg, #409eff, #a0cfff); }
+.bar-num {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: #666;
+  white-space: nowrap;
+}
+.trend-label { font-size: 12px; color: #999; }
+.trend-legend {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 12px;
+}
+.legend-item {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; color: #666;
+}
+.legend-dot {
+  width: 12px; height: 12px; border-radius: 3px;
+}
+.legend-dot.lost { background: #e6a23c; }
+.legend-dot.found { background: #409eff; }
+
+/* ===== 底部 ===== */
+.dashboard-footer {
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+  padding: 24px 0;
+}
 </style>

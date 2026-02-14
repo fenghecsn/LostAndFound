@@ -1,320 +1,383 @@
 <template>
   <div class="audit-page">
+    <!-- 页头 -->
     <div class="page-header">
-      <div class="header-left">
-        <h2 class="title">内容审核台</h2>
-        <span class="subtitle">待处理事项</span>
-      </div>
-      <div class="header-right">
-        <el-button 
-          type="primary" 
-          color="#f97316" 
-          style="color:white; margin-right: 15px;"
-          @click="$router.push('/admin/audit-history')"
-        >
-          查看审核记录
-        </el-button>
-
-        <el-input 
-          v-model="queryParams.keyword" 
-          placeholder="搜索物品 / 用户 / 手机号" 
-          class="search-input"
-          :prefix-icon="Search"
-          clearable
-          @keyup.enter="fetchData"
-        />
-      </div>
+      <h2 class="page-title">发布审核</h2>
+      <el-button type="warning" size="large" round @click="router.push('/admin/audit-history')">
+        审核记录
+      </el-button>
     </div>
-    
-    <div class="list-container" v-loading="loading">
-      <div v-if="itemList.length === 0" class="empty-state">
-        <img src="https://via.placeholder.com/200x150?text=All+Clear" alt="Empty" class="empty-img" />
-        <p>太棒了！所有内容都已审核完毕 ~</p>
-      </div>
 
-      <div v-for="item in itemList" :key="item.id" class="audit-card">
-        <div class="card-media">
-          <el-image 
-            v-if="item.images && item.images.length"
-            :src="item.images[0]" 
-            fit="cover" 
-            class="main-img"
-            :preview-src-list="item.images"
-            preview-teleported
+    <!-- 表格 -->
+    <div class="table-wrapper">
+      <el-table
+        :data="auditList"
+        v-loading="loading"
+        stripe
+        :header-cell-style="{ background: '#fdf6ec', color: '#333', fontWeight: 'bold' }"
+        style="width: 100%"
+      >
+        <el-table-column label="索引" width="70" align="center">
+          <template #default="{ $index }">
+            {{ (currentPage - 1) * pageSize + $index + 1 }}
+          </template>
+        </el-table-column>
+        <el-table-column label="发帖类型" width="100" align="center">
+          <template #default="{ row }">
+            {{ row.lost_or_found === 1 ? '丢失帖' : '拾取帖' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="物品名称" width="100" align="center">
+          <template #default="{ row }">
+            {{ row.category || row.title || '--' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="图片" width="100" align="center">
+          <template #default="{ row }">
+            <el-image
+              v-if="row.img1"
+              :src="row.img1"
+              fit="cover"
+              style="width: 60px; height: 60px; border-radius: 4px;"
+              :preview-src-list="[row.img1, row.img2, row.img3, row.img4].filter(Boolean)"
+            />
+            <div v-else class="img-placeholder">
+              <el-icon :size="30" color="#ccc"><Picture /></el-icon>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="拾取/丢失时间" width="160" align="center">
+          <template #default="{ row }">{{ row.time || '--' }}</template>
+        </el-table-column>
+        <el-table-column label="拾取/丢失地点" width="120" align="center">
+          <template #default="{ row }">{{ row.location || '--' }}</template>
+        </el-table-column>
+        <el-table-column label="拾取/丢失物品描述" min-width="180">
+          <template #default="{ row }">
+            <span class="desc-text">{{ row.description || '--' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="260" align="center" fixed="right">
+          <template #default="{ row }">
+            <div class="action-btns">
+              <el-button type="warning" round size="small" @click="showDetail(row)">详情</el-button>
+              <el-button type="warning" round size="small" plain @click="openReject(row)">驳回</el-button>
+              <el-button type="warning" round size="small" @click="handleApprove(row)">通过</el-button>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+
+    <!-- 分页 -->
+    <div class="pagination-wrapper">
+      <el-pagination
+        v-model:current-page="currentPage"
+        :page-size="pageSize"
+        :total="total"
+        layout="prev, pager, next"
+        @current-change="fetchPendingList"
+      />
+    </div>
+
+    <!-- 详情弹窗 -->
+    <el-dialog v-model="detailVisible" width="700px" :show-close="true" top="8vh">
+      <div class="detail-dialog" v-if="currentItem">
+        <div class="detail-header">
+          <div class="detail-info">
+            <p><strong>物品名称：</strong>{{ currentItem.title || currentItem.category }}</p>
+            <p><strong>{{ currentItem.lost_or_found === 1 ? '丢失' : '拾取' }}时间：</strong>{{ currentItem.time || '--' }}</p>
+            <p><strong>{{ currentItem.lost_or_found === 1 ? '丢失' : '拾取' }}地点：</strong>{{ currentItem.location || '--' }}</p>
+            <p><strong>联系方式：</strong>你没有权限知道</p>
+            <p><strong>联系人：</strong>你没有权限知道</p>
+            <p><strong>物品特征：</strong>{{ currentItem.description || '--' }}</p>
+          </div>
+          <div class="detail-actions">
+            <el-button type="primary" @click="openReject(currentItem)">驳回</el-button>
+            <el-button type="primary" @click="handleApprove(currentItem)">通过</el-button>
+            <el-button type="primary" @click="detailVisible = false">返回</el-button>
+          </div>
+        </div>
+
+        <!-- 标签 -->
+        <div class="detail-tags">
+          <div class="tag-item">
+            <span class="tag-dot blue"></span>
+            <el-tag type="warning" effect="plain" round>校区：{{ currentItem.campus || '--' }}</el-tag>
+          </div>
+          <div class="tag-item">
+            <span class="tag-dot orange"></span>
+            <el-tag type="warning" effect="plain" round>物品类型：{{ currentItem.category || '--' }}</el-tag>
+          </div>
+          <div class="tag-item" v-if="currentItem.is_bounty">
+            <span class="tag-dot yellow"></span>
+            <el-tag type="warning" effect="plain" round>悬赏：10元</el-tag>
+          </div>
+        </div>
+
+        <!-- 图片 -->
+        <div class="detail-images">
+          <el-image
+            v-for="(img, idx) in [currentItem.img1, currentItem.img2, currentItem.img3, currentItem.img4].filter(Boolean)"
+            :key="idx"
+            :src="img"
+            fit="cover"
+            class="detail-img"
+            :preview-src-list="[currentItem.img1, currentItem.img2, currentItem.img3, currentItem.img4].filter(Boolean)"
           />
-          <div v-else class="no-img">
-            <el-icon :size="32" color="#e0e0e0"><Picture /></el-icon>
-            <span>无图</span>
-          </div>
-          <div v-if="item.images && item.images.length > 1" class="img-badge">+{{ item.images.length }}</div>
+          <div v-if="![currentItem.img1, currentItem.img2, currentItem.img3, currentItem.img4].filter(Boolean).length" class="no-img">暂无图片</div>
         </div>
 
-        <div class="card-content">
-          <div class="content-head">
-            <el-tag :type="item.type === 1 ? 'warning' : 'success'" effect="dark" class="type-tag">
-              {{ item.type === 1 ? '失物' : '招领' }}
-            </el-tag>
-            <h3 class="item-name">{{ item.name }}</h3>
-            <span class="publish-time">{{ item.create_time }} 提交</span>
-          </div>
-
-          <div class="content-body">
-            <p class="desc-text">{{ item.content }}</p>
-          </div>
-
-          <div class="content-foot">
-            <div class="meta-row">
-              <span class="meta-item"><el-icon><Location /></el-icon> {{ item.location }}</span>
-              <span class="meta-item"><el-icon><Timer /></el-icon> {{ item.event_time }}</span>
-            </div>
-            <div class="meta-row secondary">
-              <span class="meta-item"><el-icon><User /></el-icon> {{ item.username }}</span>
-              <span class="meta-item"><el-icon><Phone /></el-icon> {{ item.contact }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="card-actions">
-          <el-button class="action-btn pass" circle size="large" @click="handlePass(item)">
-            <el-icon><Check /></el-icon>
-          </el-button>
-          <span class="btn-label pass">通过</span>
-          
-          <div class="spacer"></div>
-          
-          <el-button class="action-btn reject" circle size="large" @click="openReject(item)">
-            <el-icon><Close /></el-icon>
-          </el-button>
-          <span class="btn-label reject">驳回</span>
-        </div>
+        <p class="detail-time">{{ currentItem.CreatedAt ? new Date(currentItem.CreatedAt).toLocaleString('zh-CN') : '' }}发布</p>
       </div>
-    </div>
+    </el-dialog>
 
-    <el-dialog v-model="rejectDialogVisible" title="请选择驳回原因" width="450px" align-center destroy-on-close>
-      <div class="dialog-body">
-        <p class="dialog-tip">选择标签或输入原因，将反馈给用户修改：</p>
-        <div class="tags-cloud">
-          <el-tag 
-            v-for="tag in rejectTags" 
-            :key="tag" 
-            class="choice-tag"
-            :effect="rejectReason === tag ? 'dark' : 'plain'"
-            size="large"
-            @click="rejectReason = tag"
-          >
-            {{ tag }}
-          </el-tag>
-        </div>
-        <el-input
-          v-model="rejectReason"
-          type="textarea"
-          :rows="3"
-          placeholder="手动输入详细原因..."
-          resize="none"
-        />
-      </div>
+    <!-- 驳回弹窗 -->
+    <el-dialog v-model="rejectVisible" title="填写驳回原因" width="450px" top="20vh">
+      <el-input
+        v-model="rejectReason"
+        type="textarea"
+        :rows="4"
+        placeholder="请输入文字"
+        maxlength="200"
+        show-word-limit
+      />
       <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="rejectDialogVisible = false">取消</el-button>
-          <el-button type="primary" color="#FF9E5E" style="color: white;" @click="confirmReject">确认驳回</el-button>
-        </span>
+        <el-button @click="rejectVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleReject">确认驳回</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { Search, Check, Close, Picture, Location, User, Timer, Phone } from '@element-plus/icons-vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import request from '@/utils/request' 
+import { Picture } from '@element-plus/icons-vue'
+import { getPendingItems, approveItem, rejectItem } from '@/api/admin'
+import { useAuditHistoryStore } from '@/stores/auditHistory'
 
-// --- 接口与类型定义 ---
-interface AuditItem {
-  id: number
-  type: number 
-  name: string
-  content: string
-  images: string[]
-  location: string
-  event_time: string
-  username: string
-  contact: string
-  status: number 
-  create_time: string
-}
-
+const router = useRouter()
+const auditHistoryStore = useAuditHistoryStore()
 const loading = ref(false)
-const itemList = ref<AuditItem[]>([])
+const auditList = ref<any[]>([])
+const currentPage = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
 
-// 筛选状态 (只查待审核 status=0)
-const queryParams = reactive({
-  page: 1,
-  size: 20,
-  status: 0, 
-  keyword: ''
-})
-
-// 驳回相关
-const rejectDialogVisible = ref(false)
+const detailVisible = ref(false)
+const currentItem = ref<any>(null)
+const rejectVisible = ref(false)
 const rejectReason = ref('')
-const currentActionItem = ref<AuditItem | null>(null)
-const rejectTags = ['图片模糊', '包含违规内容', '非本校物品', '联系方式缺失', '重复发布', '描述不符']
+const rejectingItem = ref<any>(null)
 
-// --- 方法 ---
-
-// 1. 获取数据
-const fetchData = async () => {
+async function fetchPendingList() {
   loading.value = true
   try {
-    const res = await request.get('/api/admin/items', { params: queryParams })
-    if (res.data && res.data.data) {
-       itemList.value = res.data.data.list
-    } else {
-       throw new Error('No Data')
-    }
-  } catch (e) {
-    console.warn('API未通，启用前端Mock数据')
-    // 只显示 status 为 0 的数据
-    itemList.value = mockData.filter(i => i.status === 0)
+    const res = await getPendingItems({
+      page: currentPage.value,
+      pageSize: pageSize.value
+    })
+    const resData = res.data?.data ?? res.data ?? {}
+    const list = resData.list ?? resData.items ?? []
+    auditList.value = list.map((item: any) => ({
+      ...item,
+      id: item.id ?? item.ID,
+    }))
+    total.value = resData.total ?? 0
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : '获取待审核列表失败'
+    ElMessage.error(errMsg)
+    auditList.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }
 }
 
-// 2. 通过审核
-const handlePass = (item: AuditItem) => {
-  ElMessageBox.confirm(`确认通过 "${item.name}" 的发布申请吗？`, '通过确认', {
-    confirmButtonText: '确认通过',
-    cancelButtonText: '取消',
-    type: 'success',
-    icon: Check
-  }).then(async () => {
-    ElMessage.success('操作成功：已发布')
-    // 移除当前项
-    itemList.value = itemList.value.filter(i => i.id !== item.id)
-    // 这里可以调用后端 API 更新状态
-  })
+function showDetail(row: any) {
+  currentItem.value = row
+  detailVisible.value = true
 }
 
-// 3. 打开驳回弹窗
-const openReject = (item: AuditItem) => {
-  currentActionItem.value = item
+function openReject(row: any) {
+  rejectingItem.value = row
   rejectReason.value = ''
-  rejectDialogVisible.value = true
+  rejectVisible.value = true
 }
 
-// 4. 确认驳回
-const confirmReject = async () => {
-  if (!rejectReason.value) return ElMessage.warning('请选择或输入驳回原因')
-  ElMessage.info('操作成功：已驳回')
-  rejectDialogVisible.value = false
-  if (currentActionItem.value) {
-    itemList.value = itemList.value.filter(i => i.id !== currentActionItem.value!.id)
-    // 这里调用后端 API
+async function handleApprove(row: any) {
+  try {
+    await ElMessageBox.confirm('确定通过该帖子的审核？', '确认')
+    await approveItem(row.id ?? row.ID)
+    auditHistoryStore.addRecord(row, 'approved', undefined, 'item')
+    ElMessage.success('审核通过')
+    detailVisible.value = false
+    fetchPendingList()
+  } catch (error: unknown) {
+    if (error === 'cancel' || error === 'close') return
+    const errMsg = error instanceof Error ? error.message : '审核失败'
+    ElMessage.error(errMsg)
   }
 }
 
-// --- Mock 数据 (只保留待审核的) ---
-const mockData: AuditItem[] = [
-  { id: 101, type: 1, name: '黑色折叠伞', content: '在图书馆三楼A区座位捡到的，伞柄上有个皮卡丘贴纸。', images: ['https://via.placeholder.com/150/FF9E5E/FFFFFF?text=Umbrella'], location: '图书馆', event_time: '2026-02-11', username: '陈同学', contact: '13812345678', status: 0, create_time: '10:00' },
-  { id: 102, type: 2, name: '校园卡 (张三)', content: '二食堂门口捡到的，已经交给食堂阿姨了。', images: [], location: '二食堂', event_time: '2026-02-10', username: '王同学', contact: 'QQ:9876543', status: 0, create_time: '09:30' },
-]
+async function handleReject() {
+  if (!rejectReason.value.trim()) {
+    ElMessage.warning('请填写驳回原因')
+    return
+  }
+  try {
+    const id = rejectingItem.value.id ?? rejectingItem.value.ID
+    await rejectItem(id, { reject_reason: rejectReason.value })
+    auditHistoryStore.addRecord(rejectingItem.value, 'rejected', rejectReason.value, 'item')
+    ElMessage.success('已驳回')
+    rejectVisible.value = false
+    rejectReason.value = ''
+    detailVisible.value = false
+    fetchPendingList()
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : '驳回失败'
+    ElMessage.error(errMsg)
+  }
+}
 
-onMounted(() => fetchData())
+onMounted(() => {
+  fetchPendingList()
+})
 </script>
 
 <style scoped>
-/* 全局容器 */
-.audit-page { padding: 10px; }
+.audit-page {
+  padding: 0;
+}
 
-/* 顶部样式 */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 25px;
-}
-.title { font-size: 22px; font-weight: bold; color: #333; margin: 0; }
-.subtitle { font-size: 14px; color: #aaa; margin-left: 8px; font-weight: normal; }
-.search-input { width: 320px; }
-:deep(.el-input__wrapper) {
-  border-radius: 20px;
-  box-shadow: 0 0 0 1px #FFD6A8 inset !important;
+  margin-bottom: 20px;
 }
 
-/* 列表卡片 */
-.audit-card {
-  display: flex;
-  background: white;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
-  border: 1px solid #FFD6A8;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-  transition: transform 0.2s ease;
+.page-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+  margin: 0;
 }
-.audit-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(255, 133, 52, 0.1); }
 
-/* 左侧图片 */
-.card-media {
-  position: relative;
-  width: 140px;
-  height: 140px;
+.table-wrapper {
+  background: #fff;
   border-radius: 8px;
   overflow: hidden;
-  margin-right: 20px;
-  flex-shrink: 0;
-  border: 1px solid #f5f5f5;
 }
-.main-img { width: 100%; height: 100%; }
-.no-img { width: 100%; height: 100%; background: #f9f9f9; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ccc; font-size: 12px; gap: 5px; }
-.img-badge { position: absolute; right: 0; bottom: 0; background: rgba(0,0,0,0.6); color: white; padding: 2px 6px; font-size: 12px; border-top-left-radius: 6px; }
 
-/* 中间内容 */
-.card-content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.content-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.item-name { margin: 0; font-size: 18px; font-weight: bold; color: #333; }
-.type-tag { border-radius: 6px; padding: 0 10px; }
-.publish-time { margin-left: auto; color: #999; font-size: 12px; }
-
-.content-body { flex: 1; margin-bottom: 12px; }
-.desc-text { color: #555; font-size: 14px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-
-.content-foot { display: flex; flex-direction: column; gap: 6px; }
-.meta-row { display: flex; gap: 20px; font-size: 13px; color: #666; align-items: center; }
-.secondary { color: #999; font-size: 12px; }
-.meta-item { display: flex; align-items: center; gap: 4px; }
-
-/* 右侧按钮区 */
-.card-actions { 
-  width: 100px; 
-  display: flex; 
-  flex-direction: column; 
-  align-items: center; 
+.img-placeholder {
+  width: 60px;
+  height: 60px;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  border-left: 1px solid #f0f0f0; 
-  margin-left: 15px;
-  padding-left: 15px;
+  border-radius: 4px;
+  margin: 0 auto;
 }
-.action-btn { width: 48px; height: 48px; font-size: 20px; margin-left: 0 !important; transition: all 0.2s; }
-.action-btn.pass { background: #f0f9eb; border-color: #e1f3d8; color: #67c23a; }
-.action-btn.pass:hover { background: #67c23a; color: white; transform: scale(1.1); }
-.action-btn.reject { background: #fef0f0; border-color: #fde2e2; color: #f56c6c; }
-.action-btn.reject:hover { background: #f56c6c; color: white; transform: scale(1.1); }
 
-.spacer { height: 15px; }
-.btn-label { font-size: 12px; margin-top: 4px; }
-.btn-label.pass { color: #67c23a; }
-.btn-label.reject { color: #f56c6c; }
+.desc-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13px;
+  color: #666;
+}
 
-/* 弹窗样式 */
-.dialog-tip { margin-bottom: 15px; color: #666; }
-.tags-cloud { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
-.choice-tag { cursor: pointer; border-color: #FFD6A8; color: #666; transition: all 0.2s; }
-.choice-tag:hover { color: #FF9E5E; background-color: #fdf6ec; border-color: #FF9E5E; }
+.action-btns {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
 
-/* 空状态 */
-.empty-state { text-align: center; padding: 60px 0; color: #999; }
-.empty-img { width: 120px; opacity: 0.5; margin-bottom: 15px; }
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+/* 详情弹窗 */
+.detail-dialog {
+  padding: 0 8px;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.detail-info p {
+  margin: 8px 0;
+  font-size: 15px;
+  color: #333;
+}
+
+.detail-info p strong {
+  color: #333;
+}
+
+.detail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detail-tags {
+  display: flex;
+  gap: 16px;
+  margin: 16px 0;
+  flex-wrap: wrap;
+}
+
+.tag-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tag-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.tag-dot.blue { background: #409eff; }
+.tag-dot.orange { background: #e6a23c; }
+.tag-dot.yellow { background: #f5c242; }
+
+.detail-images {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.detail-img {
+  width: 100%;
+  height: 200px;
+  border-radius: 8px;
+  background: #f5f5f5;
+}
+
+.no-img {
+  color: #999;
+  text-align: center;
+  padding: 40px;
+  grid-column: 1 / -1;
+}
+
+.detail-time {
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+  margin-top: 12px;
+}
 </style>
