@@ -20,8 +20,8 @@ const close = () => {
   emit('update:modelValue', false)
 }
 
-const isLostPost = computed(() => props.item?.type === 1)
-const isMatchedPost = computed(() => props.item?.status === 2)
+const isLostPost = computed(() => props.item?.type === 1 || props.item?.type === 'lost')
+const isMatchedPost = computed(() => props.item?.status === 2 || props.item?.status === 'matched')
 
 const timeLabel = computed(() => isLostPost.value ? '丢失时间' : '拾取时间')
 const locationLabel = computed(() => isLostPost.value ? '丢失地点' : '拾取地点')
@@ -29,10 +29,12 @@ const actionLabel = computed(() => isLostPost.value ? '我捡到了' : '是我�
 
 const imageList = computed(() => {
   const sources = props.item?.images?.filter(Boolean) ?? []
+  const legacyImages = [props.item?.img1, props.item?.img2, props.item?.img3, props.item?.img4].filter((value): value is string => Boolean(value))
+  sources.push(...legacyImages)
   if (props.item?.cover_image) {
     sources.unshift(props.item.cover_image)
   }
-  return sources.slice(0, 4)
+  return [...new Set(sources)].slice(0, 4)
 })
 
 const handleAction = () => {
@@ -50,10 +52,10 @@ const handleAction = () => {
         <div class="content-top">
           <div class="info-lines">
             <div class="line"><span class="label">物品名称：</span><span>{{ item.name || '未知' }}</span></div>
-            <div class="line"><span class="label">{{ timeLabel }}：</span><span>{{ item.event_time || '未知' }}</span></div>
+            <div class="line"><span class="label">{{ timeLabel }}：</span><span>{{ item.event_time || item.time || '未知' }}</span></div>
             <div class="line"><span class="label">{{ locationLabel }}：</span><span>{{ item.location || '未知' }}</span></div>
-            <div class="line"><span class="label">联系方式：</span><span>{{ item.contact_method || '你没有权限知道' }}</span></div>
-            <div class="line"><span class="label">联系人：</span><span>{{ item.contact_person || '你没有权限知道' }}</span></div>
+            <div class="line"><span class="label">联系方式：</span><span>{{ '你没有权限知道' }}</span></div>
+            <div class="line"><span class="label">联系人：</span><span>{{'你没有权限知道' }}</span></div>
             <div class="line"><span class="label">物品特征：</span><span class="feature">{{ item.description || '暂无描述' }}</span></div>
           </div>
           <button
@@ -98,7 +100,7 @@ const handleAction = () => {
         </div>
 
         <div class="dialog-footer">
-          <span class="date">{{ item.create_time || '' }}</span>
+          <span class="date">{{ item.create_time || item.CreatedAt || '' }}</span>
           <span v-if="isMatchedPost" class="matched-status">已匹配</span>
         </div>
       </div>

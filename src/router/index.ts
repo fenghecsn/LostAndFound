@@ -31,14 +31,17 @@ const router = createRouter({
           component: () => import('../views/Profile.vue'),
         },
         {
-          path: 'publish-lost',
-          name: 'PublishLost',
-          component: () => import('../views/Publish/Publish_lost.vue'),
+          path: 'publish',
+          name: 'Publish',
+          component: () => import('../views/Publish/Publish.vue'),
         },
         {
           path: 'publish-found',
-          name: 'PublishFound',
-          component: () => import('../views/Publish/Publish_found.vue'),
+          redirect: '/StudentHome/publish?type=found',
+        },
+        {
+          path: 'publish-lost',
+          redirect: '/StudentHome/publish?type=lost',
         },
         {
           path: 'message',

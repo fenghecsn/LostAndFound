@@ -156,12 +156,10 @@ onBeforeUnmount(() => {
 
 const handlePublish = (type: 'found' | 'lost') => {
   showDropdown.value = false
-  // 跳转到对应的发布页面，或弹窗等
-  if (type === 'found') {
-    router.push('/StudentHome/publish-found')
-  } else {
-    router.push('/StudentHome/publish-lost')
-  }
+  router.push({
+    path: '/StudentHome/publish',
+    query: { type }
+  })
 }
 
 const handleLogout = () => {
