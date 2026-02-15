@@ -62,3 +62,13 @@ export const updateMyItemApi = (id: number, data: UpdateMyItemPayload) => {
 		data
 	})
 }
+
+export const deleteMyItemApi = (id: number) => {
+	return request<PublishItemResponse>({
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		url: `/api/v1/items/${id}`,
+		method: 'delete'
+	})
+}

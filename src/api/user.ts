@@ -69,6 +69,54 @@ export interface GetMyItemsResponse {
     total: number
   }
 }
+
+export interface MyClaimsParams {
+  page_num?: number
+  page_size?: number
+}
+
+export interface MyClaimUser {
+  ID?: number
+  username?: string
+  role?: number
+  name?: string
+  nickname?: string
+  phone?: string
+  is_active?: boolean
+  first_login?: boolean
+}
+
+export interface MyClaimItem {
+  ID?: number
+  CreatedAt?: string
+  UpdatedAt?: string
+  DeletedAt?: string | null
+  item_id?: number
+  item?: MyItem & {
+    reviewer_id?: number | null
+    reject_reason?: string
+    process_method?: string
+  }
+  claimant_id?: number
+  claimant?: MyClaimUser
+  status?: string
+  proof?: string
+}
+
+export interface GetMyClaimsResponse {
+  code: number
+  msg: string
+  data: {
+    list: MyClaimItem[]
+    total: number
+  }
+}
+
+export interface GetMyClaimDetailResponse {
+  code: number
+  msg: string
+  data: MyClaimItem
+}
 // 登录接口
 export const loginApi = (params: LoginParams) => {
   return request ({
@@ -111,5 +159,26 @@ export const getMyItemsApi = (params: MyItemsParams) => {
     url: '/api/v1/my/items?apifoxApiId=418131351',
     method: 'get',
     params
+  })
+}
+// 获取我的认领列表接口
+export const getMyClaimsApi = (params: MyClaimsParams) => {
+  return request<GetMyClaimsResponse>({
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    url: '/api/v1/my/claims?apifoxApiId=418131342',
+    method: 'get',
+    params
+  })
+}
+// 获取我的认领详情接口
+export const getMyClaimDetailApi = (id: number) => {
+  return request<GetMyClaimDetailResponse>({
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    url: `/api/v1/claims/${id}`,
+    method: 'get'
   })
 }

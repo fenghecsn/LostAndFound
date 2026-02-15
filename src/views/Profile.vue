@@ -28,8 +28,8 @@
 			</div>
 
 			<div class="toolbar-actions">
-				<el-button type="warning" class="manage-btn" @click="scrollToPublish">管理我发布的帖子</el-button>
-				<el-button type="warning" class="manage-btn" @click="handleManageClaim">管理我申请的认领</el-button>
+				<el-button type="warning" class="manage-btn" @click="openManagePublishedDialog">管理我发布的帖子</el-button>
+				<el-button type="warning" class="manage-btn" @click="openManageClaimsDialog">管理我申请的认领</el-button>
 			</div>
 
 			<div class="status-tabs">
@@ -165,6 +165,151 @@
 				</div>
 			</template>
 		</el-dialog>
+
+		<el-dialog v-model="managePublishedVisible" width="92%" top="6vh" destroy-on-close class="manage-dialog" align-center>
+			<template #header>
+				<div class="manage-title">管理我发布的帖子</div>
+			</template>
+			<el-table :data="managePublishedList" v-loading="managePublishedLoading" class="manage-table" border>
+				<el-table-column label="#" width="56" align="center">
+					<template #default="scope">{{ publishRowNo(scope.$index) }}</template>
+				</el-table-column>
+				<el-table-column prop="title" label="物品名称" min-width="110" />
+				<el-table-column prop="createdAt" label="发布时间" min-width="170" />
+				<el-table-column label="图片" min-width="160">
+					<template #default="scope">
+						<div class="table-images" v-if="scope.row.images.length">
+							<el-image v-for="(img, idx) in scope.row.images.slice(0, 2)" :key="`${img}-${idx}`" :src="img" fit="cover" class="table-img" />
+						</div>
+						<span v-else>无</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="statusLabel" label="帖子状态" min-width="100" />
+				<el-table-column prop="typeLabel" label="帖子类型" min-width="96" />
+				<el-table-column prop="claimStatusLabel" label="招领状态" min-width="100" />
+				<el-table-column label="操作" min-width="180" fixed="right">
+					<template #default="scope">
+						<div class="table-actions">
+							<ConfirmButton
+								v-if="scope.row.canDelete"
+								class="table-confirm-btn"
+								label="删除"
+								title="确认删除"
+								message="确定删除这条发布记录吗？删除后不可恢复。"
+								confirm-text="确认删除"
+								cancel-text="取消"
+								@confirm="handleDeletePublished(scope.row)"
+							/>
+							<el-button v-else size="small" round disabled>删除</el-button>
+							<el-button size="small" round class="detail-btn" @click="openPublishedDetail(scope.row)">详情</el-button>
+						</div>
+					</template>
+				</el-table-column>
+			</el-table>
+			<div class="dialog-pager">
+				<el-pagination
+					layout="prev, pager, next"
+					:total="managePublishedTotal"
+					:page-size="managePublishedPageSize"
+					:current-page="managePublishedPageNum"
+					@current-change="handleManagePublishedPageChange"
+				/>
+			</div>
+		</el-dialog>
+
+		<el-dialog v-model="manageClaimsVisible" width="92%" top="6vh" destroy-on-close class="manage-dialog" align-center>
+			<template #header>
+				<div class="manage-title">管理我申请的认领</div>
+			</template>
+			<el-table :data="manageClaimsList" v-loading="manageClaimsLoading" class="manage-table" border>
+				<el-table-column label="#" width="56" align="center">
+					<template #default="scope">{{ claimRowNo(scope.$index) }}</template>
+				</el-table-column>
+				<el-table-column prop="title" label="物品名称" min-width="110" />
+				<el-table-column prop="createdAt" label="发布时间" min-width="170" />
+				<el-table-column label="图片" min-width="160">
+					<template #default="scope">
+						<div class="table-images" v-if="scope.row.images.length">
+							<el-image v-for="(img, idx) in scope.row.images.slice(0, 2)" :key="`${img}-${idx}`" :src="img" fit="cover" class="table-img" />
+						</div>
+						<span v-else>无</span>
+					</template>
+				</el-table-column>
+				<el-table-column prop="claimStatusLabel" label="认领进度" min-width="100" />
+				<el-table-column prop="typeLabel" label="帖子类型" min-width="96" />
+				<el-table-column label="原因" min-width="120">
+					<template #default="scope">
+						<span :class="{ 'reason-link': scope.row.reasonText !== '/' }">{{ scope.row.reasonText }}</span>
+					</template>
+				</el-table-column>
+				<el-table-column label="操作" min-width="240" fixed="right">
+					<template #default="scope">
+						<div class="table-actions">
+							<el-button size="small" round type="warning" :disabled="!scope.row.canModify">修改</el-button>
+							<el-button size="small" round :disabled="!scope.row.canDelete">删除</el-button>
+							<el-button size="small" round type="warning" :disabled="!scope.row.canTalk">沟通</el-button>
+							<el-button size="small" round class="detail-btn" @click="openClaimDetail(scope.row)">详情</el-button>
+						</div>
+					</template>
+				</el-table-column>
+			</el-table>
+			<div class="dialog-pager">
+				<el-pagination
+					layout="prev, pager, next"
+					:total="manageClaimsTotal"
+					:page-size="manageClaimsPageSize"
+					:current-page="manageClaimsPageNum"
+					@current-change="handleManageClaimsPageChange"
+				/>
+			</div>
+		</el-dialog>
+
+		<el-dialog v-model="claimDetailVisible" title="认领详情" width="760px" destroy-on-close>
+			<div v-loading="claimDetailLoading" class="claim-detail-wrap">
+				<el-empty v-if="!claimDetailData" description="暂无认领详情" />
+				<template v-else>
+					<el-descriptions :column="2" border>
+						<el-descriptions-item label="认领ID">{{ claimDetailData.ID || '-' }}</el-descriptions-item>
+						<el-descriptions-item label="认领状态">{{ normalizeClaimStatus(claimDetailData.status) }}</el-descriptions-item>
+						<el-descriptions-item label="物品名称">{{ claimDetailData.item?.title || '-' }}</el-descriptions-item>
+						<el-descriptions-item label="帖子类型">{{ resolveTypeLabel(claimDetailData.item?.type) === '丢失' ? '失丢贴' : '拾取贴' }}</el-descriptions-item>
+						<el-descriptions-item label="校区">{{ claimDetailData.item?.campus || '-' }}</el-descriptions-item>
+						<el-descriptions-item label="物品类别">{{ claimDetailData.item?.category || '-' }}</el-descriptions-item>
+						<el-descriptions-item label="地点">{{ claimDetailData.item?.location || '-' }}</el-descriptions-item>
+						<el-descriptions-item label="时间">{{ claimDetailData.item?.time || '-' }}</el-descriptions-item>
+						<el-descriptions-item label="申请人">{{ claimDetailData.claimant?.name || claimDetailData.claimant?.nickname || claimDetailData.claimant?.username || '-' }}</el-descriptions-item>
+						<el-descriptions-item label="申请人电话">{{ claimDetailData.claimant?.phone || '-' }}</el-descriptions-item>
+						<el-descriptions-item label="发布者">{{ claimDetailData.item?.publisher?.name || claimDetailData.item?.publisher?.nickname || claimDetailData.item?.publisher?.Username || '-' }}</el-descriptions-item>
+						<el-descriptions-item label="发布时间">{{ formatTime(claimDetailData.item?.CreatedAt) || '-' }}</el-descriptions-item>
+						<el-descriptions-item label="认领创建时间">{{ formatTime(claimDetailData.CreatedAt) || '-' }}</el-descriptions-item>
+						<el-descriptions-item label="认领更新时间">{{ formatTime(claimDetailData.UpdatedAt) || '-' }}</el-descriptions-item>
+					</el-descriptions>
+
+					<div class="claim-detail-block">
+						<div class="claim-detail-title">认领说明</div>
+						<div class="claim-detail-text">{{ claimDetailData.proof || '-' }}</div>
+					</div>
+
+					<div class="claim-detail-block">
+						<div class="claim-detail-title">帖子描述</div>
+						<div class="claim-detail-text">{{ claimDetailData.item?.description || '-' }}</div>
+					</div>
+
+					<div class="claim-detail-block">
+						<div class="claim-detail-title">驳回/处理信息</div>
+						<div class="claim-detail-text">{{ claimDetailData.item?.reject_reason || claimDetailData.item?.process_method || '-' }}</div>
+					</div>
+
+					<div class="dialog-images">
+						<el-image v-for="(img, index) in claimDetailImages" :key="`${img}-${index}`" :src="img" fit="cover" class="dialog-img" />
+						<span v-if="claimDetailImages.length === 0" class="dialog-empty-img">暂无相关图片</span>
+					</div>
+				</template>
+			</div>
+			<template #footer>
+				<el-button @click="claimDetailVisible = false">关闭</el-button>
+			</template>
+		</el-dialog>
 	</div>
 </template>
 
@@ -174,9 +319,10 @@ import { useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { EditPen, UserFilled } from '@element-plus/icons-vue'
-import { changePasswordApi, getMyItemsApi, getUserInfoApi, type MyItem, type MyItemStatus } from '@/api/user'
-import { updateMyItemApi } from '@/api/Publish'
+import { changePasswordApi, getMyClaimDetailApi, getMyClaimsApi, getMyItemsApi, getUserInfoApi, type MyClaimItem, type MyItem, type MyItemStatus } from '@/api/user'
+import { deleteMyItemApi, updateMyItemApi } from '@/api/Publish'
 import { useUserStore } from '@/stores/user'
+import ConfirmButton from '@/components/ConfirmButton.vue'
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -197,6 +343,34 @@ type ViewMyItem = MyItem & {
 	statusLabel: string
 }
 
+type ManagePublishedRow = {
+	id: number
+	apiId: number
+	title: string
+	createdAt: string
+	images: string[]
+	statusLabel: string
+	typeLabel: string
+	claimStatusLabel: string
+	canDelete: boolean
+	canCancel: boolean
+	viewItem: ViewMyItem
+}
+
+type ManageClaimRow = {
+	id: number
+	claimId: number
+	title: string
+	createdAt: string
+	images: string[]
+	claimStatusLabel: string
+	typeLabel: string
+	reasonText: string
+	canModify: boolean
+	canDelete: boolean
+	canTalk: boolean
+}
+
 const loading = ref(false)
 const myItems = ref<ViewMyItem[]>([])
 const total = ref(0)
@@ -207,6 +381,24 @@ const feedbackText = ref('')
 const detailVisible = ref(false)
 const activeItem = ref<ViewMyItem | null>(null)
 const resubmitLoading = ref(false)
+const managePublishedVisible = ref(false)
+const manageClaimsVisible = ref(false)
+
+const managePublishedLoading = ref(false)
+const managePublishedList = ref<ManagePublishedRow[]>([])
+const managePublishedPageNum = ref(1)
+const managePublishedPageSize = 5
+const managePublishedTotal = ref(0)
+const deletingPublishedId = ref<number | null>(null)
+
+const manageClaimsLoading = ref(false)
+const manageClaimsList = ref<ManageClaimRow[]>([])
+const manageClaimsPageNum = ref(1)
+const manageClaimsPageSize = 5
+const manageClaimsTotal = ref(0)
+const claimDetailVisible = ref(false)
+const claimDetailLoading = ref(false)
+const claimDetailData = ref<MyClaimItem | null>(null)
 
 const editForm = reactive({
 	title: '',
@@ -245,6 +437,11 @@ const canEditCurrent = computed(() => {
 
 const detailImages = computed(() => {
 	return [editForm.img1, editForm.img2, editForm.img3, editForm.img4].filter(Boolean)
+})
+
+const claimDetailImages = computed(() => {
+	const item = claimDetailData.value?.item
+	return collectItemImages(item)
 })
 
 const passwordFormRef = ref<FormInstance>()
@@ -306,6 +503,38 @@ const normalizeStatus = (status?: string | number): string => {
 	return String(status)
 }
 
+const normalizeClaimStatus = (status?: string | number): string => {
+	if (typeof status === 'number') {
+		if (status === 0) return '待审核'
+		if (status === 1) return '已通过'
+		if (status === 2) return '已完成'
+		if (status === 3) return '已驳回'
+	}
+	const raw = String(status || '').trim().toLowerCase()
+	if (!raw) return '待审核'
+	if (raw === '待审核' || raw === 'pending' || raw === 'in' || raw === 'reviewing') return '待审核'
+	if (raw === '已通过' || raw === 'approved' || raw === 'pass' || raw === 'passed') return '已通过'
+	if (raw === '已完成' || raw === 'claimed' || raw === 'done' || raw === 'completed' || raw === 'matched') return '已完成'
+	if (raw === '已驳回' || raw === 'rejected' || raw === 'reject') return '已驳回'
+	if (raw === '已取消' || raw === 'cancelled' || raw === 'canceled') return '已取消'
+	return String(status)
+}
+
+const hasCodeField = (data?: { code?: number }) => {
+	return data !== null && data !== undefined && Object.prototype.hasOwnProperty.call(data, 'code')
+}
+
+const collectItemImages = (item?: MyItem) => {
+	return [item?.img1, item?.img2, item?.img3, item?.img4].filter((img): img is string => Boolean(img))
+}
+
+const getClaimStatusLabelForPost = (item: MyItem, statusLabel: string) => {
+	if (statusLabel === '已认领') return '已认领'
+	if (statusLabel === '已驳回') return '待找回'
+	if (resolveTypeLabel(item.type) === '丢失') return '待找回'
+	return '待认领'
+}
+
 const formatTime = (value?: string) => {
 	if (!value) return ''
 	const date = new Date(value)
@@ -325,7 +554,7 @@ const fetchMyItems = async () => {
 		}
 
 		const response = await getMyItemsApi(queryParams)
-		if (response?.data?.code ) {
+		if (hasCodeField(response?.data)) {
 			const sourceList = response.data?.data?.list
 			const list = Array.isArray(sourceList) ? sourceList : []
 			myItems.value = list.map((item, index) => {
@@ -378,6 +607,183 @@ const scrollToPublish = () => scrollToElement(publishSectionRef.value)
 
 const handleManageClaim = () => {
 	router.push('/StudentHome/message/progress')
+}
+
+const fetchManagePublishedList = async () => {
+	managePublishedLoading.value = true
+	try {
+		const response = await getMyItemsApi({
+			page_num: managePublishedPageNum.value,
+			page_size: managePublishedPageSize
+		})
+		if (!hasCodeField(response?.data)) {
+			ElMessage.warning(response?.data?.msg || '获取发布列表失败')
+			managePublishedList.value = []
+			managePublishedTotal.value = 0
+			return
+		}
+
+		const list = Array.isArray(response.data?.data?.list) ? response.data.data.list : []
+		managePublishedList.value = list.map((item, index) => {
+			const id = Number(item.ID ?? item.id ?? index + 1)
+			const apiId = Number(item.ID ?? item.id ?? 0)
+			const statusLabel = normalizeStatus(item.status)
+			const typeLabel = resolveTypeLabel(item.type) === '丢失' ? '失丢贴' : '拾取贴'
+			const viewItem: ViewMyItem = {
+				...item,
+				id,
+				title: item.title || (item as MyItem & { tilte?: string }).tilte || '未命名',
+				createdAt: formatTime(item.CreatedAt || item.UpdatedAt),
+				typeLabel: resolveTypeLabel(item.type),
+				statusLabel
+			}
+			return {
+				id,
+				apiId,
+				title: viewItem.title,
+				createdAt: viewItem.createdAt,
+				images: collectItemImages(item),
+				statusLabel,
+				typeLabel,
+				claimStatusLabel: getClaimStatusLabelForPost(item, statusLabel),
+				canDelete: apiId > 0,
+				canCancel: statusLabel === '已通过',
+				viewItem
+			}
+		})
+		managePublishedTotal.value = Number(response.data?.data?.total || list.length || 0)
+	} catch {
+		ElMessage.error('获取发布列表失败，请稍后重试')
+		managePublishedList.value = []
+		managePublishedTotal.value = 0
+	} finally {
+		managePublishedLoading.value = false
+	}
+}
+
+const fetchManageClaimsList = async () => {
+	manageClaimsLoading.value = true
+	try {
+		const response = await getMyClaimsApi({
+			page_num: manageClaimsPageNum.value,
+			page_size: manageClaimsPageSize
+		})
+		if (!hasCodeField(response?.data)) {
+			ElMessage.warning(response?.data?.msg || '获取认领列表失败')
+			manageClaimsList.value = []
+			manageClaimsTotal.value = 0
+			return
+		}
+
+		const list = Array.isArray(response.data?.data?.list) ? response.data.data.list : []
+		manageClaimsList.value = list.map((record: MyClaimItem, index) => {
+			const claimStatusLabel = normalizeClaimStatus(record.status)
+			const item = record.item || {}
+			const rejectReason = item.reject_reason || item.process_method || record.proof || ''
+			return {
+				id: Number(record.ID ?? index + 1),
+				claimId: Number(record.ID ?? 0),
+				title: item.title || '未命名',
+				createdAt: formatTime(record.CreatedAt || item.CreatedAt),
+				images: collectItemImages(item),
+				claimStatusLabel,
+				typeLabel: resolveTypeLabel(item.type) === '丢失' ? '失丢贴' : '拾取贴',
+				reasonText: claimStatusLabel === '已驳回' && rejectReason ? '点击查看原因' : '/',
+				canModify: claimStatusLabel === '待审核',
+				canDelete: claimStatusLabel === '待审核',
+				canTalk: claimStatusLabel === '已通过'
+			}
+		})
+		manageClaimsTotal.value = Number(response.data?.data?.total || list.length || 0)
+	} catch {
+		ElMessage.error('获取认领列表失败，请稍后重试')
+		manageClaimsList.value = []
+		manageClaimsTotal.value = 0
+	} finally {
+		manageClaimsLoading.value = false
+	}
+}
+
+const openClaimDetail = async (row: ManageClaimRow) => {
+	if (!row.claimId) {
+		ElMessage.warning('缺少认领ID，无法获取详情')
+		return
+	}
+	claimDetailVisible.value = true
+	claimDetailLoading.value = true
+	claimDetailData.value = null
+	try {
+		const response = await getMyClaimDetailApi(row.claimId)
+		if (!hasCodeField(response?.data)) {
+			ElMessage.warning(response?.data?.msg || '获取认领详情失败')
+			return
+		}
+		claimDetailData.value = response.data?.data || null
+	} catch {
+		ElMessage.error('获取认领详情失败，请稍后重试')
+	} finally {
+		claimDetailLoading.value = false
+	}
+}
+
+const openPublishedDetail = (row: ManagePublishedRow) => {
+	managePublishedVisible.value = false
+	openItemDetail(row.viewItem)
+}
+
+const handleDeletePublished = async (row: ManagePublishedRow) => {
+	if (!row.apiId || row.apiId <= 0) {
+		ElMessage.warning('无效的帖子ID，无法删除')
+		return
+	}
+	if (deletingPublishedId.value === row.apiId) {
+		return
+	}
+
+	deletingPublishedId.value = row.apiId
+	try {
+		const response = await deleteMyItemApi(row.apiId)
+		if (!hasCodeField(response?.data)) {
+			ElMessage.error(response?.data?.msg || '删除失败')
+			return
+		}
+		ElMessage.success(response?.data?.msg || '删除成功')
+		await Promise.all([fetchManagePublishedList(), fetchMyItems()])
+	} catch {
+		ElMessage.error('删除失败，请稍后重试')
+	} finally {
+		deletingPublishedId.value = null
+	}
+}
+
+const openManagePublishedDialog = async () => {
+	managePublishedVisible.value = true
+	managePublishedPageNum.value = 1
+	await fetchManagePublishedList()
+}
+
+const openManageClaimsDialog = async () => {
+	manageClaimsVisible.value = true
+	manageClaimsPageNum.value = 1
+	await fetchManageClaimsList()
+}
+
+const publishRowNo = (index: number) => {
+	return (managePublishedPageNum.value - 1) * managePublishedPageSize + index + 1
+}
+
+const claimRowNo = (index: number) => {
+	return (manageClaimsPageNum.value - 1) * manageClaimsPageSize + index + 1
+}
+
+const handleManagePublishedPageChange = (page: number) => {
+	managePublishedPageNum.value = page
+	fetchManagePublishedList()
+}
+
+const handleManageClaimsPageChange = (page: number) => {
+	manageClaimsPageNum.value = page
+	fetchManageClaimsList()
 }
 
 const handleStaticAction = (actionName: string) => {
@@ -447,7 +853,7 @@ const handleResubmit = async () => {
 			img4: editForm.img4 || undefined
 		})
 
-		if (response?.data?.code === 200) {
+		if (hasCodeField(response?.data)) {
 			ElMessage.success(response.data.msg || '重新发送成功')
 			detailVisible.value = false
 			await fetchMyItems()
@@ -470,7 +876,7 @@ const handleLogout = () => {
 const loadProfile = async () => {
 	if (!userStore.username) return
 	const response = await getUserInfoApi({ username: userStore.username })
-	if (response?.data?.code === 200) {
+	if (hasCodeField(response?.data)) {
 		profile.username = response.data.data?.username || ''
 		profile.name = response.data.data?.name || ''
 		profile.phone = response.data.data?.phone || ''
@@ -494,7 +900,7 @@ const handleChangePassword = async () => {
 				new_password: passwordForm.new_password
 			})
 
-			if (response?.data?.code === 200) {
+			if (hasCodeField(response?.data)) {
 				userStore.setFirstLogin(false)
 				ElMessage.success(response.data.msg || '密码修改成功')
 				router.push(getHomePathByRole(userStore.role))
@@ -788,5 +1194,100 @@ onMounted(async () => {
 	justify-content: flex-end;
 	align-items: center;
 	gap: 10px;
+}
+
+.manage-title {
+	font-size: 20px;
+	font-weight: 600;
+	padding-left: 12px;
+}
+
+.manage-table {
+	margin: 0 6px;
+}
+
+.table-images {
+	display: flex;
+	gap: 8px;
+}
+
+.table-img {
+	width: 88px;
+	height: 56px;
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.table-actions {
+	display: flex;
+	gap: 8px;
+	flex-wrap: nowrap;
+}
+
+.table-confirm-btn {
+	padding: 0;
+}
+
+.table-actions .table-confirm-btn :deep(.confirm-button) {
+	height: 24px;
+	padding: 0 12px;
+	border-radius: 12px;
+	font-size: 12px;
+}
+
+.table-actions .detail-btn {
+	--el-button-bg-color: #f97316;
+	--el-button-border-color: #f97316;
+	--el-button-text-color: #fff;
+	--el-button-hover-bg-color: #ea6a0f;
+	--el-button-hover-border-color: #ea6a0f;
+	--el-button-active-bg-color: #ea6a0f;
+	--el-button-active-border-color: #ea6a0f;
+	--el-button-disabled-bg-color: #dcdfe6;
+	--el-button-disabled-border-color: #dcdfe6;
+	--el-button-disabled-text-color: #fff;
+	min-width: 52px !important;
+	height: 32px!important;
+	padding: 0 12px!important;
+	font-size: 12px!important;
+  border-radius: 15%;
+}
+
+.reason-link {
+	color: #f56c6c;
+	cursor: pointer;
+}
+
+.dialog-pager {
+	display: flex;
+	justify-content: center;
+	margin-top: 18px;
+}
+
+.claim-detail-wrap {
+	min-height: 180px;
+}
+
+.claim-detail-block {
+	margin-top: 12px;
+	padding: 10px 12px;
+	background: #fafafa;
+	border-radius: 8px;
+	border: 1px solid #f0f0f0;
+}
+
+.claim-detail-title {
+	font-size: 14px;
+	font-weight: 600;
+	color: #303133;
+	margin-bottom: 6px;
+}
+
+.claim-detail-text {
+	font-size: 13px;
+	line-height: 1.7;
+	color: #606266;
+	white-space: pre-wrap;
+	word-break: break-word;
 }
 </style>
