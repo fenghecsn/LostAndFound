@@ -5,7 +5,8 @@ const request= axios.create({
   // 改成真实后端地址，例如：
   // baseURL: 'http://localhost:8080',
   // 原来的 Mock 地址：
-  baseURL: 'http://127.0.0.1:4523/m1/7803476-7550431-7135491',
+  //你用了本地mock，我这是云端mock地址，后端接口开发好记得改回来
+  baseURL: 'https://m1.apifoxmock.com/m1/7803476-7550431-7135491/',
   timeout: 15000,
 })
 

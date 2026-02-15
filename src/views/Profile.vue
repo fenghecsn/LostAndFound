@@ -1,50 +1,181 @@
 <template>
 	<div class="profile-page">
-		<el-card class="profile-card" shadow="never">
-			<template #header>
-				<div class="card-header">
-					<span>个人中心</span>
+		<el-card class="profile-top-card" shadow="never">
+			<div class="profile-top">
+				<div class="avatar-block">
+					<el-avatar :size="100" class="avatar-circle">
+						<el-icon><UserFilled /></el-icon>
+					</el-avatar>
+					<div class="avatar-actions">
+						<el-button class="pill-btn" round @click="handleStaticAction('修改头像')">修改头像</el-button>
+						<el-button class="pill-btn" round @click="handleStaticAction('修改昵称')">
+							{{ displayName }}
+							<el-icon class="btn-icon"><EditPen /></el-icon>
+						</el-button>
+						<el-button class="pill-btn" round @click="handleLogout">退出登录</el-button>
+					</div>
 				</div>
-			</template>
+			</div>
+		</el-card>
 
-			<el-descriptions :column="1" border class="mb-16">
-				<el-descriptions-item label="用户名">{{ profile.username || userStore.username }}</el-descriptions-item>
-				<el-descriptions-item label="姓名">{{ profile.name || '-' }}</el-descriptions-item>
-				<el-descriptions-item label="手机号">{{ profile.phone || '-' }}</el-descriptions-item>
-			</el-descriptions>
+		<el-card ref="publishSectionRef" class="profile-main-card" shadow="never">
+			<div class="toolbar-top">
+				<div class="toolbar-right">
+					<span class="meta-link active">我的发布 {{ total }}</span>
+					<el-link type="info" :underline="false" @click="scrollToPassword">修改密码</el-link>
+					<el-link type="info" :underline="false" @click="scrollToFeedback">反馈意见</el-link>
+				</div>
+			</div>
 
-			<el-form
-				ref="passwordFormRef"
-				:model="passwordForm"
-				:rules="rules"
-				label-width="100px"
-			>
-				<el-form-item label="原密码" prop="old_password">
-					<el-input v-model="passwordForm.old_password" type="password" show-password />
-				</el-form-item>
-				<el-form-item label="新密码" prop="new_password">
-					<el-input v-model="passwordForm.new_password" type="password" show-password />
-				</el-form-item>
-				<el-form-item label="确认新密码" prop="confirm_password">
-					<el-input v-model="passwordForm.confirm_password" type="password" show-password />
-				</el-form-item>
+			<div class="toolbar-actions">
+				<el-button type="warning" class="manage-btn" @click="scrollToPublish">管理我发布的帖子</el-button>
+				<el-button type="warning" class="manage-btn" @click="handleManageClaim">管理我申请的认领</el-button>
+			</div>
 
-				<el-form-item>
-					<el-button type="primary" :loading="submitting" @click="handleChangePassword">
-						保存新密码
-					</el-button>
+			<div class="status-tabs">
+				<button
+					v-for="option in statusOptions"
+					:key="option.value || 'all'"
+					class="status-pill"
+					:class="{ active: currentStatus === option.value }"
+					@click="changeStatus(option.value)"
+				>
+					{{ option.label }}
+				</button>
+			</div>
+
+			<div v-loading="loading" class="publish-list">
+				<el-empty v-if="myItems.length === 0" description="暂无发布记录" />
+				<div v-else class="card-grid">
+					<div v-for="item in myItems" :key="item.id" class="item-card" @click="openItemDetail(item)">
+						<div class="card-head">
+							<div class="row"><span class="label">物品名称:</span><span>{{ item.title }}</span></div>
+							<div class="row"><span class="label">{{ item.typeLabel }}时间:</span><span>{{ item.time || '-' }}</span></div>
+							<div class="row"><span class="label">{{ item.typeLabel }}地点:</span><span>{{ item.location || '-' }}</span></div>
+						</div>
+						<div class="card-body">
+							<div class="tags-col">
+								<el-tag size="small" effect="plain">校区: {{ item.campus || '未知' }}</el-tag>
+								<el-tag size="small" effect="plain" type="warning">物品类型: {{ item.category || '未知' }}</el-tag>
+							</div>
+							<div class="img-col">
+								<el-image :src="item.img1" fit="cover" class="item-image">
+									<template #error>
+										<div class="empty-img">暂无图片</div>
+									</template>
+								</el-image>
+							</div>
+						</div>
+						<div class="card-foot">
+							<span class="created">{{ item.createdAt || '-' }}</span>
+							<span class="status" :class="statusClass(item.statusLabel)">{{ item.statusLabel }}</span>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="pager" v-if="total > pageSize">
+				<el-pagination
+					layout="prev, pager, next"
+					:total="total"
+					:page-size="pageSize"
+					:current-page="pageNum"
+					@current-change="handlePageChange"
+				/>
+			</div>
+
+			<div ref="passwordSectionRef" class="section-block">
+				<div class="section-title">修改密码</div>
+				<el-form
+					ref="passwordFormRef"
+					:model="passwordForm"
+					:rules="rules"
+					label-width="100px"
+				>
+					<el-form-item label="原密码" prop="old_password">
+						<el-input v-model="passwordForm.old_password" type="password" show-password />
+					</el-form-item>
+					<el-form-item label="新密码" prop="new_password">
+						<el-input v-model="passwordForm.new_password" type="password" show-password />
+					</el-form-item>
+					<el-form-item label="确认新密码" prop="confirm_password">
+						<el-input v-model="passwordForm.confirm_password" type="password" show-password />
+					</el-form-item>
+					<el-form-item>
+						<el-button type="primary" :loading="submitting" @click="handleChangePassword">保存新密码</el-button>
+					</el-form-item>
+				</el-form>
+			</div>
+
+			<div ref="feedbackSectionRef" class="section-block">
+				<div class="section-title">反馈意见</div>
+				<el-input
+					v-model="feedbackText"
+					type="textarea"
+					:rows="4"
+					maxlength="500"
+					show-word-limit
+					placeholder="请输入你的反馈意见（当前为静态入口，后续将接入接口）"
+				/>
+				<div class="feedback-actions">
+					<el-button type="warning" @click="handleFeedbackSubmit">提交反馈</el-button>
+				</div>
+			</div>
+		</el-card>
+
+		<el-dialog v-model="detailVisible" title="帖子详情" width="760px" destroy-on-close>
+			<el-form :model="editForm" label-width="92px">
+				<el-form-item label="物品名称">
+					<el-input v-model="editForm.title" :disabled="!canEditCurrent" />
+				</el-form-item>
+				<el-form-item label="校区">
+					<el-input v-model="editForm.campus" :disabled="!canEditCurrent" />
+				</el-form-item>
+				<el-form-item label="物品类型">
+					<el-input v-model="editForm.category" :disabled="!canEditCurrent" />
+				</el-form-item>
+				<el-form-item :label="`${activeItem?.typeLabel || '丢失'}时间`">
+					<el-input v-model="editForm.time" :disabled="!canEditCurrent" />
+				</el-form-item>
+				<el-form-item :label="`${activeItem?.typeLabel || '丢失'}地点`">
+					<el-input v-model="editForm.location" :disabled="!canEditCurrent" />
+				</el-form-item>
+				<el-form-item label="联系人">
+					<el-input v-model="editForm.contact_name" :disabled="!canEditCurrent" />
+				</el-form-item>
+				<el-form-item label="联系方式">
+					<el-input v-model="editForm.contact_phone" :disabled="!canEditCurrent" />
+				</el-form-item>
+				<el-form-item label="物品特征">
+					<el-input v-model="editForm.description" type="textarea" :rows="4" :disabled="!canEditCurrent" />
+				</el-form-item>
+				<el-form-item label="状态">
+					<el-tag>{{ activeItem?.statusLabel || '-' }}</el-tag>
 				</el-form-item>
 			</el-form>
-		</el-card>
+			<div class="dialog-images">
+				<el-image v-for="(img, index) in detailImages" :key="`${img}-${index}`" :src="img" fit="cover" class="dialog-img" />
+				<span v-if="detailImages.length === 0" class="dialog-empty-img">暂无相关图片</span>
+			</div>
+			<template #footer>
+				<div class="dialog-footer-actions">
+					<el-text v-if="!canEditCurrent" type="info">仅待审核、已通过、已驳回的帖子可修改并重新发送</el-text>
+					<el-button @click="detailVisible = false">关闭</el-button>
+					<el-button type="warning" :disabled="!canEditCurrent" :loading="resubmitLoading" @click="handleResubmit">修改并重新发送</el-button>
+				</div>
+			</template>
+		</el-dialog>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
-import { changePasswordApi, getUserInfoApi } from '@/api/user'
+import { EditPen, UserFilled } from '@element-plus/icons-vue'
+import { changePasswordApi, getMyItemsApi, getUserInfoApi, type MyItem, type MyItemStatus } from '@/api/user'
+import { updateMyItemApi } from '@/api/Publish'
 import { useUserStore } from '@/stores/user'
 
 const userStore = useUserStore()
@@ -54,6 +185,66 @@ const profile = reactive({
 	username: '',
 	name: '',
 	phone: ''
+})
+
+const displayName = computed(() => profile.name || userStore.nickname || userStore.username || '未命名用户')
+
+type ViewMyItem = MyItem & {
+	id: number
+	title: string
+	createdAt: string
+	typeLabel: string
+	statusLabel: string
+}
+
+const loading = ref(false)
+const myItems = ref<ViewMyItem[]>([])
+const total = ref(0)
+const pageNum = ref(1)
+const pageSize = 6
+const currentStatus = ref<MyItemStatus>('')
+const feedbackText = ref('')
+const detailVisible = ref(false)
+const activeItem = ref<ViewMyItem | null>(null)
+const resubmitLoading = ref(false)
+
+const editForm = reactive({
+	title: '',
+	campus: '',
+	category: '',
+	location: '',
+	time: '',
+	description: '',
+	contact_name: '',
+	contact_phone: '',
+	img1: '',
+	img2: '',
+	img3: '',
+	img4: ''
+})
+
+const publishSectionRef = ref<HTMLElement>()
+const passwordSectionRef = ref<HTMLElement>()
+const feedbackSectionRef = ref<HTMLElement>()
+
+const statusOptions: Array<{ label: string; value: MyItemStatus }> = [
+	{ label: '全部类型', value: '' },
+	{ label: '待审核', value: '待审核' },
+	{ label: '已通过', value: '已通过' },
+	{ label: '已匹配', value: '已匹配' },
+	{ label: '已认领', value: '已认领' },
+	{ label: '已驳回', value: '已驳回' }
+]
+
+const editableStatuses = ['待审核', '已通过', '已驳回']
+
+const canEditCurrent = computed(() => {
+	if (!activeItem.value) return false
+	return editableStatuses.includes(activeItem.value.statusLabel)
+})
+
+const detailImages = computed(() => {
+	return [editForm.img1, editForm.img2, editForm.img3, editForm.img4].filter(Boolean)
 })
 
 const passwordFormRef = ref<FormInstance>()
@@ -86,7 +277,194 @@ const rules: FormRules<typeof passwordForm> = {
 }
 
 const getHomePathByRole = (role: number) => {
-	return role === 2 || role === 3 ? '/admin' : '/StudentHome'
+	if (role === 3) return '/super'
+	if (role === 2) return '/admin'
+	return '/StudentHome'
+}
+
+const resolveTypeLabel = (type?: string) => {
+	const rawType = String(type || '').toLowerCase()
+	if (rawType === 'found' || rawType === 'pick' || rawType === 'picked' || type === '拾取') return '拾取'
+	return '丢失'
+}
+
+const normalizeStatus = (status?: string | number): string => {
+	if (typeof status === 'number') {
+		if (status === 0) return '待审核'
+		if (status === 1) return '已通过'
+		if (status === 2) return '已匹配'
+		if (status === 3) return '已认领'
+		if (status === 4) return '已驳回'
+	}
+	const raw = String(status || '').trim().toLowerCase()
+	if (!raw) return '待审核'
+	if (raw === '待审核' || raw === 'pending' || raw === 'in' || raw === 'reviewing') return '待审核'
+	if (raw === '已通过' || raw === 'approved' || raw === 'displaying' || raw === 'pass' || raw === 'passed') return '已通过'
+	if (raw === '已匹配' || raw === 'matched') return '已匹配'
+	if (raw === '已认领' || raw === 'claimed') return '已认领'
+	if (raw === '已驳回' || raw === 'rejected' || raw === 'reject') return '已驳回'
+	return String(status)
+}
+
+const formatTime = (value?: string) => {
+	if (!value) return ''
+	const date = new Date(value)
+	if (Number.isNaN(date.getTime())) return value
+	return `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+const fetchMyItems = async () => {
+	loading.value = true
+	try {
+		const queryParams = {
+			page_num: pageNum.value,
+			page_size: pageSize
+		} as { status?: MyItemStatus; page_num: number; page_size: number }
+		if (currentStatus.value) {
+			queryParams.status = currentStatus.value
+		}
+
+		const response = await getMyItemsApi(queryParams)
+		if (response?.data?.code ) {
+			const sourceList = response.data?.data?.list
+			const list = Array.isArray(sourceList) ? sourceList : []
+			myItems.value = list.map((item, index) => {
+				const id = Number(item.ID ?? item.id ?? index + 1)
+				const statusLabel = normalizeStatus(item.status)
+				return {
+					...item,
+					id,
+					title: item.title || (item as MyItem & { tilte?: string }).tilte || '未命名物品',
+					createdAt: formatTime(item.CreatedAt || item.UpdatedAt),
+					typeLabel: resolveTypeLabel(item.type),
+					statusLabel
+				}
+			})
+			total.value = Number(response.data?.data?.total || list.length || 0)
+			return
+		}
+		ElMessage.warning(response?.data?.msg || '获取我的发布失败')
+		myItems.value = []
+		total.value = 0
+	} catch {
+		ElMessage.error('获取我的发布失败，请稍后重试')
+		myItems.value = []
+		total.value = 0
+	} finally {
+		loading.value = false
+	}
+}
+
+const changeStatus = (status: MyItemStatus) => {
+	if (currentStatus.value === status) return
+	currentStatus.value = status
+	pageNum.value = 1
+	fetchMyItems()
+}
+
+const handlePageChange = (page: number) => {
+	pageNum.value = page
+	fetchMyItems()
+}
+
+const scrollToElement = async (el?: HTMLElement) => {
+	await nextTick()
+	el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+const scrollToPassword = () => scrollToElement(passwordSectionRef.value)
+const scrollToFeedback = () => scrollToElement(feedbackSectionRef.value)
+const scrollToPublish = () => scrollToElement(publishSectionRef.value)
+
+const handleManageClaim = () => {
+	router.push('/StudentHome/message/progress')
+}
+
+const handleStaticAction = (actionName: string) => {
+	ElMessage.info(`${actionName}功能暂未开放`)
+}
+
+const handleFeedbackSubmit = () => {
+	if (!feedbackText.value.trim()) {
+		ElMessage.warning('请先输入反馈内容')
+		return
+	}
+	ElMessage.success('反馈已记录，后续将接入接口')
+	feedbackText.value = ''
+}
+
+const statusClass = (status?: string) => {
+	const statusLabel = normalizeStatus(status)
+	if (statusLabel === '已通过') return 'status-approved'
+	if (statusLabel === '已匹配') return 'status-matched'
+	if (statusLabel === '已认领') return 'status-claimed'
+	if (statusLabel === '已驳回') return 'status-rejected'
+	return 'status-pending'
+}
+
+const openItemDetail = (item: ViewMyItem) => {
+	activeItem.value = item
+	editForm.title = item.title || ''
+	editForm.campus = item.campus || ''
+	editForm.category = item.category || ''
+	editForm.location = item.location || ''
+	editForm.time = item.time || ''
+	editForm.description = item.description || ''
+	editForm.contact_name = item.contact_name || ''
+	editForm.contact_phone = item.contact_phone || ''
+	editForm.img1 = item.img1 || ''
+	editForm.img2 = item.img2 || ''
+	editForm.img3 = item.img3 || ''
+	editForm.img4 = item.img4 || ''
+	detailVisible.value = true
+}
+
+const handleResubmit = async () => {
+	if (!activeItem.value) return
+	if (!canEditCurrent.value) {
+		ElMessage.warning('当前状态不可修改重新发送')
+		return
+	}
+	if (!editForm.title.trim()) {
+		ElMessage.warning('物品名称不能为空')
+		return
+	}
+
+	resubmitLoading.value = true
+	try {
+		const response = await updateMyItemApi(activeItem.value.id, {
+			title: editForm.title.trim(),
+			campus: editForm.campus.trim() || undefined,
+			category: editForm.category.trim() || undefined,
+			location: editForm.location.trim() || undefined,
+			time: editForm.time.trim() || undefined,
+			description: editForm.description.trim() || undefined,
+			contact_name: editForm.contact_name.trim() || undefined,
+			contact_phone: editForm.contact_phone.trim() || undefined,
+			img1: editForm.img1 || undefined,
+			img2: editForm.img2 || undefined,
+			img3: editForm.img3 || undefined,
+			img4: editForm.img4 || undefined
+		})
+
+		if (response?.data?.code === 200) {
+			ElMessage.success(response.data.msg || '重新发送成功')
+			detailVisible.value = false
+			await fetchMyItems()
+			return
+		}
+		ElMessage.error(response?.data?.msg || '重新发送失败')
+	} catch {
+		ElMessage.error('重新发送失败，请稍后重试')
+	} finally {
+		resubmitLoading.value = false
+	}
+}
+
+const handleLogout = () => {
+	userStore.clearUserData()
+	router.push('/')
+	ElMessage.success('退出登录成功')
 }
 
 const loadProfile = async () => {
@@ -135,6 +513,7 @@ const handleChangePassword = async () => {
 onMounted(async () => {
 	try {
 		await loadProfile()
+		await fetchMyItems()
 	} catch {
 		// noop
 	}
@@ -143,20 +522,271 @@ onMounted(async () => {
 
 <style scoped>
 .profile-page {
-	max-width: 720px;
-	margin: 0 auto;
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
 }
 
-.profile-card {
+.profile-top-card,
+.profile-main-card {
 	border: none;
 }
 
-.card-header {
-	font-size: 18px;
+.profile-top {
+	padding: 6px 0;
+}
+
+.avatar-block {
+	display: flex;
+	align-items: center;
+	gap: 24px;
+}
+
+.avatar-circle {
+	background: linear-gradient(180deg, #fcb045, #ff7a00);
+	color: #fff;
+}
+
+.avatar-actions {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.pill-btn {
+	justify-content: flex-start;
+	width: fit-content;
+	padding: 0 14px;
+}
+
+.btn-icon {
+	margin-left: 8px;
+}
+
+.toolbar-top {
+	display: flex;
+	justify-content: flex-end;
+	padding-bottom: 10px;
+	border-bottom: 1px solid #f0f0f0;
+}
+
+.toolbar-right {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	font-size: 13px;
+}
+
+.meta-link {
+	color: #909399;
+}
+
+.meta-link.active {
+	color: #303133;
 	font-weight: 600;
 }
 
-.mb-16 {
+.toolbar-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
+	margin: 16px 0;
+}
+
+.manage-btn {
+	--el-color-warning: #f97316;
+}
+
+.status-tabs {
+	display: flex;
+	gap: 12px;
+	flex-wrap: wrap;
 	margin-bottom: 16px;
+}
+
+.status-pill {
+	border: 1px solid #ebeef5;
+	background: #fff;
+	height: 36px;
+	padding: 0 20px;
+	border-radius: 18px;
+	cursor: pointer;
+	font-size: 14px;
+	color: #606266;
+}
+
+.status-pill.active {
+	background: #f97316;
+	color: #fff;
+	border-color: #f97316;
+}
+
+.publish-list {
+	min-height: 180px;
+}
+
+.card-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+	gap: 16px;
+}
+
+.item-card {
+	border: 1px solid #f3c07b;
+	border-radius: 8px;
+	padding: 14px;
+	background: #fff;
+	cursor: pointer;
+	overflow: hidden;
+}
+
+.card-head .row {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	column-gap: 8px;
+	line-height: 1.8;
+	font-size: 14px;
+}
+
+.card-head .row span:last-child {
+	min-width: 0;
+	word-break: break-all;
+	overflow-wrap: anywhere;
+}
+
+.label {
+	color: #606266;
+}
+
+.card-body {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 120px;
+	margin-top: 10px;
+	gap: 10px;
+	align-items: start;
+}
+
+.tags-col {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-width: 0;
+}
+
+.tags-col :deep(.el-tag) {
+	max-width: 100%;
+}
+
+.tags-col :deep(.el-tag__content) {
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.img-col {
+	width: 120px;
+	flex: 0 0 120px;
+}
+
+.item-image {
+	width: 120px;
+	height: 90px;
+	border-radius: 6px;
+	overflow: hidden;
+}
+
+.empty-img {
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: #f5f7fa;
+	color: #909399;
+	font-size: 12px;
+}
+
+.card-foot {
+	display: flex;
+	justify-content: space-between;
+	margin-top: 10px;
+	font-size: 13px;
+}
+
+.created {
+	color: #909399;
+}
+
+.status {
+	font-weight: 600;
+}
+
+.status-pending {
+	color: #e6a23c;
+}
+
+.status-approved {
+	color: #409eff;
+}
+
+.status-matched {
+	color: #f56c6c;
+}
+
+.status-claimed {
+	color: #67c23a;
+}
+
+.status-rejected {
+	color: #909399;
+}
+
+.pager {
+	display: flex;
+	justify-content: center;
+	margin-top: 16px;
+}
+
+.section-block {
+	margin-top: 28px;
+	padding-top: 16px;
+	border-top: 1px solid #f0f0f0;
+}
+
+.section-title {
+	font-size: 17px;
+	font-weight: 600;
+	margin-bottom: 14px;
+}
+
+.feedback-actions {
+	margin-top: 12px;
+}
+
+.dialog-images {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin: 4px 0 8px;
+}
+
+.dialog-img {
+	width: 120px;
+	height: 90px;
+	border-radius: 6px;
+	overflow: hidden;
+	border: 1px solid #ebeef5;
+}
+
+.dialog-empty-img {
+	font-size: 13px;
+	color: #909399;
+}
+
+.dialog-footer-actions {
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+	gap: 10px;
 }
 </style>
