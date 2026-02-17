@@ -1,6 +1,7 @@
 <template>
 	<div class="profile-page">
 		<el-card class="profile-top-card" shadow="never">
+			<input ref="avatarInputRef" type="file" accept="image/*" class="avatar-file-input" @change="handleAvatarInputChange" />
 			<div class="profile-top">
 				<div class="avatar-block">
 					<el-avatar :size="100" class="avatar-circle">
@@ -312,6 +313,35 @@
 				<el-button @click="claimDetailVisible = false">关闭</el-button>
 			</template>
 		</el-dialog>
+
+		<el-dialog v-model="nicknameDialogVisible" title="修改昵称" width="420px" destroy-on-close>
+			<el-form label-width="80px">
+				<el-form-item label="新昵称">
+					<el-input v-model="nicknameInput" maxlength="20" show-word-limit placeholder="请输入昵称" />
+				</el-form-item>
+			</el-form>
+			<template #footer>
+				<el-button @click="nicknameDialogVisible = false">取消</el-button>
+				<el-button type="primary" :loading="nicknameSaving" @click="submitNicknameUpdate">保存</el-button>
+			</template>
+		</el-dialog>
+
+		<el-dialog v-model="avatarDialogVisible" title="修改头像" width="460px" destroy-on-close @closed="resetAvatarDialogState">
+			<div class="avatar-dialog-content">
+				<el-avatar :size="120" class="avatar-circle">
+					<img v-if="avatarPreviewUrl" :src="avatarPreviewUrl" alt="头像预览" />
+					<template v-else>
+						<el-icon class="default-avatar-icon"><UserFilled /></el-icon>
+					</template>
+				</el-avatar>
+				<el-text type="info">支持图片格式，大小不超过 5MB</el-text>
+			</div>
+			<template #footer>
+				<el-button @click="avatarDialogVisible = false">取消</el-button>
+				<el-button @click="pickAvatarFile">选择图片</el-button>
+				<el-button type="primary" :loading="avatarSaving" :disabled="!pendingAvatarFile" @click="submitAvatarUpdate">保存</el-button>
+			</template>
+		</el-dialog>
 	</div>
 </template>
 
@@ -319,13 +349,13 @@
 import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { EditPen, UserFilled } from '@element-plus/icons-vue'
 import { updateUserInfoApi, changePasswordApi, getMyClaimDetailApi, getMyClaimsApi, getMyItemsApi, getUserInfoApi, type MyClaimItem, type MyItem, type MyItemStatus } from '@/api/user'
 import { deleteMyItemApi, updateMyItemApi } from '@/api/Publish'
 import { useUserStore } from '@/stores/user'
 import ConfirmButton from '@/components/ConfirmButton.vue'
-import { a } from 'vue-router/dist/index-Cu9B0wDz.mjs'
+import { uploadImagesAndGetUrls } from '@/utils/imageUpload'
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -337,7 +367,7 @@ const profile = reactive({
   avatar: userStore.avatar || ''
 })
 
-const displayName = computed(() => profile.name || userStore.nickname || userStore.username || '未命名用户')
+const displayName = computed(() => userStore.nickname || profile.name || userStore.username || '未命名用户')
 
 type ViewMyItem = MyItem & {
 	id: number
@@ -403,6 +433,13 @@ const manageClaimsTotal = ref(0)
 const claimDetailVisible = ref(false)
 const claimDetailLoading = ref(false)
 const claimDetailData = ref<MyClaimItem | null>(null)
+const nicknameDialogVisible = ref(false)
+const nicknameInput = ref('')
+const nicknameSaving = ref(false)
+const avatarDialogVisible = ref(false)
+const avatarSaving = ref(false)
+const pendingAvatarFile = ref<File | null>(null)
+const avatarPreviewUrl = ref('')
 
 const editForm = reactive({
 	title: '',
@@ -422,6 +459,7 @@ const editForm = reactive({
 const publishSectionRef = ref<HTMLElement>()
 const passwordSectionRef = ref<HTMLElement>()
 const feedbackSectionRef = ref<HTMLElement>()
+const avatarInputRef = ref<HTMLInputElement>()
 
 const statusOptions: Array<{ label: string; value: MyItemStatus }> = [
 	{ label: '全部类型', value: '' },
@@ -790,10 +828,125 @@ const handleManageClaimsPageChange = (page: number) => {
 	fetchManageClaimsList()
 }
 
-const handleStaticAction = (actionName: string) => {
-	ElMessage.info(`${actionName}功能暂未开放`)
+const openNicknameDialog = () => {
+	nicknameInput.value = userStore.nickname || ''
+	nicknameDialogVisible.value = true
 }
 
+const handleAvatarInputChange = async (event: Event) => {
+	const input = event.target as HTMLInputElement
+	const file = input.files?.[0]
+	input.value = ''
+	if (!file) return
+
+	if (!file.type.startsWith('image/')) {
+		ElMessage.warning('请选择图片文件')
+		return
+	}
+
+	if (file.size > 5 * 1024 * 1024) {
+		ElMessage.warning('头像大小不能超过5MB')
+		return
+	}
+
+	pendingAvatarFile.value = file
+	avatarPreviewUrl.value = URL.createObjectURL(file)
+}
+
+const pickAvatarFile = () => {
+	avatarInputRef.value?.click()
+}
+
+const openAvatarDialog = () => {
+	avatarDialogVisible.value = true
+	avatarPreviewUrl.value = profile.avatar || ''
+}
+
+const resetAvatarDialogState = () => {
+	if (avatarPreviewUrl.value.startsWith('blob:')) {
+		URL.revokeObjectURL(avatarPreviewUrl.value)
+	}
+	pendingAvatarFile.value = null
+	avatarPreviewUrl.value = ''
+}
+
+const submitNicknameUpdate = async () => {
+	const trimmedNickname = nicknameInput.value.trim()
+	if (!trimmedNickname) {
+		ElMessage.warning('昵称不能为空')
+		return
+	}
+	if (trimmedNickname.length > 20) {
+		ElMessage.warning('昵称长度不能超过20个字符')
+		return
+	}
+
+	nicknameSaving.value = true
+	try {
+		const response = await updateUserInfoApi({ nickname: trimmedNickname })
+		if (!hasCodeField(response?.data)) {
+			ElMessage.error(response?.data?.msg || '修改昵称失败')
+			return
+		}
+
+		userStore.setNickname(trimmedNickname)
+		nicknameDialogVisible.value = false
+		ElMessage.success(response.data.msg || '昵称修改成功')
+	} catch {
+		ElMessage.error('修改昵称失败，请稍后重试')
+	} finally {
+		nicknameSaving.value = false
+	}
+}
+
+const submitAvatarUpdate = async () => {
+	if (!pendingAvatarFile.value) {
+		ElMessage.warning('请先选择图片')
+		return
+	}
+
+	try {
+		avatarSaving.value = true
+		const [avatarUrl] = await uploadImagesAndGetUrls([pendingAvatarFile.value])
+		if (!avatarUrl) {
+			ElMessage.error('头像上传失败，请重试')
+			return
+		}
+
+		const response = await updateUserInfoApi({ avatar: avatarUrl })
+		if (!hasCodeField(response?.data)) {
+			ElMessage.error(response?.data?.msg || '修改头像失败')
+			return
+		}
+
+		profile.avatar = avatarUrl
+		userStore.setAvatar(avatarUrl)
+		avatarDialogVisible.value = false
+		ElMessage.success(response.data.msg || '头像修改成功')
+	} catch {
+		ElMessage.error('修改头像失败，请稍后重试')
+	} finally {
+		avatarSaving.value = false
+	}
+}
+
+const handleStaticAction = async (actionName: string) => {
+	try {
+		if (actionName === '修改昵称') {
+			openNicknameDialog()
+			return
+		}
+
+		if (actionName === '修改头像') {
+			openAvatarDialog()
+			return
+		}
+
+		ElMessage.warning('暂不支持该操作')
+	} catch {
+		ElMessage.error('操作失败，请稍后重试')
+	}
+}
 const handleFeedbackSubmit = () => {
 	if (!feedbackText.value.trim()) {
 		ElMessage.warning('请先输入反馈内容')
@@ -871,10 +1024,19 @@ const handleResubmit = async () => {
 	}
 }
 
-const handleLogout = () => {
-	userStore.clearUserData()
-	router.push('/')
-	ElMessage.success('退出登录成功')
+const handleLogout = async () => {
+	try {
+		await ElMessageBox.confirm('确定要退出登录吗？', '退出确认', {
+			confirmButtonText: '确定退出',
+			cancelButtonText: '取消',
+			type: 'warning'
+		})
+		userStore.clearUserData()
+		router.push('/')
+		ElMessage.success('退出登录成功')
+	} catch {
+		// 用户取消退出
+	}
 }
 
 const loadProfile = async () => {
@@ -884,7 +1046,9 @@ const loadProfile = async () => {
 		profile.username = response.data.data?.username || ''
 		profile.name = response.data.data?.name || ''
 		profile.phone = response.data.data?.phone || ''
-    profile.avatar = response.data.data?.avatar || ''
+		profile.avatar = response.data.data?.avatar || ''
+		userStore.setAvatar(profile.avatar)
+		userStore.setNickname(response.data.data?.nickname || '')
 	}
 }
 
@@ -945,6 +1109,18 @@ onMounted(async () => {
 
 .profile-top {
 	padding: 6px 0;
+}
+
+.avatar-file-input {
+	display: none;
+}
+
+.avatar-dialog-content {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 12px;
+	padding: 8px 0 4px;
 }
 
 .avatar-block {
