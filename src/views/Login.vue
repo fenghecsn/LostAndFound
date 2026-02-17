@@ -121,6 +121,8 @@ const handleLogin = async () => {
       // 2. 存储 Token (传入 response.data，因为你的 store 内部会自动取 data.token)
       userStore.setToken(response.data)
       userStore.setUsername(loginForm.username)
+      userStore.setNickname(response.data?.data?.nickname || '')
+      userStore.setAvatar(response.data?.data?.avatar || '')
 
       // 3. 获取角色并跳转
       // 优先取后端返回的 role，如果后端没返回，就用你表单里选的 role
@@ -132,7 +134,8 @@ const handleLogin = async () => {
         const profileRes = await getUserInfoApi({ username: loginForm.username })
         isFirstLogin = profileRes?.data?.data?.first_login
         userStore.setNickname(profileRes?.data?.data?.nickname || '')
-      }
+        userStore.setAvatar(profileRes?.data?.data?.avatar || '')
+        }
 
       userStore.setFirstLogin(Boolean(isFirstLogin))
 

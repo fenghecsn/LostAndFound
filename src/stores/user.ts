@@ -8,6 +8,7 @@ export const useUserStore = defineStore('user', () => {
   const role = ref<number>(Number(localStorage.getItem('role')) || 1) //1: 学生/老師，2: 管理员 3.超级管理员
   const firstLogin = ref<boolean>(localStorage.getItem('firstLogin') === 'true')
   const nickname = ref<string>(localStorage.getItem('nickname') || '')
+  const avatar = ref<string>(localStorage.getItem('avatar') || '')
 
   const setRole = (newRole: number) => {
     role.value = newRole
@@ -35,18 +36,24 @@ export const useUserStore = defineStore('user', () => {
     localStorage.removeItem('role')
     localStorage.removeItem('firstLogin')
     localStorage.removeItem('nickname')
+    localStorage.removeItem('avatar')
   }
   const setNickname = (newNickname: string) => {
     nickname.value = newNickname
     localStorage.setItem('nickname', newNickname)
   }
-  // 如果你没有 clearUser / logout 方法，加上这个：
+  const setAvatar = (newAvatar: string) => {
+    avatar.value = newAvatar
+    localStorage.setItem('avatar', newAvatar)
+  }
   function clearUser() {
     token.value = ''
     username.value = ''
     role.value = 0
     firstLogin.value = false
     nickname.value = ''
+    localStorage.removeItem('nickname')
+    localStorage.removeItem('avatar')
     localStorage.removeItem('token')
   }
 
@@ -59,9 +66,11 @@ export const useUserStore = defineStore('user', () => {
     setToken,
     setFirstLogin,
     setUsername,
+    setAvatar,
     clearUserData,
     setNickname,
     nickname,
+    avatar,
     clearUser
   }
 })

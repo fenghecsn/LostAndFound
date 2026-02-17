@@ -13,6 +13,14 @@ export interface GetUserInfoParams {
   username: string
 }
 
+// 修改用户信息参数类型
+export interface UpdateUserInfoParams {
+  name?: string
+  nickname?: string
+  phone?: string
+  avatar?: string
+}
+
 export interface ChangePasswordParams {
   old_password: string
   new_password: string
@@ -146,6 +154,17 @@ export const changePasswordApi = (data: ChangePasswordParams) => {
       "Content-Type": "application/json",
     } ,
     url: '/api/v1/password',
+    method: 'put',
+    data
+  })
+}
+// 修改用户信息接口
+export const updateUserInfoApi = (data: Partial<UpdateUserInfoParams>) => {
+  return request ({
+    "headers":{
+      "Content-Type": "application/json",
+    } ,
+    url: '/api/v1/profile',
     method: 'put',
     data
   })

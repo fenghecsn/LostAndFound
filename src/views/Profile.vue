@@ -4,7 +4,10 @@
 			<div class="profile-top">
 				<div class="avatar-block">
 					<el-avatar :size="100" class="avatar-circle">
-						<el-icon><UserFilled /></el-icon>
+						<img v-if="profile.avatar" :src="profile.avatar" alt="用户头像" />
+            <template v-else>
+              <el-icon class="default-avatar-icon"><UserFilled /></el-icon>
+            </template>
 					</el-avatar>
 					<div class="avatar-actions">
 						<el-button class="pill-btn" round @click="handleStaticAction('修改头像')">修改头像</el-button>
@@ -115,7 +118,7 @@
 					:rows="4"
 					maxlength="500"
 					show-word-limit
-					placeholder="请输入你的反馈意见（当前为静态入口，后续将接入接口）"
+					placeholder="请输入你的反馈意见"
 				/>
 				<div class="feedback-actions">
 					<el-button type="warning" @click="handleFeedbackSubmit">提交反馈</el-button>
@@ -318,10 +321,11 @@ import { useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { EditPen, UserFilled } from '@element-plus/icons-vue'
-import { changePasswordApi, getMyClaimDetailApi, getMyClaimsApi, getMyItemsApi, getUserInfoApi, type MyClaimItem, type MyItem, type MyItemStatus } from '@/api/user'
+import { updateUserInfoApi, changePasswordApi, getMyClaimDetailApi, getMyClaimsApi, getMyItemsApi, getUserInfoApi, type MyClaimItem, type MyItem, type MyItemStatus } from '@/api/user'
 import { deleteMyItemApi, updateMyItemApi } from '@/api/Publish'
 import { useUserStore } from '@/stores/user'
 import ConfirmButton from '@/components/ConfirmButton.vue'
+import { a } from 'vue-router/dist/index-Cu9B0wDz.mjs'
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -329,7 +333,8 @@ const router = useRouter()
 const profile = reactive({
 	username: '',
 	name: '',
-	phone: ''
+	phone: '',
+  avatar: userStore.avatar || ''
 })
 
 const displayName = computed(() => profile.name || userStore.nickname || userStore.username || '未命名用户')
@@ -879,6 +884,7 @@ const loadProfile = async () => {
 		profile.username = response.data.data?.username || ''
 		profile.name = response.data.data?.name || ''
 		profile.phone = response.data.data?.phone || ''
+    profile.avatar = response.data.data?.avatar || ''
 	}
 }
 
