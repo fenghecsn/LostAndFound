@@ -245,7 +245,6 @@
 				<el-table-column label="操作" min-width="240" fixed="right">
 					<template #default="scope">
 						<div class="table-actions">
-							<el-button size="small" round type="warning" :disabled="!scope.row.canModify">修改</el-button>
 							<el-button size="small" round :disabled="!scope.row.canDelete">删除</el-button>
 							<el-button size="small" round type="warning" :disabled="!scope.row.canTalk">沟通</el-button>
 							<el-button size="small" round class="detail-btn" @click="openClaimDetail(scope.row)">详情</el-button>
