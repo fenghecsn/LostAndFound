@@ -356,6 +356,7 @@ import { deleteMyItemApi, updateMyItemApi } from '@/api/Publish'
 import { useUserStore } from '@/stores/user'
 import ConfirmButton from '@/components/ConfirmButton.vue'
 import { uploadImagesAndGetUrls } from '@/utils/imageUpload'
+import { normalizeResourceUrl } from '@/utils/url'
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -364,7 +365,7 @@ const profile = reactive({
 	username: '',
 	name: '',
 	phone: '',
-  avatar: userStore.avatar || ''
+  avatar: normalizeResourceUrl(userStore.avatar) || ''
 })
 
 const displayName = computed(() => userStore.nickname || profile.name || userStore.username || '未命名用户')
@@ -563,7 +564,7 @@ const normalizeClaimStatus = (status?: string | number): string => {
 }
 
 const hasCodeField = (data?: { code?: number }) => {
-	return data !== null && data !== undefined && Object.prototype.hasOwnProperty.call(data, 'code')
+	return Number(data?.code) === 200
 }
 
 const collectItemImages = (item?: MyItem) => {
@@ -1046,7 +1047,7 @@ const loadProfile = async () => {
 		profile.username = response.data.data?.username || ''
 		profile.name = response.data.data?.name || ''
 		profile.phone = response.data.data?.phone || ''
-		profile.avatar = response.data.data?.avatar || ''
+		profile.avatar = normalizeResourceUrl(response.data.data?.avatar)
 		userStore.setAvatar(profile.avatar)
 		userStore.setNickname(response.data.data?.nickname || '')
 	}

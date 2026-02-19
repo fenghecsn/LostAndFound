@@ -253,7 +253,7 @@ const handleSubmit = async () => {
     }
 
     const res = await publishItemApi(payload)
-    if (Number(res?.data?.code) === 200 || res?.status === 200) {
+    if (Number(res?.data?.code) === 200) {
       ElMessage.success(res?.data?.msg || '发布成功')
       router.push('/StudentHome')
       return
