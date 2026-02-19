@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { normalizeResourceUrl } from '@/utils/url'
 
 
 export const useUserStore = defineStore('user', () => {
@@ -43,8 +44,9 @@ export const useUserStore = defineStore('user', () => {
     localStorage.setItem('nickname', newNickname)
   }
   const setAvatar = (newAvatar: string) => {
-    avatar.value = newAvatar
-    localStorage.setItem('avatar', newAvatar)
+    const normalizedAvatar = normalizeResourceUrl(newAvatar)
+    avatar.value = normalizedAvatar
+    localStorage.setItem('avatar', normalizedAvatar)
   }
   function clearUser() {
     token.value = ''

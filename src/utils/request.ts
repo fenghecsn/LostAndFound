@@ -1,17 +1,26 @@
 import axios from "axios";
 import { ElMessage } from 'element-plus'
 
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || ''
+
 const request= axios.create({
-  // 改成真实后端地址，例如：
-  // baseURL: 'http://localhost:8080',
-  // 原来的 Mock 地址：
-  //你用了本地mock，我这是云端mock地址，后端接口开发好记得改回来
-  baseURL: 'https://m1.apifoxmock.com/m1/7803476-7550431-7135491/',
+  baseURL: apiBaseUrl,
   timeout: 15000,
 })
 
 request.interceptors.request.use(
   (config) => {
+    const method = (config.method || 'get').toLowerCase()
+    if ((method === 'get' || method === 'delete') && config.headers) {
+      const headers = config.headers as any
+      if (typeof headers.delete === 'function') {
+        headers.delete('Content-Type')
+      } else {
+        delete headers['Content-Type']
+        delete headers['content-type']
+      }
+    }
+
     const token = localStorage.getItem('token')
     if (token) {
       config.headers = config.headers || {}

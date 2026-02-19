@@ -46,7 +46,7 @@ export const publishItemApi = (data: PublishItemPayload) => {
 		headers: {
 			'Content-Type': 'application/json'
 		},
-		url: '/api/v1/items?apifoxApiId=418131347',
+		url: '/api/v1/items',
 		method: 'post',
 		data
 	})

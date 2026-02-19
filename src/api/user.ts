@@ -125,13 +125,19 @@ export interface GetMyClaimDetailResponse {
   msg: string
   data: MyClaimItem
 }
+
+export interface LogoutResponse {
+  code: number
+  msg: string
+  data: null
+}
 // 登录接口
 export const loginApi = (params: LoginParams) => {
   return request ({
     "headers":{
       "Content-Type": "application/json",
     } ,
-    url: '/api/v1/login?apifoxApiId=418131352',
+    url: '/api/v1/login',
     method: 'post',
     data: params
   })
@@ -175,7 +181,7 @@ export const getMyItemsApi = (params: MyItemsParams) => {
     headers: {
       'Content-Type': 'application/json'
     },
-    url: '/api/v1/my/items?apifoxApiId=418131351',
+    url: '/api/v1/my/items',
     method: 'get',
     params
   })
@@ -186,7 +192,7 @@ export const getMyClaimsApi = (params: MyClaimsParams) => {
     headers: {
       'Content-Type': 'application/json'
     },
-    url: '/api/v1/my/claims?apifoxApiId=418131342',
+    url: '/api/v1/my/claims',
     method: 'get',
     params
   })
@@ -199,5 +205,15 @@ export const getMyClaimDetailApi = (id: number) => {
     },
     url: `/api/v1/claims/${id}`,
     method: 'get'
+  })
+}
+
+export const logoutApi = () => {
+  return request<LogoutResponse>({
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    url: '/api/v1/logout',
+    method: 'post'
   })
 }

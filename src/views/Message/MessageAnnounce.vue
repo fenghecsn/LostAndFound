@@ -55,7 +55,7 @@ const currentIndex = ref(0)
 const currentNotice = computed(() => announceList.value[currentIndex.value] || null)
 
 const isSuccessResponse = (resData: unknown) => {
-  return typeof resData === 'object' && resData !== null && 'code' in (resData as Record<string, unknown>)
+  return Number((resData as { code?: number } | null | undefined)?.code) === 200
 }
 
 const formatTime = (value?: string) => {

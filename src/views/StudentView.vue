@@ -112,19 +112,18 @@ const buildQueryParams = (params: ItemQuery): ItemQuery => {
 const fetchData = async () => {
     loading.value = true
     try {
-    const res = await getItems(buildQueryParams(queryParams))
-        const list = Array.isArray(res.data?.data?.list) ? res.data.data.list : []
-        const totalValue = Number(res.data?.data?.total || 0)
-
-        if (list.length > 0 || totalValue >= 0) {
-            itemList.value = list.map((item) => normalizeItem(item))
-            total.value = totalValue
+        const res = await getItems(buildQueryParams(queryParams))
+        if (Number(res?.data?.code) !== 200) {
+            itemList.value = []
+            total.value = 0
+            ElMessage.warning(res?.data?.msg || '获取数据失败')
             return
         }
 
-        itemList.value = []
-        total.value = 0
-        ElMessage.warning(res.data?.msg || '获取数据失败')
+        const list = Array.isArray(res.data?.data?.list) ? res.data.data.list : []
+        const totalValue = Number(res.data?.data?.total || 0)
+        itemList.value = list.map((item) => normalizeItem(item))
+        total.value = totalValue
     } catch (error) {
         console.error(error)
         ElMessage.error('获取数据失败')
@@ -151,7 +150,7 @@ const openDetailDialog = async (item: Item) => {
 
     try {
         const res = await getItemDetail(item.id)
-        if (res?.data?.data) {
+        if (Number(res?.data?.code) === 200 && res?.data?.data) {
             currentItem.value = normalizeItem(res.data.data, item)
             return
         }
@@ -188,11 +187,15 @@ const handleApplySubmit = async (payload: { content: string; file: File | null; 
             }
         }
 
-        await claimItemApi({
+        const claimRes = await claimItemApi({
             item_id: currentItem.value?.id ?? 0,
             proof: payload.content,
             img: imageUrl,
         })
+        if (Number(claimRes?.data?.code) !== 200) {
+            ElMessage.error(claimRes?.data?.msg || '提交申请失败')
+            return
+        }
         const actionText = payload.mode === 'picked' ? '已提交“我捡到了”申请' : '已提交“是我的”申请'
         ElMessage.success(actionText)
         applyVisible.value = false

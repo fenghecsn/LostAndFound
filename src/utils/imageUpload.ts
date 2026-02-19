@@ -1,12 +1,13 @@
 import { uploadImageApi } from '@/api/Img'
+import { normalizeResourceUrl } from '@/utils/url'
 
 export const extractUploadedUrl = (response: any): string => {
   const data = response?.data
   if (!data) return ''
   const payload = data?.data ?? data
-  if (typeof payload === 'string') return payload
+  if (typeof payload === 'string') return normalizeResourceUrl(payload)
 
-  return (
+  return normalizeResourceUrl(
     payload?.url ||
     payload?.image_url ||
     payload?.img ||

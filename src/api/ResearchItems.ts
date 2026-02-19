@@ -89,7 +89,7 @@ export const getItems = (params: ItemQuery) => {
     "headers":{
       "Content-Type": "application/json",
     } ,
-    url: '/api/v1/items?apifoxApiId=418131343',
+    url: '/api/v1/items',
     method: 'get',
     params: params
   })
@@ -100,7 +100,7 @@ export const getItemDetail = (id: number) => {
     headers: {
       'Content-Type': 'application/json',
     },
-    url: `/api/v1/items/${id}?apifoxApiId=418131344`,
+    url: `/api/v1/items/${id}`,
     method: 'get',
   })
 }
