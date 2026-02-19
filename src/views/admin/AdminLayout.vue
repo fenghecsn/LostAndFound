@@ -103,6 +103,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import { getPendingItems, getPendingClaims, getAnnouncements } from '@/api/admin'
+import { logoutApi } from '@/api/user'
 
 const route = useRoute()
 const router = useRouter()
@@ -174,6 +175,14 @@ async function handleLogout() {
       cancelButtonText: '取消',
       type: 'warning',
     })
+    try {
+      const response = await logoutApi()
+      if (Number(response?.data?.code) !== 200) {
+        ElMessage.warning(response?.data?.msg || '退出接口调用失败，已执行本地退出')
+      }
+    } catch {
+      ElMessage.warning('退出接口调用失败，已执行本地退出')
+    }
     userStore.clearUser()
     sessionStorage.removeItem('admin_notice_shown')
     router.push('/')

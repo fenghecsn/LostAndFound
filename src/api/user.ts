@@ -125,6 +125,12 @@ export interface GetMyClaimDetailResponse {
   msg: string
   data: MyClaimItem
 }
+
+export interface LogoutResponse {
+  code: number
+  msg: string
+  data: null
+}
 // 登录接口
 export const loginApi = (params: LoginParams) => {
   return request ({
@@ -199,5 +205,15 @@ export const getMyClaimDetailApi = (id: number) => {
     },
     url: `/api/v1/claims/${id}`,
     method: 'get'
+  })
+}
+
+export const logoutApi = () => {
+  return request<LogoutResponse>({
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    url: '/api/v1/logout',
+    method: 'post'
   })
 }

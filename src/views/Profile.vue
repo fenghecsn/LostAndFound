@@ -351,7 +351,7 @@ import { useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { EditPen, UserFilled } from '@element-plus/icons-vue'
-import { updateUserInfoApi, changePasswordApi, getMyClaimDetailApi, getMyClaimsApi, getMyItemsApi, getUserInfoApi, type MyClaimItem, type MyItem, type MyItemStatus } from '@/api/user'
+import { updateUserInfoApi, changePasswordApi, getMyClaimDetailApi, getMyClaimsApi, getMyItemsApi, getUserInfoApi, logoutApi, type MyClaimItem, type MyItem, type MyItemStatus } from '@/api/user'
 import { deleteMyItemApi, updateMyItemApi } from '@/api/Publish'
 import { useUserStore } from '@/stores/user'
 import ConfirmButton from '@/components/ConfirmButton.vue'
@@ -583,6 +583,76 @@ const formatTime = (value?: string) => {
 	const date = new Date(value)
 	if (Number.isNaN(date.getTime())) return value
 	return `${date.getFullYear()}.${date.getMonth() + 1}.${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+const toApiTimeString = (input?: string) => {
+	const raw = String(input || '').trim()
+	if (!raw) return undefined
+
+	const formatDateToApi = (date: Date) => {
+		return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`
+	}
+
+	if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$/.test(raw)) {
+		return raw
+	}
+
+	const directParsedDate = new Date(raw)
+	if (!Number.isNaN(directParsedDate.getTime())) {
+		return formatDateToApi(directParsedDate)
+	}
+
+	const normalized = raw
+		.replace(/年|\//g, '-')
+		.replace(/月/g, '-')
+		.replace(/日/g, ' ')
+		.replace(/[Tt]/g, ' ')
+		.replace(/\./g, '-')
+		.replace(/时/g, ':')
+		.replace(/分/g, ':')
+		.replace(/秒/g, '')
+		.replace(/\s+/g, ' ')
+		.trim()
+
+	const matched = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2})(?::(\d{1,2}))?(?::(\d{1,2}))?)?$/)
+	if (!matched) {
+		const normalizedParsedDate = new Date(normalized)
+		if (!Number.isNaN(normalizedParsedDate.getTime())) {
+			return formatDateToApi(normalizedParsedDate)
+		}
+		return null
+	}
+
+	const [, year, month, day, hour = '0', minute = '0', second = '0'] = matched
+	const y = Number(year)
+	const m = Number(month)
+	const d = Number(day)
+	const hh = Number(hour)
+	const mm = Number(minute)
+	const ss = Number(second)
+
+	if (
+		!Number.isInteger(y) ||
+		!Number.isInteger(m) ||
+		!Number.isInteger(d) ||
+		!Number.isInteger(hh) ||
+		!Number.isInteger(mm) ||
+		!Number.isInteger(ss) ||
+		m < 1 ||
+		m > 12 ||
+		d < 1 ||
+		d > 31 ||
+		hh < 0 ||
+		hh > 23 ||
+		mm < 0 ||
+		mm > 59 ||
+		ss < 0 ||
+		ss > 59
+	) {
+		return null
+	}
+
+	return `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')} ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
 }
 
 const fetchMyItems = async () => {
@@ -972,7 +1042,7 @@ const openItemDetail = (item: ViewMyItem) => {
 	editForm.campus = item.campus || ''
 	editForm.category = item.category || ''
 	editForm.location = item.location || ''
-	editForm.time = item.time || ''
+	editForm.time = toApiTimeString(item.time) || item.time || ''
 	editForm.description = item.description || ''
 	editForm.contact_name = item.contact_name || ''
 	editForm.contact_phone = item.contact_phone || ''
@@ -994,6 +1064,12 @@ const handleResubmit = async () => {
 		return
 	}
 
+	const normalizedTime = toApiTimeString(editForm.time)
+	if (normalizedTime === null) {
+		ElMessage.warning('时间格式错误，需为 2006-01-02 15:04:05')
+		return
+	}
+
 	resubmitLoading.value = true
 	try {
 		const response = await updateMyItemApi(activeItem.value.id, {
@@ -1001,7 +1077,7 @@ const handleResubmit = async () => {
 			campus: editForm.campus.trim() || undefined,
 			category: editForm.category.trim() || undefined,
 			location: editForm.location.trim() || undefined,
-			time: editForm.time.trim() || undefined,
+			time: normalizedTime,
 			description: editForm.description.trim() || undefined,
 			contact_name: editForm.contact_name.trim() || undefined,
 			contact_phone: editForm.contact_phone.trim() || undefined,
@@ -1032,6 +1108,14 @@ const handleLogout = async () => {
 			cancelButtonText: '取消',
 			type: 'warning'
 		})
+		try {
+			const response = await logoutApi()
+			if (Number(response?.data?.code) !== 200) {
+				ElMessage.warning(response?.data?.msg || '退出接口调用失败，已执行本地退出')
+			}
+		} catch {
+			ElMessage.warning('退出接口调用失败，已执行本地退出')
+		}
 		userStore.clearUserData()
 		router.push('/')
 		ElMessage.success('退出登录成功')

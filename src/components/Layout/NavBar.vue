@@ -73,6 +73,7 @@ import { useRouter, useRoute } from 'vue-router'
 import ConfirmButton from '../ConfirmButton.vue'
 import {useUserStore} from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import { logoutApi } from '@/api/user'
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -162,7 +163,15 @@ const handlePublish = (type: 'found' | 'lost') => {
   })
 }
 
-const handleLogout = () => {
+const handleLogout = async () => {
+  try {
+    const response = await logoutApi()
+    if (Number(response?.data?.code) !== 200) {
+      ElMessage.warning(response?.data?.msg || '退出接口调用失败，已执行本地退出')
+    }
+  } catch {
+    ElMessage.warning('退出接口调用失败，已执行本地退出')
+  }
   userStore.clearUserData()
   router.push('/')
   ElMessage.success('退出登录成功')
