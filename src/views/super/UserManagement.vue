@@ -210,15 +210,15 @@ watch([searchKeyword, filterRole, filterStatus], () => {
 })
 
 function roleKey(role: number) {
+  if (role === 3) return 'super'
   if (role === 2) return 'admin'
-  if (role === 3) return 'teacher'
   return 'student'
 }
 
 function roleText(role: number) {
+  if (role === 3) return '超级管理员'
   if (role === 2) return '管理员'
-  if (role === 3) return '教师'
-  return '学生'
+  return '学生/老师'
 }
 
 function getRowId(row: UserRow) {
@@ -226,23 +226,27 @@ function getRowId(row: UserRow) {
 }
 
 function statusKey(row: UserRow) {
-  if (row.role !== 2) return 'none'
+  if (row.role !== 2 && row.role !== 3) return 'none'
   return row.is_active ? 'enabled' : 'disabled'
 }
 
 function statusText(row: UserRow) {
-  if (row.role !== 2) return '无'
+  if (row.role !== 2 && row.role !== 3) return '无'
   return row.is_active ? '启用' : '禁用'
 }
 
 function statusClass(row: UserRow) {
-  if (row.role !== 2) return 'status-none'
+  if (row.role !== 2 && row.role !== 3) return 'status-none'
   return row.is_active ? 'status-enabled' : 'status-disabled'
 }
 
 function formatDate(val?: string) {
   if (!val) return '--'
-  return val.slice(0, 10)
+  const raw = String(val).trim()
+  if (!raw || raw.startsWith('0001-01-01') || raw.startsWith('1970-01-01')) return '--'
+  const d = new Date(raw)
+  if (Number.isNaN(d.getTime())) return '--'
+  return d.toISOString().slice(0, 10)
 }
 
 async function fetchUsers() {
@@ -250,8 +254,8 @@ async function fetchUsers() {
   try {
     const roleMap: Record<string, number | undefined> = {
       student: 1,
+      teacher: 1,
       admin: 2,
-      teacher: 3,
     }
     const res = await getUserList({
       page: 1,
@@ -317,7 +321,7 @@ function getSelectedRows() {
 
 async function handleBatchEnable() {
   if (batchLoading.value) return
-  const rows = getSelectedRows().filter((u) => u.role === 2)
+  const rows = getSelectedRows().filter((u) => u.role === 2 || u.role === 3)
   if (rows.length === 0) {
     ElMessage.warning('请至少勾选一个管理员')
     return
@@ -337,7 +341,7 @@ async function handleBatchEnable() {
 
 async function handleBatchDisable() {
   if (batchLoading.value) return
-  const rows = getSelectedRows().filter((u) => u.role === 2)
+  const rows = getSelectedRows().filter((u) => u.role === 2 || u.role === 3)
   if (rows.length === 0) {
     ElMessage.warning('请至少勾选一个管理员')
     return
