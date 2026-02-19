@@ -16,7 +16,7 @@ export const claimItemApi = (data: ClaimItemPayload) => {
     headers: {
       'Content-Type': 'application/json'
     },
-    url: 'api/v1/claim',
+    url: '/api/v1/claims',
     method: 'post',
     data
   })
