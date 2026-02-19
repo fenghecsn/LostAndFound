@@ -48,11 +48,17 @@ onBeforeUnmount(() => {
   width: 100%;
   padding: 20px;
   gap: 20px;
+  align-items: flex-start;
 }
 
 .sidebar-wrapper {
   width: 240px;
   flex-shrink: 0;
+  position: sticky;
+  top: 80px;
+  align-self: flex-start;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
 }
 
 .main-content {
