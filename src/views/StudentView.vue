@@ -30,6 +30,13 @@ const queryParams = reactive<ItemQuery>({
 })
 
 // --- 筛选项常量 ---
+const statusFilterOptions: Array<{ label: string; value: ItemQuery['status'] }> = [
+    { label: '全部状态', value: undefined },
+    { label: '待审核', value: 'pending' },
+    { label: '已匹配', value: 'matched' },
+    { label: '已通过', value: 'approved' },
+]
+
 const filterOptions = {
     types: [
         { label: '全部帖子', value: undefined },
@@ -42,19 +49,14 @@ const filterOptions = {
         { label: '屏峰', value: '屏峰' },
         { label: '莫干山', value: '莫干山' },
     ],
-    statuses: [
-        { label: '全部状态', value: undefined },
-        { label: '已通过', value: 1 },
-        { label: '已匹配', value: 2 },
-        { label: '已认领', value: 3 },
-    ],
+    statuses: statusFilterOptions,
     times: [
         { label: '全部时间', value: undefined },
-        { label: '0~3', value: '0-3' },
-        { label: '3~7', value: '3-7' },
-        { label: '7~15', value: '7-15' },
-        { label: '15~30', value: '15-30' },
-        { label: '>30', value: '30+' },
+        { label: '0~3', value: 3},
+        { label: '3~7', value: 7 },
+        { label: '7~15', value: 15 },
+        { label: '15~30', value: 30 },
+        { label: '>30', value: 999 },
     ],
     categories: [
         { label: '全部类型', value: undefined },
@@ -75,6 +77,8 @@ const normalizeType = (type: RawItemFromApi['type'], fallback: Item['type'] = 1)
 }
 
 const normalizeStatus = (status: RawItemFromApi['status'], fallback: Item['status'] = 1): Item['status'] => {
+    if (status === 'pending') return 'pending'
+    if (status === 'approved') return 'approved'
     if (status === 'displaying') return 1
     if (status === 'matched') return 2
     if (status === 'claimed') return 3
@@ -208,6 +212,10 @@ const handleApplySubmit = async (payload: { content: string; file: File | null; 
 // 状态文本映射
 const getStatusText = (status: number | string) => {
     switch(status) {
+        case 'pending':
+            return '待审核'
+        case 'approved':
+            return '已通过'
         case 1:
         case 'displaying':
             return '已通过'
@@ -227,9 +235,12 @@ const getStatusText = (status: number | string) => {
 // 状态颜色映射
 const getStatusColor = (status: number | string) => {
     switch(status) {
+                case 'pending':
+                    return 'rgb(230, 162, 60)'
         case 2:
         case 'matched':
           return 'rgb(245, 108, 108)'
+                case 'approved':
         case 3:
         case 'claimed':
           return 'rgb(103, 194, 58)'

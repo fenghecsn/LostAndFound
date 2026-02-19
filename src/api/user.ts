@@ -26,7 +26,7 @@ export interface ChangePasswordParams {
   new_password: string
 }
 
-export type MyItemStatus = '' | '待审核' | '已通过' | '已匹配' | '已认领' | '已驳回'
+export type MyItemStatus = '' | 'pending' | 'approved' | 'matched' | 'claimed' | 'rejected'
 
 export interface MyItemsParams {
   status?: MyItemStatus

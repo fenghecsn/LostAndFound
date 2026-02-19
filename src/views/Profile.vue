@@ -464,11 +464,11 @@ const avatarInputRef = ref<HTMLInputElement>()
 
 const statusOptions: Array<{ label: string; value: MyItemStatus }> = [
 	{ label: '全部类型', value: '' },
-	{ label: '待审核', value: '待审核' },
-	{ label: '已通过', value: '已通过' },
-	{ label: '已匹配', value: '已匹配' },
-	{ label: '已认领', value: '已认领' },
-	{ label: '已驳回', value: '已驳回' }
+	{ label: '待审核', value: 'pending' },
+	{ label: '已通过', value: 'approved' },
+	{ label: '已匹配', value: 'matched' },
+	{ label: '已认领', value: 'claimed' },
+	{ label: '已驳回', value: 'rejected' }
 ]
 
 const editableStatuses = ['待审核', '已通过', '已驳回']
