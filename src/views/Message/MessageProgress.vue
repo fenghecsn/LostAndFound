@@ -63,7 +63,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getClaimProgressApi, getClaimReasonApi, type ClaimProgressItem } from '@/api/Claim'
+import { getClaimProgressApi, getClaimReasonApi, type ClaimProgressItem } from '@/api/ClaimProgess'
 import { normalizeResourceUrl } from '@/utils/url'
 
 const loading = ref(false)
