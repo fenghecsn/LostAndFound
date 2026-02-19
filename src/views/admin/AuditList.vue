@@ -61,8 +61,8 @@
           <template #default="{ row }">
             <div class="action-btns">
               <el-button type="warning" round size="small" @click="showDetail(row)">详情</el-button>
-              <el-button type="warning" round size="small" plain @click="openReject(row)">驳回</el-button>
-              <el-button type="warning" round size="small" @click="handleApprove(row)">通过</el-button>
+              <el-button type="warning" round size="small" plain :disabled="submitLoading" @click="openReject(row)">驳回</el-button>
+              <el-button type="warning" round size="small" :loading="submitLoading && submittingAction === 'approve'" @click="handleApprove(row)">通过</el-button>
             </div>
           </template>
         </el-table-column>
@@ -143,8 +143,8 @@
         show-word-limit
       />
       <template #footer>
-        <el-button @click="rejectVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleReject">确认驳回</el-button>
+        <el-button :disabled="submitLoading" @click="rejectVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitLoading && submittingAction === 'reject'" @click="handleReject">确认驳回</el-button>
       </template>
     </el-dialog>
   </div>
@@ -171,6 +171,8 @@ const currentItem = ref<any>(null)
 const rejectVisible = ref(false)
 const rejectReason = ref('')
 const rejectingItem = ref<any>(null)
+const submitLoading = ref(false)
+const submittingAction = ref<'approve' | 'reject' | ''>('')
 
 async function fetchPendingList() {
   loading.value = true
@@ -208,8 +210,11 @@ function openReject(row: any) {
 }
 
 async function handleApprove(row: any) {
+  if (submitLoading.value) return
   try {
     await ElMessageBox.confirm('确定通过该帖子的审核？', '确认')
+    submitLoading.value = true
+    submittingAction.value = 'approve'
     await approveItem(row.id ?? row.ID)
     auditHistoryStore.addRecord(row, 'approved', undefined, 'item')
     ElMessage.success('审核通过')
@@ -219,15 +224,21 @@ async function handleApprove(row: any) {
     if (error === 'cancel' || error === 'close') return
     const errMsg = error instanceof Error ? error.message : '审核失败'
     ElMessage.error(errMsg)
+  } finally {
+    submitLoading.value = false
+    submittingAction.value = ''
   }
 }
 
 async function handleReject() {
+  if (submitLoading.value) return
   if (!rejectReason.value.trim()) {
     ElMessage.warning('请填写驳回原因')
     return
   }
   try {
+    submitLoading.value = true
+    submittingAction.value = 'reject'
     const id = rejectingItem.value.id ?? rejectingItem.value.ID
     await rejectItem(id, { reject_reason: rejectReason.value })
     auditHistoryStore.addRecord(rejectingItem.value, 'rejected', rejectReason.value, 'item')
@@ -239,6 +250,9 @@ async function handleReject() {
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : '驳回失败'
     ElMessage.error(errMsg)
+  } finally {
+    submitLoading.value = false
+    submittingAction.value = ''
   }
 }
 

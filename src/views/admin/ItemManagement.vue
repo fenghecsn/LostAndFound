@@ -40,7 +40,7 @@
             :key="opt.value"
             :type="filterType === opt.value ? 'warning' : 'default'"
             round size="small"
-            @click="filterType = opt.value; fetchItemList()"
+            @click="filterType = opt.value; currentPage = 1; fetchItemList()"
           >{{ opt.label }}</el-button>
         </div>
         <div class="filter-row">
@@ -49,7 +49,7 @@
             :key="opt.value"
             :type="filterStatus === opt.value ? 'warning' : 'default'"
             round size="small"
-            @click="filterStatus = opt.value; fetchItemList()"
+            @click="filterStatus = opt.value; currentPage = 1; fetchItemList()"
           >{{ opt.label }}</el-button>
         </div>
         <div class="filter-row">
@@ -58,7 +58,7 @@
             :key="opt.value"
             :type="filterTime === opt.value ? 'warning' : 'default'"
             round size="small"
-            @click="filterTime = opt.value; fetchItemList()"
+            @click="filterTime = opt.value; currentPage = 1; fetchItemList()"
           >{{ opt.label }}</el-button>
         </div>
       </div>
@@ -295,6 +295,7 @@ const selectedIds = ref<number[]>([])
 const filterType = ref('')
 const filterStatus = ref('')
 const filterTime = ref('')
+const fullItemList = ref<any[]>([])
 
 const typeOptions = [
   { label: '全部帖子', value: '' },
@@ -462,30 +463,68 @@ function getStatusTagType(status: string) {
 async function fetchItemList() {
   loading.value = true
   try {
-    const params: any = {
-      page: currentPage.value,
-      pageSize: pageSize.value,
-    }
-    if (filterType.value) params.lost_or_found = filterType.value
-    if (filterStatus.value) {
-      params.status = filterStatus.value
-    } else {
-      params.status = 'approved,matched,claimed,archived,cancelled'
-    }
-    if (searchKeyword.value) params.keyword = searchKeyword.value
-    if (filterTime.value) params.time_range = filterTime.value
+    const hasFilter =
+      Boolean(filterType.value) ||
+      Boolean(filterStatus.value) ||
+      Boolean(searchKeyword.value.trim()) ||
+      Boolean(filterTime.value)
 
+    const params: any = hasFilter
+      ? { page: 1, pageSize: 9999 }
+      : { page: currentPage.value, pageSize: pageSize.value }
+
+    if (!hasFilter) {
+      // 无筛选时，服务端分页直接返回，提高性能
+      const res = await getAllItems(params)
+      const resData = res.data?.data ?? res.data ?? {}
+      itemList.value = (resData.list ?? resData.items ?? []).map((item: any) => ({
+        ...item,
+        id: item.id ?? item.ID,
+      }))
+      total.value = resData.total ?? 0
+      fullItemList.value = itemList.value
+      return
+    }
+
+    // 有筛选时，前端兜底过滤，避免后端筛选不生效导致“显示全部”
     const res = await getAllItems(params)
     const resData = res.data?.data ?? res.data ?? {}
-    itemList.value = (resData.list ?? resData.items ?? []).map((item: any) => ({
+    fullItemList.value = (resData.list ?? resData.items ?? []).map((item: any) => ({
       ...item,
       id: item.id ?? item.ID,
     }))
-    total.value = resData.total ?? 0
+
+    const keyword = searchKeyword.value.trim().toLowerCase()
+    const daysRange = parseTimeRange(filterTime.value)
+    const now = Date.now()
+
+    const filtered = fullItemList.value.filter((item: any) => {
+      if (filterType.value && String(item.lost_or_found) !== String(filterType.value)) return false
+      if (filterStatus.value && String(item.status) !== String(filterStatus.value)) return false
+      if (keyword) {
+        const title = String(item.title || '').toLowerCase()
+        const category = String(item.category || '').toLowerCase()
+        const location = String(item.location || '').toLowerCase()
+        if (!title.includes(keyword) && !category.includes(keyword) && !location.includes(keyword)) return false
+      }
+      if (daysRange) {
+        const created = new Date(item.CreatedAt || item.created_at || item.time || '').getTime()
+        if (!created || Number.isNaN(created)) return false
+        const diffDays = Math.floor((now - created) / (24 * 3600 * 1000))
+        if (diffDays < daysRange.min) return false
+        if (daysRange.max !== null && diffDays >= daysRange.max) return false
+      }
+      return true
+    })
+
+    total.value = filtered.length
+    const start = (currentPage.value - 1) * pageSize.value
+    itemList.value = filtered.slice(start, start + pageSize.value)
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : '获取物品列表失败'
     ElMessage.error(errMsg)
     itemList.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }
@@ -494,6 +533,16 @@ async function fetchItemList() {
 function handleSearch() {
   currentPage.value = 1
   fetchItemList()
+}
+
+function parseTimeRange(val: string): { min: number; max: number | null } | null {
+  if (!val) return null
+  if (val === '0-3') return { min: 0, max: 3 }
+  if (val === '3-7') return { min: 3, max: 7 }
+  if (val === '7-15') return { min: 7, max: 15 }
+  if (val === '15-30') return { min: 15, max: 30 }
+  if (val === '30+') return { min: 30, max: null }
+  return null
 }
 
 function showItemDetail(item: any) {

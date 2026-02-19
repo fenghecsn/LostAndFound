@@ -1,147 +1,269 @@
 import request from '@/utils/request'
 
-// ==================== 类型定义 ====================
+export interface ApiResponse<T = any> {
+  code: number
+  msg: string
+  data: T
+}
+
+export interface PageResponse<T> {
+  list: T[]
+  total: number
+}
+
+export interface PageParams {
+  page_num: number
+  page_size: number
+}
 
 export interface PaginationParams {
   page?: number
   pageSize?: number
 }
 
-/** 创建管理员请求 */
-export interface CreateAdminRequest {
+export interface User {
+  ID: number
   username: string
   name: string
-  password: string
+  nickname: string
+  phone: string
+  role: number
+  is_active: boolean
+  avatar: string
+  CreatedAt: string
 }
 
-/** 更新用户状态请求 */
+export interface Announcement {
+  ID: number
+  title: string
+  content: string
+  type: string
+  publisher: string
+  is_top: boolean
+  status: string
+  region?: string
+  CreatedAt: string
+}
+
+export interface Feedback {
+  ID: number
+  type: string
+  content: string
+  contact: string
+  status: string
+  reply?: string
+  CreatedAt: string
+}
+
+export interface Category {
+  id: number
+  kind_name: string
+}
+
+export interface GetUsersParams extends PageParams {
+  role?: number
+  keyword?: string
+}
+
+export interface CreateAdminRequest {
+  username: string
+  password: string
+  name: string
+}
+
 export interface UpdateUserStatusRequest {
   is_active: boolean
 }
 
-/** 创建系统公告请求 */
-export interface CreateAnnouncementRequest {
+export interface CreateSystemAnnouncementRequest {
   title: string
   content: string
+  type: string
   is_top?: boolean
-  type?: string
 }
 
-/** 审核公告请求（body 里传 id + status） */
 export interface ReviewAnnouncementRequest {
   id: number
   status: 'approved' | 'rejected'
 }
 
-/** 添加物品分类请求 */
-export interface AddCategoryRequest {
-  name: string
+export interface GetFeedbacksParams extends PageParams {
+  status?: string
 }
 
-/** 回复反馈请求 */
 export interface ReplyFeedbackRequest {
   reply: string
 }
 
-/** 数据清理请求 */
 export interface CleanupRequest {
   days: number
 }
 
-// ==================== 仪表盘与数据中心 ====================
-
-/** 获取系统统计数据 */
-export function getSuperStats() {
-  return request.get('/api/v1/super/stats')
+export interface AddCategoryRequest {
+  name: string
 }
 
-/** 清理过期数据 */
-export function cleanupExpiredData(data: CleanupRequest) {
-  return request.post('/api/v1/super/data/cleanup', data)
+export interface SendMessageRequest {
+  receiver_id: number
+  content: string
+  type?: number
+  item_id?: number
 }
 
-// ==================== 账号与权限管理 ====================
-
-/** 获取用户列表 */
-export function getUserList(params?: PaginationParams & { role?: number; keyword?: string }) {
-  return request.get('/api/v1/super/users', {
-    params: {
-      page_num: params?.page || 1,
-      page_size: params?.pageSize || 10,
-      role: params?.role,
-      keyword: params?.keyword,
-    }
+export const getSuperStatsApi = () =>
+  request<ApiResponse<any>>({
+    url: '/api/v1/super/stats',
+    method: 'GET',
   })
-}
 
-/** 创建失物招领管理员 */
-export function createAdmin(data: CreateAdminRequest) {
-  return request.post('/api/v1/super/users/admin', data)
-}
-
-/** 禁用/启用账号 */
-export function updateUserStatus(id: number, data: UpdateUserStatusRequest) {
-  return request.put(`/api/v1/super/users/${id}/status`, data)
-}
-
-// ==================== 公告管理 ====================
-
-/** 获取公告列表 */
-export function getAnnouncements(params?: PaginationParams) {
-  return request.get('/api/v1/super/announcements', {
-    params: {
-      page_num: params?.page || 1,
-      page_size: params?.pageSize || 50,
-    }
+export const cleanupDataApi = (data: CleanupRequest) =>
+  request<ApiResponse<any>>({
+    url: '/api/v1/super/data/cleanup',
+    method: 'POST',
+    data,
   })
-}
 
-/** 发布系统公告 */
-export function createSystemAnnouncement(data: CreateAnnouncementRequest) {
-  return request.post('/api/v1/super/announcements', data)
-}
-
-/** 审核公告（通过/拒绝）—— body 传 { id, status } */
-export function reviewAnnouncement(data: ReviewAnnouncementRequest) {
-  return request.put('/api/v1/super/announcements/review', data)
-}
-
-/** 删除公告 */
-export function deleteAnnouncement(id: number) {
-  return request.delete(`/api/v1/super/announcements/${id}`)
-}
-
-// ==================== 系统参数设置 ====================
-
-/** 获取分类列表（公共接口） */
-export function getCategoryList() {
-  return request.get('/api/v1/kinds')
-}
-
-/** 添加物品分类 */
-export function addCategory(data: AddCategoryRequest) {
-  return request.post('/api/v1/super/categories', data)
-}
-
-/** 删除物品分类 */
-export function deleteCategory(id: number) {
-  return request.delete(`/api/v1/super/categories/${id}`)
-}
-
-// ==================== 反馈中心 ====================
-
-/** 获取用户反馈列表 */
-export function getFeedbacks(params?: PaginationParams & { status?: string }) {
-  return request.get('/api/v1/super/feedbacks', {
-    params: {
-      page_num: params?.page || 1,
-      page_size: params?.pageSize || 10,
-      status: params?.status,
-    }
+export const getUsersApi = (params: GetUsersParams) =>
+  request<ApiResponse<PageResponse<User>>>({
+    url: '/api/v1/super/users',
+    method: 'GET',
+    params,
   })
+
+export const createAdminApi = (data: CreateAdminRequest) =>
+  request<ApiResponse<null>>({
+    url: '/api/v1/super/users/admin',
+    method: 'POST',
+    data,
+  })
+
+export const updateUserStatusApi = (id: number, data: UpdateUserStatusRequest) =>
+  request<ApiResponse<null>>({
+    url: `/api/v1/super/users/${id}/status`,
+    method: 'PUT',
+    data,
+  })
+
+export const getAnnouncementsApi = (params: PageParams) =>
+  request<ApiResponse<PageResponse<Announcement>>>({
+    url: '/api/v1/super/announcements',
+    method: 'GET',
+    params,
+  })
+
+export const createSystemAnnouncementApi = (data: CreateSystemAnnouncementRequest) =>
+  request<ApiResponse<null>>({
+    url: '/api/v1/super/announcements',
+    method: 'POST',
+    data,
+  })
+
+export const reviewAnnouncementApi = (data: ReviewAnnouncementRequest) =>
+  request<ApiResponse<null>>({
+    url: '/api/v1/super/announcements/review',
+    method: 'PUT',
+    data,
+  })
+
+export const deleteAnnouncementApi = (id: number) =>
+  request<ApiResponse<null>>({
+    url: `/api/v1/super/announcements/${id}`,
+    method: 'DELETE',
+  })
+
+export const getFeedbacksApi = (params: GetFeedbacksParams) =>
+  request<ApiResponse<PageResponse<Feedback>>>({
+    url: '/api/v1/super/feedbacks',
+    method: 'GET',
+    params,
+  })
+
+export const replyFeedbackApi = (id: number, data: ReplyFeedbackRequest) =>
+  request<ApiResponse<null>>({
+    url: `/api/v1/super/feedbacks/${id}/reply`,
+    method: 'PUT',
+    data,
+  })
+
+export const getCategoriesApi = () =>
+  request<ApiResponse<Category[]>>({
+    url: '/api/v1/kinds',
+    method: 'GET',
+  })
+
+export const addCategoryApi = (data: AddCategoryRequest) =>
+  request<ApiResponse<null>>({
+    url: '/api/v1/super/categories',
+    method: 'POST',
+    data,
+  })
+
+export const deleteCategoryApi = (id: number) =>
+  request<ApiResponse<null>>({
+    url: `/api/v1/super/categories/${id}`,
+    method: 'DELETE',
+  })
+
+export const sendMessageApi = (data: SendMessageRequest) =>
+  request<ApiResponse<null>>({
+    url: '/api/v1/messages',
+    method: 'POST',
+    data,
+  })
+
+export const updateUserApi = (id: number, data: any) =>
+  request<ApiResponse<null>>({
+    url: `/api/v1/super/users/${id}`,
+    method: 'PUT',
+    data,
+  })
+
+export const deleteUserApi = (id: number) =>
+  request<ApiResponse<null>>({
+    url: `/api/v1/super/users/${id}`,
+    method: 'DELETE',
+  })
+
+export const getUserList = (params?: any) => {
+  const newParams = {
+    ...params,
+    page_num: params?.page || params?.page_num || 1,
+    page_size: params?.pageSize || params?.page_size || 10,
+  }
+  return getUsersApi(newParams)
 }
 
-/** 回复反馈 */
-export function replyFeedback(id: number, data: ReplyFeedbackRequest) {
-  return request.put(`/api/v1/super/feedbacks/${id}/reply`, data)
+export const getSuperStats = getSuperStatsApi
+export const cleanupExpiredData = cleanupDataApi
+
+export const getAnnouncements = (params?: any) => {
+  const newParams = {
+    ...params,
+    page_num: params?.page || params?.page_num || 1,
+    page_size: params?.pageSize || params?.page_size || 10,
+  }
+  return getAnnouncementsApi(newParams)
 }
+
+export const createSystemAnnouncement = createSystemAnnouncementApi
+export const reviewAnnouncement = reviewAnnouncementApi
+export const deleteAnnouncement = deleteAnnouncementApi
+export const getCategoryList = getCategoriesApi
+export const addCategory = addCategoryApi
+export const deleteCategory = deleteCategoryApi
+export const updateUserStatus = updateUserStatusApi
+export const createAdmin = createAdminApi
+export const sendMessage = sendMessageApi
+export const updateUser = updateUserApi
+export const deleteUser = deleteUserApi
+
+export const getFeedbacks = (params?: any) => {
+  const newParams = {
+    ...params,
+    page_num: params?.page || params?.page_num || 1,
+    page_size: params?.pageSize || params?.page_size || 10,
+  }
+  return getFeedbacksApi(newParams)
+}
+
+export const replyFeedback = replyFeedbackApi
