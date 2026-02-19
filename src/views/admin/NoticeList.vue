@@ -141,6 +141,7 @@ const hasUnread = ref(true)
 
 const loading = ref(false)
 const publishing = ref(false)
+const confirmedNoticeIds = ref<number[]>([])
 
 // 区域公告列表（包含后端返回的 + 本地刚发布的）
 const noticeList = ref<any[]>([])
@@ -160,6 +161,20 @@ const publishForm = reactive({
 function formatTime(t: string | undefined): string {
   if (!t) return ''
   return new Date(t).toLocaleString('zh-CN')
+}
+
+function loadConfirmedNoticeIds() {
+  try {
+    const raw = localStorage.getItem('admin_confirmed_notice_ids')
+    const list = raw ? JSON.parse(raw) : []
+    confirmedNoticeIds.value = Array.isArray(list) ? list.map((v) => Number(v)).filter(Boolean) : []
+  } catch {
+    confirmedNoticeIds.value = []
+  }
+}
+
+function saveConfirmedNoticeIds() {
+  localStorage.setItem('admin_confirmed_notice_ids', JSON.stringify(confirmedNoticeIds.value))
 }
 
 function getStatusText(notice: any): string {
@@ -185,7 +200,12 @@ async function fetchNoticeList() {
 
     // 后端返回的按类型分
     const regionFromApi = list.filter((n: any) => n.type !== 'system')
-    systemNoticeList.value = list.filter((n: any) => n.type === 'system')
+    systemNoticeList.value = list
+      .filter((n: any) => n.type === 'system')
+      .map((n: any) => ({
+        ...n,
+        confirmed: confirmedNoticeIds.value.includes(Number(n.ID ?? n.id ?? 0)),
+      }))
 
     // 合并：本地发布的排在最前面 + 后端返回的
     // 用 title+content 去重，避免后端已经入库了还重复显示
@@ -252,11 +272,17 @@ async function handlePublish() {
 }
 
 function confirmNotice(notice: any) {
+  const id = Number(notice.ID ?? notice.id ?? 0)
+  if (id && !confirmedNoticeIds.value.includes(id)) {
+    confirmedNoticeIds.value.push(id)
+    saveConfirmedNoticeIds()
+  }
   notice.confirmed = true
   ElMessage.success('已确认')
 }
 
 onMounted(() => {
+  loadConfirmedNoticeIds()
   fetchNoticeList()
 })
 </script>

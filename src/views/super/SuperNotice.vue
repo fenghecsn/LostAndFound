@@ -1,154 +1,259 @@
-<template>
+﻿<template>
   <div class="notice-page">
-    <div class="page-header">
+    <div class="notice-panel">
       <h2 class="page-title">公告管理</h2>
-    </div>
 
-    <div class="tab-header">
-      <el-button :type="currentTab === 'publish' ? 'danger' : 'default'" round @click="currentTab = 'publish'">
-        发布系统公告
-      </el-button>
-      <el-button :type="currentTab === 'audit' ? 'danger' : 'default'" round @click="currentTab = 'audit'; fetchList()">
-        审核区域公告
-        <el-badge v-if="pendingCount > 0" :value="pendingCount" :max="99" class="badge-offset" />
-      </el-button>
-      <el-button :type="currentTab === 'all' ? 'danger' : 'default'" round @click="currentTab = 'all'; fetchList()">
-        全部公告
-      </el-button>
-    </div>
+      <div class="toolbar">
+        <el-button class="publish-btn" type="warning" @click="openPublishDialog">+发布全局公告</el-button>
+        <el-select v-model="filterStatus" class="status-select" placeholder="全部状态">
+          <el-option label="全部状态" value="" />
+          <el-option label="已发布" value="approved" />
+          <el-option label="已驳回" value="rejected" />
+          <el-option label="待审核" value="pending" />
+        </el-select>
+        <el-input v-model="keyword" class="search-input" placeholder="搜索公告..." clearable />
+      </div>
 
-    <!-- 发布系统公告 -->
-    <div v-if="currentTab === 'publish'" class="publish-card">
-      <el-form :model="publishForm" label-width="90px">
-        <el-form-item label="公告标题">
-          <el-input v-model="publishForm.title" placeholder="请输入系统公告标题" />
-        </el-form-item>
-        <el-form-item label="公告内容">
-          <el-input v-model="publishForm.content" type="textarea" :rows="10" placeholder="请输入公告内容" />
-        </el-form-item>
-        <el-form-item label="是否置顶">
-          <el-switch v-model="publishForm.is_top" />
-        </el-form-item>
-        <el-form-item>
-          <div style="text-align: right; width: 100%;">
-            <el-button type="primary" :loading="publishing" @click="handlePublish">发布</el-button>
+      <div class="notice-list" v-loading="loading">
+        <div v-for="item in pagedNotices" :key="item.ID" class="notice-card">
+          <div class="card-main">
+            <h3 class="notice-title">{{ item.title }}</h3>
+            <p class="notice-content">{{ item.content }}</p>
+            <div class="notice-meta">
+              <span>{{ item.publisher || '系统管理员' }}</span>
+              <span>·</span>
+              <span>{{ formatDate(item.CreatedAt) }}</span>
+              <el-tag size="small" round :type="statusTagType(item.status)" class="status-tag">
+                {{ statusText(item.status) }}
+              </el-tag>
+            </div>
           </div>
+
+          <div class="card-actions">
+            <el-button
+              link
+              type="primary"
+              :disabled="normalizeStatus(item.status) === 'approved' || normalizeStatus(item.status) === 'rejected'"
+              @click="openAuditDialog(item)"
+            >
+              审核
+            </el-button>
+            <el-button
+              link
+              type="warning"
+              :disabled="normalizeStatus(item.status) === 'pending'"
+              @click="openEditDialog(item)"
+            >
+              修改
+            </el-button>
+            <el-button link type="danger" @click="handleDelete(item)">删除</el-button>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-bar">
+        <span class="record-text">显示第 {{ pageStart }} 到 {{ pageEnd }} 条，共 {{ filteredNotices.length }} 条记录</span>
+        <el-pagination
+          v-model:current-page="currentPage"
+          :page-size="pageSize"
+          :total="filteredNotices.length"
+          layout="prev, pager, next"
+          background
+        />
+      </div>
+    </div>
+
+    <el-dialog v-model="publishVisible" title="发布新公告" width="900px" destroy-on-close>
+      <el-form :model="publishForm" label-position="top">
+        <el-form-item label="标题">
+          <el-input v-model="publishForm.title" placeholder="请输入公告标题" />
+        </el-form-item>
+        <el-form-item label="内容">
+          <el-input v-model="publishForm.content" type="textarea" :rows="6" placeholder="请输入公告内容" />
+        </el-form-item>
+        <el-form-item label="发布范围">
+          <el-select v-model="publishForm.type" style="width: 100%;">
+            <el-option label="全体用户" value="system" />
+            <el-option label="区域用户" value="region" />
+          </el-select>
         </el-form-item>
       </el-form>
-    </div>
+      <template #footer>
+        <el-button class="publish-footer-btn" type="warning" :loading="publishing" @click="handlePublish">发布公告</el-button>
+      </template>
+    </el-dialog>
 
-    <!-- 审核区域公告 -->
-    <div v-if="currentTab === 'audit'" v-loading="loading">
-      <div v-if="auditList.length === 0" style="padding: 40px 0;">
-        <el-empty description="暂无待审核公告" />
-      </div>
-      <div v-else class="notice-list">
-        <div v-for="notice in auditList" :key="notice.ID" class="notice-card">
-          <div class="notice-card-header">
-            <h3>{{ notice.title }}</h3>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <el-tag type="warning" size="small">待审核</el-tag>
-              <el-tag v-if="notice.region" type="info" size="small" effect="plain">{{ notice.region }}</el-tag>
-            </div>
-          </div>
-          <p class="notice-body">{{ notice.content }}</p>
-          <div class="notice-meta">
-            <span>发布者：{{ notice.publisher || '--' }}</span>
-          </div>
-          <div class="notice-card-footer">
-            <span class="notice-time">
-              提交时间：{{ notice.CreatedAt ? new Date(notice.CreatedAt).toLocaleString('zh-CN') : '' }}
-            </span>
-            <div class="notice-actions">
-              <el-button type="success" size="small" round @click="handleAudit(notice, 'approved')">通过</el-button>
-              <el-button type="danger" size="small" round @click="handleAudit(notice, 'rejected')">拒绝</el-button>
-            </div>
-          </div>
+    <el-dialog v-model="auditVisible" title="" width="860px" destroy-on-close>
+      <template v-if="currentNotice">
+        <div class="detail-title">{{ currentNotice.title }}</div>
+        <div class="detail-body">{{ currentNotice.content }}</div>
+        <div class="detail-meta">
+          <span>{{ currentNotice.publisher || '信息技术中心' }}</span>
+          <span>发布时间{{ formatDate(currentNotice.CreatedAt) }}</span>
         </div>
-      </div>
-    </div>
+      </template>
+      <template #footer>
+        <div class="audit-footer">
+          <el-button type="success" plain :loading="auditLoading" @click="handleAudit('approved')">通过</el-button>
+          <el-button type="danger" plain :loading="auditLoading" @click="handleAudit('rejected')">驳回</el-button>
+        </div>
+      </template>
+    </el-dialog>
 
-    <!-- 全部公告 -->
-    <div v-if="currentTab === 'all'" v-loading="loading">
-      <div v-if="allList.length === 0" style="padding: 40px 0;">
-        <el-empty description="暂无公告" />
-      </div>
-      <div v-else class="notice-list">
-        <div v-for="notice in allList" :key="notice.ID" class="notice-card">
-          <div class="notice-card-header">
-            <h3>
-              <el-tag v-if="notice.is_top" type="danger" size="small" effect="dark" style="margin-right: 8px;">置顶</el-tag>
-              {{ notice.title }}
-            </h3>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <el-tag
-                :type="notice.status === 'approved' ? 'success' : notice.status === 'rejected' ? 'danger' : 'warning'"
-                size="small"
-              >
-                {{ notice.status === 'approved' ? '已通过' : notice.status === 'rejected' ? '已拒绝' : '待审核' }}
-              </el-tag>
-              <el-tag :type="notice.type === 'system' ? 'danger' : 'info'" size="small" effect="plain">
-                {{ notice.type === 'system' ? '系统公告' : '区域公告' }}
-              </el-tag>
-            </div>
-          </div>
-          <p class="notice-body">{{ notice.content }}</p>
-          <div class="notice-meta">
-            <span>发布者：{{ notice.publisher || '--' }}</span>
-            <span v-if="notice.region">区域：{{ notice.region }}</span>
-          </div>
-          <div class="notice-card-footer">
-            <span class="notice-time">
-              {{ notice.CreatedAt ? new Date(notice.CreatedAt).toLocaleString('zh-CN') : '' }}
-            </span>
-            <el-button type="danger" size="small" plain round @click="handleDelete(notice)">
-              删除
-            </el-button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <el-dialog v-model="editVisible" title="编辑公告" width="900px" destroy-on-close>
+      <el-form :model="editForm" label-position="top">
+        <el-form-item label="标题">
+          <el-input v-model="editForm.title" placeholder="请输入公告标题" />
+        </el-form-item>
+        <el-form-item label="内容">
+          <el-input v-model="editForm.content" type="textarea" :rows="6" placeholder="请输入公告内容" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editVisible = false">取消</el-button>
+        <el-button type="warning" :loading="editing" @click="handleSaveEdit">保存修改</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  getAnnouncements,
-  createSystemAnnouncement,
-  reviewAnnouncement,
-  deleteAnnouncement,
-} from '@/api/super'
+import { createSystemAnnouncement, deleteAnnouncement, getAnnouncements, reviewAnnouncement } from '@/api/super'
+
+type NoticeRow = {
+  ID: number
+  title: string
+  content: string
+  status: 'pending' | 'approved' | 'rejected' | string
+  type: string
+  publisher?: string
+  CreatedAt: string
+}
 
 const loading = ref(false)
 const publishing = ref(false)
-const currentTab = ref<'publish' | 'audit' | 'all'>('publish')
+const editing = ref(false)
+const auditLoading = ref(false)
 
-const noticeList = ref<any[]>([])
+const allNotices = ref<NoticeRow[]>([])
+const currentPage = ref(1)
+const pageSize = ref(4)
+const filterStatus = ref('')
+const keyword = ref('')
+
+const publishVisible = ref(false)
+const auditVisible = ref(false)
+const editVisible = ref(false)
+
+const currentNotice = ref<NoticeRow | null>(null)
 
 const publishForm = reactive({
   title: '',
   content: '',
-  is_top: false,
+  type: 'system',
 })
 
-/** 待审核列表（从全量列表前端过滤） */
-const auditList = computed(() => noticeList.value.filter(n => n.status === 'pending'))
-const allList = computed(() => noticeList.value)
-const pendingCount = computed(() => auditList.value.length)
+const editForm = reactive({
+  id: 0,
+  title: '',
+  content: '',
+})
 
-async function fetchList() {
+const filteredNotices = computed(() => {
+  const text = keyword.value.trim().toLowerCase()
+  return allNotices.value.filter((n) => {
+    const statusMatch = !filterStatus.value || normalizeStatus(n.status) === filterStatus.value
+    const keywordMatch = !text || n.title.toLowerCase().includes(text) || n.content.toLowerCase().includes(text)
+    return statusMatch && keywordMatch
+  })
+})
+
+const pageStart = computed(() => {
+  if (filteredNotices.value.length === 0) return 0
+  return (currentPage.value - 1) * pageSize.value + 1
+})
+
+const pageEnd = computed(() => {
+  const end = currentPage.value * pageSize.value
+  return Math.min(end, filteredNotices.value.length)
+})
+
+const pagedNotices = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return filteredNotices.value.slice(start, start + pageSize.value)
+})
+
+watch([filterStatus, keyword], () => {
+  currentPage.value = 1
+})
+
+watch(filteredNotices, (list) => {
+  const maxPage = Math.max(1, Math.ceil(list.length / pageSize.value))
+  if (currentPage.value > maxPage) currentPage.value = maxPage
+})
+
+function formatDate(value?: string) {
+  if (!value) return '--'
+  return new Date(value).toLocaleString('zh-CN')
+}
+
+function statusText(status: string) {
+  const normalized = normalizeStatus(status)
+  if (normalized === 'approved') return '已发布'
+  if (normalized === 'rejected') return '已驳回'
+  return '待审核'
+}
+
+function statusTagType(status: string) {
+  const normalized = normalizeStatus(status)
+  if (normalized === 'approved') return 'success'
+  if (normalized === 'rejected') return 'danger'
+  return 'info'
+}
+
+function normalizeStatus(status?: string) {
+  const s = (status || '').toLowerCase()
+  if (['approved', 'published', 'pass', 'passed', 'success', '1', '已发布', '已通过'].includes(s)) return 'approved'
+  if (['rejected', 'reject', 'failed', 'fail', '2', '已驳回'].includes(s)) return 'rejected'
+  return 'pending'
+}
+
+async function fetchNotices() {
   loading.value = true
   try {
-    const res = await getAnnouncements({ page: 1, pageSize: 200 })
-    const resData = res.data?.data ?? res.data ?? {}
-    noticeList.value = resData.list ?? resData.items ?? []
+    const res = await getAnnouncements({ page: 1, pageSize: 500 })
+    const data = res.data?.data ?? res.data ?? {}
+    const list = data.list ?? []
+    allNotices.value = Array.isArray(list)
+      ? list.map((item: NoticeRow) => ({
+          ...item,
+          status: normalizeStatus(item.status),
+        }))
+      : []
   } catch {
-    noticeList.value = []
+    allNotices.value = []
+    ElMessage.error('获取公告失败')
   } finally {
     loading.value = false
   }
+}
+
+function openPublishDialog() {
+  publishVisible.value = true
+}
+
+function openAuditDialog(row: NoticeRow) {
+  currentNotice.value = row
+  auditVisible.value = true
+}
+
+function openEditDialog(row: NoticeRow) {
+  editForm.id = row.ID
+  editForm.title = row.title
+  editForm.content = row.content
+  editVisible.value = true
 }
 
 async function handlePublish() {
@@ -161,80 +266,260 @@ async function handlePublish() {
     await createSystemAnnouncement({
       title: publishForm.title,
       content: publishForm.content,
-      is_top: publishForm.is_top,
+      type: publishForm.type,
     })
-    ElMessage.success('系统公告发布成功')
+    ElMessage.success('发布成功')
+    publishVisible.value = false
     publishForm.title = ''
     publishForm.content = ''
-    publishForm.is_top = false
-    fetchList()
+    publishForm.type = 'system'
+    await fetchNotices()
   } catch (error: unknown) {
-    const errMsg = error instanceof Error ? error.message : '发布失败'
-    ElMessage.error(errMsg)
+    const err = error instanceof Error ? error.message : '发布失败'
+    ElMessage.error(err)
   } finally {
     publishing.value = false
   }
 }
 
-async function handleAudit(notice: any, status: 'approved' | 'rejected') {
-  const action = status === 'approved' ? '通过' : '拒绝'
+async function handleAudit(status: 'approved' | 'rejected') {
+  if (!currentNotice.value) return
+  auditLoading.value = true
   try {
-    await ElMessageBox.confirm(`确定要${action}该公告吗？`, '确认', { type: 'warning' })
-    await reviewAnnouncement({ id: notice.ID, status })
-    ElMessage.success(`已${action}`)
-    fetchList()
+    await reviewAnnouncement({ id: currentNotice.value.ID, status })
+    ElMessage.success(status === 'approved' ? '已通过' : '已驳回')
+    allNotices.value = allNotices.value.map((item) =>
+      item.ID === currentNotice.value?.ID ? { ...item, status } : item
+    )
+    auditVisible.value = false
   } catch (error: unknown) {
-    if (error === 'cancel' || error === 'close') return
-    const errMsg = error instanceof Error ? error.message : `${action}失败`
-    ElMessage.error(errMsg)
+    const err = error instanceof Error ? error.message : '审核失败'
+    ElMessage.error(err)
+  } finally {
+    auditLoading.value = false
   }
 }
 
-async function handleDelete(notice: any) {
+async function handleSaveEdit() {
+  if (!editForm.title.trim() || !editForm.content.trim()) {
+    ElMessage.warning('请填写标题和内容')
+    return
+  }
+  editing.value = true
   try {
-    await ElMessageBox.confirm(`确定要删除公告「${notice.title}」吗？此操作不可撤销！`, '删除公告', {
-      type: 'error', confirmButtonText: '确认删除',
+    allNotices.value = allNotices.value.map((item) => {
+      if (item.ID !== editForm.id) return item
+      return {
+        ...item,
+        title: editForm.title,
+        content: editForm.content,
+      }
     })
-    await deleteAnnouncement(notice.ID)
-    ElMessage.success('已删除')
-    fetchList()
-  } catch (error: unknown) {
-    if (error === 'cancel' || error === 'close') return
-    const errMsg = error instanceof Error ? error.message : '删除失败'
-    ElMessage.error(errMsg)
+    ElMessage.success('保存成功（前端演示）')
+    editVisible.value = false
+  } finally {
+    editing.value = false
   }
 }
 
-onMounted(() => {
-  fetchList()
-})
+async function handleDelete(row: NoticeRow) {
+  try {
+    await ElMessageBox.confirm(`确认删除公告「${row.title}」吗？`, '提示', { type: 'warning' })
+    await deleteAnnouncement(row.ID)
+    ElMessage.success('删除成功')
+    await fetchNotices()
+  } catch (error: unknown) {
+    if (error === 'cancel' || error === 'close') return
+    const err = error instanceof Error ? error.message : '删除失败'
+    ElMessage.error(err)
+  }
+}
+
+onMounted(fetchNotices)
 </script>
 
 <style scoped>
-.notice-page { padding: 0; }
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.page-title { font-size: 24px; font-weight: bold; color: #333; margin: 0; }
-.tab-header { display: flex; gap: 12px; margin-bottom: 24px; }
-.badge-offset { margin-left: 6px; }
-
-.publish-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 24px;
+.notice-page {
+  padding: 10px;
 }
 
-.notice-list { display: flex; flex-direction: column; gap: 16px; }
-.notice-card {
-  background: #fff;
-  border: 1px solid #eee;
+.notice-panel {
+  background: #ffffff;
+  border: 1px solid #f5d4a0;
   border-radius: 10px;
-  padding: 20px 24px;
+  padding: 20px;
 }
-.notice-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.notice-card-header h3 { margin: 0; font-size: 17px; color: #333; display: flex; align-items: center; }
-.notice-body { font-size: 14px; color: #555; line-height: 1.8; white-space: pre-wrap; margin: 0 0 8px 0; }
-.notice-meta { font-size: 13px; color: #999; margin-bottom: 12px; display: flex; gap: 16px; }
-.notice-card-footer { display: flex; justify-content: space-between; align-items: center; }
-.notice-time { font-size: 13px; color: #999; }
-.notice-actions { display: flex; gap: 8px; }
+
+.page-title {
+  margin: 0 0 14px 0;
+  font-size: 22px;
+  color: #1f2430;
+  font-weight: 700;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.publish-btn {
+  background: #e6a23c;
+  border-color: #e6a23c;
+  color: #fff;
+}
+
+.status-select {
+  width: 120px;
+}
+
+.search-input {
+  width: 220px;
+}
+
+.notice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 430px;
+}
+
+.notice-card {
+  border: 1px solid #e9e9e9;
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.card-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.notice-title {
+  margin: 0;
+  font-size: 18px;
+  color: #111827;
+  font-weight: 700;
+}
+
+.notice-content {
+  margin: 6px 0 8px 0;
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.notice-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.status-tag {
+  margin-left: 8px;
+}
+
+.card-actions {
+  display: flex;
+  gap: 6px;
+  padding-left: 16px;
+}
+
+.footer-bar {
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.record-text {
+  color: #4b5563;
+  font-size: 14px;
+}
+
+.detail-title {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 12px 14px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 14px;
+}
+
+.detail-body {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  min-height: 280px;
+  padding: 12px 14px;
+  white-space: pre-wrap;
+  font-size: 15px;
+  line-height: 1.65;
+  color: #374151;
+}
+
+.detail-meta {
+  margin-top: 12px;
+  text-align: right;
+  color: #4b5563;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.audit-footer {
+  display: flex;
+  justify-content: center;
+  gap: 60px;
+}
+
+.publish-footer-btn {
+  background: #e6a23c;
+  border-color: #e6a23c;
+  color: #fff;
+}
+
+:deep(.el-pagination.is-background .el-pager li.is-active) {
+  background-color: #e6a23c;
+}
+
+@media (max-width: 768px) {
+  .toolbar {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .status-select,
+  .search-input {
+    width: 100%;
+  }
+
+  .notice-card {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .card-actions {
+    padding-left: 0;
+  }
+
+  .footer-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
 </style>
+

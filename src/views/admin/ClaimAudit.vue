@@ -226,7 +226,7 @@ async function doRejectClaim() {
   rejectLoading.value = true
   try {
     const id = currentClaim.value.id ?? currentClaim.value.ID
-    await rejectClaim(id)
+    await rejectClaim(id, { reject_reason: rejectReason.value })
     const itemForHistory = currentClaim.value.item || currentClaim.value
     auditHistoryStore.addRecord(itemForHistory, 'rejected', rejectReason.value, 'claim')
     ElMessage.success('已驳回')

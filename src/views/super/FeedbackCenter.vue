@@ -1,15 +1,14 @@
-<template>
+﻿<template>
   <div class="feedback-page">
     <div class="page-header">
       <h2 class="page-title">反馈中心</h2>
     </div>
 
-    <!-- 状态筛选 -->
     <div class="filter-bar">
       <el-radio-group v-model="filterStatus" @change="handleFilterChange">
-        <el-radio-button value="">全部</el-radio-button>
-        <el-radio-button value="pending">待处理</el-radio-button>
-        <el-radio-button value="resolved">已回复</el-radio-button>
+        <el-radio-button label="">全部</el-radio-button>
+        <el-radio-button label="pending">待处理</el-radio-button>
+        <el-radio-button label="resolved">已处理</el-radio-button>
       </el-radio-group>
     </div>
 
@@ -18,44 +17,38 @@
         :data="feedbackList"
         v-loading="loading"
         stripe
-        :header-cell-style="{ background: '#fdf6ec', color: '#333', fontWeight: 'bold' }"
+        :header-cell-style="{ background: '#f5efe5', color: '#3f4754', fontWeight: 'bold' }"
         style="width: 100%"
       >
         <el-table-column label="ID" width="70" align="center">
           <template #default="{ row }">{{ row.ID || row.id }}</template>
         </el-table-column>
-        <el-table-column label="反馈类型" width="100" align="center">
+        <el-table-column label="类型" width="100" align="center">
           <template #default="{ row }">
             <el-tag v-if="row.type === 'bug'" type="danger" size="small">Bug</el-tag>
             <el-tag v-else-if="row.type === 'complaint'" type="warning" size="small">投诉</el-tag>
             <el-tag v-else type="info" size="small">{{ row.type || '其他' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="提交用户" width="140" align="center">
-          <template #default="{ row }">
-            {{ row.user?.name || row.user?.username || row.username || '--' }}
-          </template>
+        <el-table-column label="用户" width="140" align="center">
+          <template #default="{ row }">{{ row.user?.name || row.user?.username || row.username || '--' }}</template>
         </el-table-column>
         <el-table-column label="联系方式" width="140" align="center">
           <template #default="{ row }">{{ row.contact || '--' }}</template>
         </el-table-column>
-        <el-table-column label="反馈内容" min-width="280">
-          <template #default="{ row }">
-            <span class="feedback-content">{{ row.content || '--' }}</span>
-          </template>
+        <el-table-column label="内容" min-width="280">
+          <template #default="{ row }"><span class="feedback-content">{{ row.content || '--' }}</span></template>
         </el-table-column>
-        <el-table-column label="提交时间" width="170" align="center">
-          <template #default="{ row }">
-            {{ row.CreatedAt ? new Date(row.CreatedAt).toLocaleString('zh-CN') : '--' }}
-          </template>
+        <el-table-column label="时间" width="170" align="center">
+          <template #default="{ row }">{{ row.CreatedAt ? new Date(row.CreatedAt).toLocaleString('zh-CN') : '--' }}</template>
         </el-table-column>
         <el-table-column label="状态" width="100" align="center">
           <template #default="{ row }">
-            <el-tag v-if="row.status === 'resolved' || row.reply" type="success" size="small">已回复</el-tag>
+            <el-tag v-if="row.status === 'resolved' || row.reply" type="success" size="small">已处理</el-tag>
             <el-tag v-else type="warning" size="small">待处理</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="回复内容" min-width="200">
+        <el-table-column label="回复" min-width="200">
           <template #default="{ row }">
             <span v-if="row.reply" class="reply-text">{{ row.reply }}</span>
             <span v-else style="color: #ccc;">--</span>
@@ -63,20 +56,14 @@
         </el-table-column>
         <el-table-column label="操作" width="100" align="center" fixed="right">
           <template #default="{ row }">
-            <el-button
-              type="primary"
-              size="small"
-              round
-              @click="openReply(row)"
-            >
-              {{ row.reply ? '重新回复' : '回复' }}
+            <el-button type="warning" plain size="small" round @click="openReply(row)">
+              {{ row.reply ? '编辑' : '回复' }}
             </el-button>
           </template>
         </el-table-column>
       </el-table>
     </div>
 
-    <!-- 分页 -->
     <div class="pagination-wrapper">
       <el-pagination
         v-model:current-page="currentPage"
@@ -87,14 +74,13 @@
       />
     </div>
 
-    <!-- 回复弹窗 -->
     <el-dialog v-model="replyVisible" title="回复反馈" width="520px" top="20vh">
       <div v-if="currentFeedback" class="reply-dialog">
         <div class="reply-original">
           <p><strong>用户：</strong>{{ currentFeedback.user?.name || currentFeedback.user?.username || '--' }}</p>
           <p><strong>类型：</strong>{{ currentFeedback.type || '其他' }}</p>
           <p><strong>联系方式：</strong>{{ currentFeedback.contact || '--' }}</p>
-          <p><strong>反馈内容：</strong></p>
+          <p><strong>内容：</strong></p>
           <div class="reply-original-content">{{ currentFeedback.content }}</div>
         </div>
         <el-input
@@ -108,7 +94,7 @@
       </div>
       <template #footer>
         <el-button @click="replyVisible = false">取消</el-button>
-        <el-button type="primary" :loading="replyLoading" @click="handleReply">提交回复</el-button>
+        <el-button type="warning" :loading="replyLoading" @click="handleReply">提交</el-button>
       </template>
     </el-dialog>
   </div>
@@ -140,10 +126,10 @@ async function fetchFeedbacks() {
       status: filterStatus.value || undefined,
     })
     const resData = res.data?.data ?? res.data ?? {}
-    feedbackList.value = resData.list ?? resData.items ?? []
+    feedbackList.value = resData.list ?? []
     total.value = resData.total ?? 0
   } catch (error: unknown) {
-    const errMsg = error instanceof Error ? error.message : '获取反馈列表失败'
+    const errMsg = error instanceof Error ? error.message : '获取反馈失败'
     ElMessage.error(errMsg)
     feedbackList.value = []
   } finally {
@@ -163,6 +149,11 @@ function openReply(row: any) {
 }
 
 async function handleReply() {
+  if (replyLoading.value) return
+  if (!currentFeedback.value) {
+    ElMessage.warning('未选择反馈记录')
+    return
+  }
   if (!replyContent.value.trim()) {
     ElMessage.warning('请输入回复内容')
     return
@@ -170,6 +161,10 @@ async function handleReply() {
   replyLoading.value = true
   try {
     const id = currentFeedback.value.ID || currentFeedback.value.id
+    if (!id) {
+      ElMessage.warning('反馈ID无效')
+      return
+    }
     await replyFeedback(id, { reply: replyContent.value })
     ElMessage.success('回复成功')
     replyVisible.value = false
@@ -191,7 +186,7 @@ onMounted(() => {
 <style scoped>
 .feedback-page { padding: 0; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.page-title { font-size: 24px; font-weight: bold; color: #333; margin: 0; }
+.page-title { font-size: 24px; font-weight: bold; color: #374151; margin: 0; }
 .filter-bar { margin-bottom: 20px; }
 .table-wrapper { background: #fff; border-radius: 8px; overflow: hidden; }
 .pagination-wrapper { display: flex; justify-content: center; margin-top: 24px; }
@@ -204,14 +199,21 @@ onMounted(() => {
   font-size: 13px;
   color: #333;
 }
-.reply-text { font-size: 13px; color: #67c23a; }
+.reply-text { font-size: 13px; color: #4f8f60; }
 
 .reply-dialog { display: flex; flex-direction: column; gap: 16px; }
-.reply-original { background: #f9f9f9; border-radius: 8px; padding: 16px; }
+.reply-original { background: #f7f4ee; border-radius: 8px; padding: 16px; }
 .reply-original p { margin: 4px 0; font-size: 14px; color: #333; }
 .reply-original-content {
-  background: #fff; border: 1px solid #eee; border-radius: 6px;
-  padding: 12px; font-size: 14px; color: #555; line-height: 1.8;
-  white-space: pre-wrap; margin-top: 8px;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  padding: 12px;
+  font-size: 14px;
+  color: #555;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  margin-top: 8px;
 }
 </style>
+

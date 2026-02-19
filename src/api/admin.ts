@@ -106,9 +106,9 @@ export function approveClaim(id: number) {
   return request.put(`/api/v1/admin/claims/${id}/approve`)
 }
 
-/** 驳回认领（文档中 requestBody 为 none，不传 Body） */
-export function rejectClaim(id: number) {
-  return request.put(`/api/v1/admin/claims/${id}/reject`)
+/** 驳回认领（部分后端支持驳回原因） */
+export function rejectClaim(id: number, data?: RejectRecordRequest) {
+  return request.put(`/api/v1/admin/claims/${id}/reject`, data)
 }
 
 // ==================== 公告管理 ====================

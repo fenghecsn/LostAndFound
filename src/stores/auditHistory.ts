@@ -19,8 +19,9 @@ export const useAuditHistoryStore = defineStore('auditHistory', () => {
 
   /** 根据当前用户生成 localStorage key */
   function getStorageKey(): string {
-    const userId = userStore.userId || (userStore as any).ID || userStore.username || 'default'
-    return `audit_history_${userId}`
+    const role = Number(userStore.role) || 0
+    const userKey = userStore.username || 'default'
+    return `audit_history_${role}_${userKey}`
   }
 
   /** 从 localStorage 加载当前用户的记录 */
@@ -72,7 +73,7 @@ export const useAuditHistoryStore = defineStore('auditHistory', () => {
   loadRecords()
 
   // 监听用户变化，重新加载对应用户的记录
-  watch(() => userStore.userId ?? userStore.username, () => {
+  watch(() => `${userStore.role}_${userStore.username}`, () => {
     loadRecords()
   })
 

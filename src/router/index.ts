@@ -120,7 +120,12 @@ const router = createRouter({
         {
           path: 'dashboard',
           name: 'SuperDashboard',
-          component: () => import('../views/super/SuperDashboard.vue')
+          component: () => import('../views/super/SystemSettings.vue')
+        },
+        {
+          path: 'global',
+          name: 'SuperGlobal',
+          component: () => import('../views/super/GlobalManagement.vue')
         },
         {
           path: 'users',
@@ -133,9 +138,9 @@ const router = createRouter({
           component: () => import('../views/super/SuperNotice.vue')
         },
         {
-          path: 'settings',
-          name: 'SuperSettings',
-          component: () => import('../views/super/SystemSettings.vue')
+          path: 'data',
+          name: 'SuperData',
+          component: () => import('../views/super/DataManagement.vue')
         },
         {
           path: 'feedback',
@@ -151,10 +156,24 @@ router.beforeEach((to, from, next) => {
   const whiteList = ['/', '/NotFound']
   const userStore = useUserStore()
   const token = userStore.token
-  const getHomePathByRole = (role: number) => {
-    if (role === 3) return '/super'
-    if (role === 2) return '/admin'
+  const normalizeRole = (role: unknown) => {
+    const parsed = Number(role)
+    if (parsed === 3) return 3
+    if (parsed === 2) return 2
+    return 1
+  }
+  const getHomePathByRole = (role: unknown) => {
+    const normalized = normalizeRole(role)
+    if (normalized === 3) return '/super'
+    if (normalized === 2) return '/admin'
     return '/StudentHome'
+  }
+  const role = normalizeRole(userStore.role)
+  const isRolePathAllowed = (path: string, userRole: number) => {
+    if (path.startsWith('/super')) return userRole === 3
+    if (path.startsWith('/admin')) return userRole === 2
+    if (path.startsWith('/StudentHome')) return userRole === 1
+    return true
   }
 
   if (token) {
@@ -164,27 +183,28 @@ router.beforeEach((to, from, next) => {
     }
 
     if (!userStore.firstLogin && to.path === '/password_change') {
-      next(getHomePathByRole(userStore.role))
+      next(getHomePathByRole(role))
       return
     }
 
-    // 有 token，访问登录页则重定向到主页
+    if (!isRolePathAllowed(to.path, role)) {
+      next(getHomePathByRole(role))
+      return
+    }
+
     if (whiteList.includes(to.path)) {
       if (to.path === '/') {
-        next(getHomePathByRole(userStore.role))
+        next(getHomePathByRole(role))
       } else {
         next()
       }
     } else {
       next()
     }
+  } else if (whiteList.includes(to.path)) {
+    next()
   } else {
-    // 没有 token，白名单页面放行，否则跳转登录页
-    if (whiteList.includes(to.path)) {
-      next()
-    } else {
-      next('/')
-    }
+    next('/')
   }
 })
 export default router
