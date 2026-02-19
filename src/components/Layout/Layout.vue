@@ -14,8 +14,20 @@
 </template>
 
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted } from 'vue'
 import NavBar from '@/components/Layout/NavBar.vue'
 import SideBar from '@/components/Layout/SideBar.vue'
+import { useClaimProgressStore } from '@/stores/ClaimProgess'
+
+const claimProgressStore = useClaimProgressStore()
+
+onMounted(() => {
+  claimProgressStore.initConnection()
+})
+
+onBeforeUnmount(() => {
+  claimProgressStore.closeConnection()
+})
 </script>
 
 <style scoped>

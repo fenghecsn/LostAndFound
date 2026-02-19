@@ -65,12 +65,14 @@ import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getClaimProgressApi, getClaimReasonApi, type ClaimProgressItem } from '@/api/ClaimProgess'
 import { normalizeResourceUrl } from '@/utils/url'
+import { useClaimProgressStore } from '@/stores/ClaimProgess'
 
 const loading = ref(false)
 const progressList = ref<ClaimProgressItem[]>([])
 const pageNum = ref(1)
 const pageSize = 10
 const total = ref(0)
+const claimProgressStore = useClaimProgressStore()
 
 type ClaimStatusType = 'approved' | 'pending' | 'rejected' | 'unknown'
 
@@ -83,17 +85,19 @@ const getClaimStatusType = (item: ClaimProgressItem): ClaimStatusType => {
 }
 
 const getNoticeTitle = (item: ClaimProgressItem) => {
+  if (item.title) return item.title
   const status = getClaimStatusType(item)
   if (status === 'approved') return '你的认领申请已通过！'
-  if (status === 'pending') return '你的帖子已有人认领'
+  if (status === 'pending') return '你的认领申请待审核'
   if (status === 'rejected') return '你的认领申请未通过'
-  return item.title || '招领进度更新'
+  return '招领进度更新'
 }
 
 const getNoticeHint = (item: ClaimProgressItem) => {
+  if (item.hint) return item.hint
   const status = getClaimStatusType(item)
   if (status === 'rejected') return '请认真填写相关细节和更多物品特征'
-  return item.hint || ''
+  return ''
 }
 
 const getActionText = (item: ClaimProgressItem) => {
@@ -190,6 +194,7 @@ const handleMore = (item: ClaimProgressItem) => {
 }
 
 onMounted(() => {
+  claimProgressStore.clearUnread()
   fetchProgress()
 })
 

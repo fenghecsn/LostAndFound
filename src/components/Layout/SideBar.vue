@@ -19,7 +19,7 @@
             @click="handleMenuClick(idx)"
           >
             <span class="red-dot-placeholder">
-              <span v-if="showDot[item.dotKey]" class="red-dot"></span>
+              <span v-if="shouldShowDot(item.dotKey)" class="red-dot"></span>
             </span>
             <img :src="`../../../public/路径@${4+idx}.png`" style="width: 16px; height: 16px;">
             <span>{{ item.label }}</span>
@@ -50,37 +50,41 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useClaimProgressStore } from '@/stores/ClaimProgess'
+
 const router = useRouter()
 const route = useRoute()
 const isExpanded = ref(true)
+const claimProgressStore = useClaimProgressStore()
+
+type DotKey = 'post' | 'progress' | 'announce'
 
 // 菜单项配置，dotKey加上类型断言
 const menuItems = [
   {
     label: '帖子动态',
     route: '/StudentHome/message/activities',
-    dotKey: 'post' as keyof typeof showDot,
+    dotKey: 'post' as DotKey,
   },
   {
     label: '招领进度',
     route: '/StudentHome/message/progress',
-    dotKey: 'progress' as keyof typeof showDot,
+    dotKey: 'progress' as DotKey,
   },
   {
     label: '系统公告',
     route: '/StudentHome/message/announce',
-    dotKey: 'announce' as keyof typeof showDot,
+    dotKey: 'announce' as DotKey,
   },
 ]
 
-// 控制每个卡片红点显示
-const showDot = reactive({
-  post: true,        // 帖子动态
-  progress: true,    // 招领进度
-  announce: false    // 系统公告
-})
+const shouldShowDot = (dotKey: DotKey) => {
+  if (dotKey === 'progress') return claimProgressStore.hasUnread
+  if (dotKey === 'post') return true
+  return false
+}
 
 // 当前高亮index
 const activeIndex = ref(0)
