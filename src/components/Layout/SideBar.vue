@@ -52,38 +52,36 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useClaimProgressStore } from '@/stores/ClaimProgess'
+import { useMessageNoticeStore, type MessageScope } from '@/stores/messageNotice'
 
 const router = useRouter()
 const route = useRoute()
 const isExpanded = ref(true)
-const claimProgressStore = useClaimProgressStore()
+const messageNoticeStore = useMessageNoticeStore()
 
-type DotKey = 'post' | 'progress' | 'announce'
+type DotKey = MessageScope
 
 // 菜单项配置，dotKey加上类型断言
 const menuItems = [
   {
     label: '帖子动态',
     route: '/StudentHome/message/activities',
-    dotKey: 'post' as DotKey,
+    dotKey: 'activity' as DotKey,
   },
   {
     label: '招领进度',
     route: '/StudentHome/message/progress',
-    dotKey: 'progress' as DotKey,
+    dotKey: 'claim_progress' as DotKey,
   },
   {
     label: '系统公告',
     route: '/StudentHome/message/announce',
-    dotKey: 'announce' as DotKey,
+    dotKey: 'announcement' as DotKey,
   },
 ]
 
 const shouldShowDot = (dotKey: DotKey) => {
-  if (dotKey === 'progress') return claimProgressStore.hasUnread
-  if (dotKey === 'post') return true
-  return false
+  return messageNoticeStore.hasScopeUnread(dotKey)
 }
 
 // 当前高亮index
@@ -102,10 +100,26 @@ const updateActiveIndex = () => {
 
 watch(() => route.path, updateActiveIndex, { immediate: true })
 
+watch(
+  () => route.path,
+  (path) => {
+    const matchedItem = menuItems.find((item) => path.startsWith(item.route))
+    if (!matchedItem) return
+    messageNoticeStore.clearScopeUnread(matchedItem.dotKey)
+  },
+  { immediate: true }
+)
+
 // 点击跳转
 const handleMenuClick = (idx: number) => {
   activeIndex.value = idx
-  router.push(menuItems[idx]?.route || '/')
+  const selected = menuItems[idx]
+  if (selected) {
+    messageNoticeStore.clearScopeUnread(selected.dotKey)
+    router.push(selected.route)
+    return
+  }
+  router.push('/')
 }
 </script>
 

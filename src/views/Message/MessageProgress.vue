@@ -65,14 +65,14 @@ import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getClaimProgressApi, getClaimReasonApi, type ClaimProgressItem } from '@/api/ClaimProgess'
 import { normalizeResourceUrl } from '@/utils/url'
-import { useClaimProgressStore } from '@/stores/ClaimProgess'
+import { useMessageNoticeStore } from '@/stores/messageNotice'
 
 const loading = ref(false)
 const progressList = ref<ClaimProgressItem[]>([])
 const pageNum = ref(1)
 const pageSize = 10
 const total = ref(0)
-const claimProgressStore = useClaimProgressStore()
+const messageNoticeStore = useMessageNoticeStore()
 
 type ClaimStatusType = 'approved' | 'pending' | 'rejected' | 'unknown'
 
@@ -194,7 +194,7 @@ const handleMore = (item: ClaimProgressItem) => {
 }
 
 onMounted(() => {
-  claimProgressStore.clearUnread()
+  messageNoticeStore.clearScopeUnread('claim_progress')
   fetchProgress()
 })
 

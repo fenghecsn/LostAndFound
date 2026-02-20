@@ -41,6 +41,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getAnnouncements } from '@/api/super'
+import { useMessageNoticeStore } from '@/stores/messageNotice'
 
 type AnnouncementItem = {
   ID?: number
@@ -60,6 +61,7 @@ const loading = ref(false)
 const announceList = ref<AnnouncementItem[]>([])
 const currentIndex = ref(0)
 const receivedNoticeKeys = ref<string[]>([])
+const messageNoticeStore = useMessageNoticeStore()
 
 const currentNotice = computed(() => announceList.value[currentIndex.value] || null)
 const getNoticeKey = (notice: AnnouncementItem | null | undefined, index: number) => {
@@ -144,6 +146,7 @@ const handleConfirmReceive = () => {
 }
 
 onMounted(() => {
+  messageNoticeStore.clearScopeUnread('announcement')
   fetchAnnouncements()
 })
 </script>

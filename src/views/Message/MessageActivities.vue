@@ -71,12 +71,14 @@ import { onMounted, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getActivitiesApi, type ActivityItem } from '@/api/activities'
 import { normalizeResourceUrl } from '@/utils/url'
+import { useMessageNoticeStore } from '@/stores/messageNotice'
 
 const loading = ref(false)
 const activities = ref<ActivityItem[]>([])
 const pageNum = ref(1)
 const pageSize = 10
 const total = ref(0)
+const messageNoticeStore = useMessageNoticeStore()
 
 const statusSteps = [
   { value: 'pending', label: '待审核' },
@@ -175,6 +177,7 @@ const handleMore = async (item: ActivityItem) => {
 }
 
 onMounted(() => {
+  messageNoticeStore.clearScopeUnread('activity')
   fetchActivities()
 })
 </script>
