@@ -122,7 +122,7 @@
 					placeholder="请输入你的反馈意见"
 				/>
 				<div class="feedback-actions">
-					<el-button type="warning" @click="handleFeedbackSubmit">提交反馈</el-button>
+					<el-button type="warning" :loading="feedbackSubmitting" @click="handleFeedbackSubmit">提交反馈</el-button>
 				</div>
 			</div>
 		</el-card>
@@ -351,7 +351,7 @@ import { useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { EditPen, UserFilled } from '@element-plus/icons-vue'
-import { updateUserInfoApi, changePasswordApi, getMyClaimDetailApi, getMyClaimsApi, getMyItemsApi, getUserInfoApi, logoutApi, type MyClaimItem, type MyItem, type MyItemStatus } from '@/api/user'
+import { updateUserInfoApi, changePasswordApi, getMyClaimDetailApi, getMyClaimsApi, getMyItemsApi, getUserInfoApi, logoutApi, submitFeedbackApi, type MyClaimItem, type MyItem, type MyItemStatus } from '@/api/user'
 import { deleteMyItemApi, updateMyItemApi } from '@/api/Publish'
 import { useUserStore } from '@/stores/user'
 import ConfirmButton from '@/components/ConfirmButton.vue'
@@ -413,6 +413,7 @@ const pageNum = ref(1)
 const pageSize = 6
 const currentStatus = ref<MyItemStatus>('')
 const feedbackText = ref('')
+const feedbackSubmitting = ref(false)
 const detailVisible = ref(false)
 const activeItem = ref<ViewMyItem | null>(null)
 const resubmitLoading = ref(false)
@@ -1018,13 +1019,36 @@ const handleStaticAction = async (actionName: string) => {
 		ElMessage.error('操作失败，请稍后重试')
 	}
 }
-const handleFeedbackSubmit = () => {
-	if (!feedbackText.value.trim()) {
+const handleFeedbackSubmit = async () => {
+	const content = feedbackText.value.trim()
+	if (!content) {
 		ElMessage.warning('请先输入反馈内容')
 		return
 	}
-	ElMessage.success('反馈已记录，后续将接入接口')
-	feedbackText.value = ''
+
+	if (feedbackSubmitting.value) return
+
+	feedbackSubmitting.value = true
+	try {
+		const contact = (profile.phone || userStore.username || '未填写').trim()
+		const response = await submitFeedbackApi({
+			type: 'suggestion',
+			content,
+			contact
+		})
+
+		if (!hasCodeField(response?.data)) {
+			ElMessage.error(response?.data?.msg || '提交反馈失败')
+			return
+		}
+
+		ElMessage.success(response.data.msg || '反馈提交成功')
+		feedbackText.value = ''
+	} catch {
+		ElMessage.error('提交反馈失败，请稍后重试')
+	} finally {
+		feedbackSubmitting.value = false
+	}
 }
 
 const statusClass = (status?: string) => {
