@@ -11,10 +11,37 @@ export type WsUpdatePayload = {
 	[key: string]: unknown
 }
 
+const toWsBase = (value: string) => {
+	const trimmed = String(value || '').trim().replace(/\/+$/, '')
+	if (!trimmed) return ''
+	if (trimmed.startsWith('ws://') || trimmed.startsWith('wss://')) return trimmed
+	if (trimmed.startsWith('http://')) return trimmed.replace('http://', 'ws://')
+	if (trimmed.startsWith('https://')) return trimmed.replace('https://', 'wss://')
+	return trimmed
+}
+
+const ensureWsPath = (wsBase: string) => {
+	if (!wsBase) return ''
+	if (wsBase.endsWith('/api/v1/ws')) return wsBase
+	return `${wsBase}/api/v1/ws`
+}
+
 export const buildMessageWsUrl = () => {
-	const envUrl = String(import.meta.env.VITE_WS_URL || '').trim()
-	if (envUrl) return envUrl
-	return 'ws://127.0.0.1:8080/api/v1/ws'
+	const explicitWsUrl = ensureWsPath(toWsBase(String(import.meta.env.VITE_WS_URL || '')))
+	if (explicitWsUrl) return explicitWsUrl
+
+	const apiBaseUrl = ensureWsPath(toWsBase(String(import.meta.env.VITE_API_BASE_URL || '')))
+	if (apiBaseUrl) return apiBaseUrl
+
+	const proxyTarget = ensureWsPath(toWsBase(String(import.meta.env.VITE_DEV_PROXY_TARGET || '')))
+	if (proxyTarget) return proxyTarget
+
+	if (typeof window !== 'undefined') {
+		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+		return `${protocol}//${window.location.host}/api/v1/ws`
+	}
+
+	return 'ws://47.98.193.254:80/api/v1/ws'
 }
 
 export const buildMessageWsUrlWithToken = (token?: string) => {
