@@ -38,7 +38,7 @@ export interface SubmitFeedbackResponse {
   data: null
 }
 
-export type MyItemStatus = '' | 'pending' | 'approved' | 'matched' | 'claimed' | 'rejected'
+export type MyItemStatus = '' | 'pending' | 'approved' | 'matched' | 'claimed' | 'archived' | 'rejected'
 
 export interface MyItemsParams {
   status?: MyItemStatus

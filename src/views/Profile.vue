@@ -468,7 +468,7 @@ const statusOptions: Array<{ label: string; value: MyItemStatus }> = [
 	{ label: '待审核', value: 'pending' },
 	{ label: '已通过', value: 'approved' },
 	{ label: '已匹配', value: 'matched' },
-	{ label: '已认领', value: 'claimed' },
+	{ label: '已认领', value: 'archived' },
 	{ label: '已驳回', value: 'rejected' }
 ]
 
@@ -542,7 +542,7 @@ const normalizeStatus = (status?: string | number): string => {
 	if (raw === '待审核' || raw === 'pending' || raw === 'in' || raw === 'reviewing') return '待审核'
 	if (raw === '已通过' || raw === 'approved' || raw === 'displaying' || raw === 'pass' || raw === 'passed') return '已通过'
 	if (raw === '已匹配' || raw === 'matched') return '已匹配'
-	if (raw === '已认领' || raw === 'claimed') return '已认领'
+	if (raw === '已认领' || raw === 'claimed' || raw === 'archived') return '已认领'
 	if (raw === '已驳回' || raw === 'rejected' || raw === 'reject') return '已驳回'
 	return String(status)
 }
