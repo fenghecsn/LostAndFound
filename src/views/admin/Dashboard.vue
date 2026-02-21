@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="dashboard-page" v-loading="loading">
     <!-- 顶部三张统计卡 -->
     <div class="stat-cards">
@@ -13,7 +13,7 @@
           </div>
         </div>
         <p class="stat-sub green-text">
-          丢失帖 {{ formatNum(stats.lost_items) }} · 拾取帖 {{ formatNum(stats.found_items) }}
+          失物帖 {{ formatNum(stats.lost_items) }} · 招领帖 {{ formatNum(stats.found_items) }}
         </p>
       </div>
 
@@ -27,7 +27,7 @@
             <el-icon :size="28"><Connection /></el-icon>
           </div>
         </div>
-        <p class="stat-sub green-text">✅ 成功率 {{ safePercent(stats.matched_items, stats.total_items) }}%</p>
+        <p class="stat-sub green-text">成功率 {{ safePercent(stats.matched_items, stats.total_items) }}%</p>
       </div>
 
       <div class="stat-card">
@@ -40,7 +40,7 @@
             <el-icon :size="28"><CircleCheck /></el-icon>
           </div>
         </div>
-        <p class="stat-sub green-text">✔ 认领率 {{ safePercent(stats.claimed_items, stats.total_items) }}%</p>
+        <p class="stat-sub green-text">认领率 {{ safePercent(stats.claimed_items, stats.total_items) }}%</p>
       </div>
     </div>
 
@@ -95,7 +95,7 @@
     <!-- 三列排行卡片 -->
     <div class="rank-cards">
       <div class="rank-card">
-        <h3><el-icon color="#f56c6c"><Location /></el-icon> 最多丢失/拾取地点</h3>
+        <h3><el-icon color="#f56c6c"><Location /></el-icon> 最多失物/捡取地点</h3>
         <div class="rank-list">
           <div class="rank-item" v-for="(item, idx) in topLocations" :key="idx">
             <span class="rank-index" :class="'top' + (idx + 1)">{{ idx + 1 }}</span>
@@ -188,7 +188,7 @@
 
     <!-- 最近7天趋势 -->
     <div class="trend-card">
-      <h3><el-icon color="#409eff"><TrendCharts /></el-icon> 最近7天发布趋势</h3>
+      <h3><el-icon color="#409eff"><TrendCharts /></el-icon> 最近 7 天发布趋势</h3>
       <div class="trend-chart">
         <div class="trend-bar-group" v-for="(day, idx) in trendData" :key="idx">
           <div class="trend-bar-wrapper">
@@ -209,14 +209,14 @@
         </div>
       </div>
       <div class="trend-legend">
-        <span class="legend-item"><span class="legend-dot lost"></span>丢失帖</span>
-        <span class="legend-item"><span class="legend-dot found"></span>拾取帖</span>
+        <span class="legend-item"><span class="legend-dot lost"></span>失物帖</span>
+        <span class="legend-item"><span class="legend-dot found"></span>招领帖</span>
       </div>
     </div>
 
     <!-- 底部 -->
     <div class="dashboard-footer">
-      数据更新时间：{{ lastUpdateTime }} · © 失物招领系统 · 数据统计中心
+      数据更新时间：{{ lastUpdateTime }} · 失物招领系统 · 数据统计中心
     </div>
   </div>
 </template>
@@ -235,7 +235,7 @@ const loading = ref(false)
 const exportLoading = ref(false)
 const lastUpdateTime = ref('')
 
-// ==================== 统计数据（来自 /api/v1/admin/stats 接口） ====================
+// ==================== 统计数据（兼容 /api/v1/admin/stats） ====================
 const stats = ref({
   total_items: 0,
   lost_items: 0,
@@ -248,12 +248,12 @@ const stats = ref({
   archived_items: 0,
 })
 
-// ==================== 排行榜数据（前端从物品列表计算） ====================
+// ==================== 排行榜数据（由物品列表计算） ====================
 const topLocations = ref<{ name: string; count: number }[]>([])
 const topCampuses = ref<{ name: string; count: number }[]>([])
 const topCategories = ref<{ name: string; count: number }[]>([])
 
-// ==================== 趋势数据（前端从物品列表计算） ====================
+// ==================== 趋势数据（由物品列表计算） ====================
 const trendData = ref<{ label: string; lost: number; found: number }[]>([])
 
 const maxTrend = computed(() => {
@@ -265,12 +265,12 @@ const maxTrend = computed(() => {
   return max
 })
 
-// ==================== 详细统计（从 stats 接口数据生成表格） ====================
+// ==================== 详细统计（由 stats 生成表格） ====================
 const detailStats = computed(() => {
   const total = stats.value.total_items || 1
   return [
-    { name: '丢失帖', count: stats.value.lost_items, percent: (stats.value.lost_items / total * 100).toFixed(1) },
-    { name: '拾取帖', count: stats.value.found_items, percent: (stats.value.found_items / total * 100).toFixed(1) },
+    { name: '失物帖', count: stats.value.lost_items, percent: (stats.value.lost_items / total * 100).toFixed(1) },
+    { name: '招领帖', count: stats.value.found_items, percent: (stats.value.found_items / total * 100).toFixed(1) },
     { name: '待审核', count: stats.value.pending_items, percent: (stats.value.pending_items / total * 100).toFixed(1) },
     { name: '已通过', count: stats.value.approved_items, percent: (stats.value.approved_items / total * 100).toFixed(1) },
     { name: '已匹配', count: stats.value.matched_items, percent: (stats.value.matched_items / total * 100).toFixed(1) },
@@ -291,7 +291,7 @@ function safePercent(part: number, total: number): string {
   return Math.min(100, (part / total) * 100).toFixed(1)
 }
 
-/** 统计数组中某个字段的 top N */
+/** 统计数组某字段的 Top N */
 function countTop(items: any[], field: string, topN = 5): { name: string; count: number }[] {
   const map: Record<string, number> = {}
   items.forEach(item => {
@@ -320,7 +320,7 @@ function isFoundPost(item: any): boolean {
   return Number(item?.lost_or_found) === 2
 }
 
-/** 统计最近7天趋势 */
+/** 统计最近 7 天趋势 */
 function calcTrend(items: any[]): { label: string; lost: number; found: number }[] {
   const result: { label: string; lost: number; found: number }[] = []
   const now = new Date()
@@ -365,55 +365,53 @@ async function fetchStats() {
     }
     return true
   } catch {
-    console.warn('[Dashboard] 统计接口未通，将从物品列表兜底计算')
+    console.warn('[Dashboard] 统计接口不可用，使用物品列表兜底计算')
     return false
   }
 }
 
-/** 获取物品列表 → 计算排行榜 + 趋势（如果统计接口失败也兜底算统计） */
-async function fetchItemsForCharts(needStatsFallback: boolean) {
+/** 获取物品列表，计算排行榜和趋势，并用列表重算状态统计 */
+async function fetchItemsForCharts() {
   try {
     const res = await getAllItems({ page: 1, pageSize: 9999 })
     const resData = res.data?.data ?? res.data ?? {}
     const allItems: any[] = resData.list ?? resData.items ?? []
 
-    // 如果统计接口没返回数据，前端兜底自己算
-    if (needStatsFallback) {
-      const total = allItems.length
-      stats.value = {
-        total_items: total,
-        lost_items: allItems.filter(i => isLostPost(i)).length,
-        found_items: allItems.filter(i => isFoundPost(i)).length,
-        pending_items: allItems.filter(i => i.status === 'pending').length,
-        approved_items: allItems.filter(i => i.status === 'approved').length,
-        matched_items: allItems.filter(i => i.status === 'matched').length,
-        claimed_items: allItems.filter(i => i.status === 'claimed').length,
-        rejected_items: allItems.filter(i => i.status === 'rejected').length,
-        archived_items: allItems.filter(i => i.status === 'archived').length,
-      }
+    // 以前端列表实时重算状态，避免统计接口与页面不同步
+    const total = allItems.length
+    stats.value = {
+      total_items: total,
+      lost_items: allItems.filter(i => isLostPost(i)).length,
+      found_items: allItems.filter(i => isFoundPost(i)).length,
+      pending_items: allItems.filter(i => i.status === 'pending').length,
+      approved_items: allItems.filter(i => i.status === 'approved').length,
+      matched_items: allItems.filter(i => i.status === 'matched').length,
+      claimed_items: allItems.filter(i => i.status === 'claimed').length,
+      rejected_items: allItems.filter(i => i.status === 'rejected' || i.status === 'cancelled').length,
+      archived_items: allItems.filter(i => i.status === 'archived').length,
     }
 
-    // 排行榜（前端计算，接口没有这个数据）
+    // 排行榜（前端计算，接口未直接提供）
     topLocations.value = countTop(allItems, 'location', 5)
     topCampuses.value = countTop(allItems, 'campus', 5)
     topCategories.value = countTop(allItems, 'category', 5)
 
-    // 趋势图（前端计算，接口没有这个数据）
+    // 趋势图（前端计算，接口未直接提供）
     trendData.value = calcTrend(allItems)
   } catch {
     console.warn('[Dashboard] 物品列表获取失败')
   }
 }
 
-/** 主入口：并行调用统计接口 + 物品列表 */
+/** 主入口：先取统计接口，再用列表兜底重算 */
 async function fetchDashboard() {
   loading.value = true
   try {
-    // 第一步：调统计接口
-    const statsOk = await fetchStats()
+    // 第一步：请求统计接口
+    await fetchStats()
 
-    // 第二步：调物品列表（排行榜+趋势必须从列表算，如果统计接口失败也兜底算统计）
-    await fetchItemsForCharts(!statsOk)
+    // 第二步：请求物品列表并重算排行榜/趋势/状态
+    await fetchItemsForCharts()
 
     lastUpdateTime.value = new Date().toLocaleString('zh-CN')
   } catch (error: unknown) {
@@ -614,7 +612,7 @@ onMounted(() => {
 .legend-dot.lost { background: #e6a23c; }
 .legend-dot.found { background: #409eff; }
 
-/* ===== 底部 ===== */
+/* ===== 搴曢儴 ===== */
 .dashboard-footer {
   text-align: center;
   color: #999;
@@ -622,3 +620,4 @@ onMounted(() => {
   padding: 24px 0;
 }
 </style>
+

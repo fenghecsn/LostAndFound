@@ -50,8 +50,8 @@
         <el-table-column label="图片" width="100" align="center">
           <template #default="{ row }">
             <el-image
-              v-if="row.item?.img1 || row.img1"
-              :src="row.item?.img1 || row.img1"
+              v-if="getApplicantImages(row)[0] || getPostImages(row)[0]"
+              :src="getApplicantImages(row)[0] || getPostImages(row)[0]"
               fit="cover"
               style="width: 60px; height: 60px; border-radius: 4px;"
             />
@@ -92,6 +92,7 @@
         <h2 class="claim-detail-title">认领申请详情</h2>
 
         <div class="item-info-card">
+          <h4 class="section-title">原帖信息</h4>
           <p>
             <strong>申请类型：</strong>
             <el-tag :type="getClaimTypeTag(currentClaim)" round>
@@ -104,20 +105,37 @@
           <p><strong>{{ isLostPost(currentClaim.item) ? '丢失地点' : '拾取地点' }}：</strong>{{ currentClaim.item?.location || '--' }}</p>
           <p><strong>{{ isLostPost(currentClaim.item) ? '丢失时间' : '拾取时间' }}：</strong>{{ currentClaim.item?.time || '--' }}</p>
           <p><strong>物品描述：</strong>{{ currentClaim.item?.description || '--' }}</p>
-          <p><strong>申请说明：</strong>{{ getClaimSpeech(currentClaim) || '--' }}</p>
-          <p><strong>申请人：</strong>{{ currentClaim.claimant?.username || currentClaim.claimant?.name || '--' }}</p>
         </div>
 
-        <div class="claim-images" v-if="getClaimImages(currentClaim).length > 0">
+        <div class="claim-images" v-if="getPostImages(currentClaim).length > 0">
           <el-image
-            v-for="(img, idx) in getClaimImages(currentClaim)"
-            :key="idx"
+            v-for="(img, idx) in getPostImages(currentClaim)"
+            :key="`post-${idx}`"
             :src="img"
             fit="cover"
             class="claim-img"
-            :preview-src-list="getClaimImages(currentClaim)"
+            :preview-src-list="getPostImages(currentClaim)"
           />
         </div>
+        <p v-else class="empty-hint">原帖无图片</p>
+
+        <div class="item-info-card">
+          <h4 class="section-title">认领人材料</h4>
+          <p><strong>申请人：</strong>{{ currentClaim.claimant?.username || currentClaim.claimant?.name || '--' }}</p>
+          <p><strong>申请说明：</strong>{{ getClaimSpeech(currentClaim) || '--' }}</p>
+        </div>
+
+        <div class="claim-images" v-if="getApplicantImages(currentClaim).length > 0">
+          <el-image
+            v-for="(img, idx) in getApplicantImages(currentClaim)"
+            :key="`claim-${idx}`"
+            :src="img"
+            fit="cover"
+            class="claim-img"
+            :preview-src-list="getApplicantImages(currentClaim)"
+          />
+        </div>
+        <p v-else class="empty-hint">认领人未上传图片</p>
 
         <div v-if="showRejectInput" class="reject-input-area">
           <h4>填写驳回原因</h4>
@@ -155,6 +173,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getPendingClaims, approveClaim, rejectClaim } from '@/api/admin'
 import { useAuditHistoryStore } from '@/stores/auditHistory'
+import { normalizeResourceUrl } from '@/utils/url'
 
 const router = useRouter()
 const auditHistoryStore = useAuditHistoryStore()
@@ -172,14 +191,121 @@ const currentClaim = ref<any>(null)
 const showRejectInput = ref(false)
 const rejectReason = ref('')
 
-function getClaimImages(claim: any): string[] {
-  if (!claim) return []
-  const item = claim.item || claim
-  return [item.img1, item.img2, item.img3, item.img4].filter(Boolean)
+function expandImageValue(value: any): string[] {
+  if (!value) return []
+  if (Array.isArray(value)) return value.flatMap(expandImageValue)
+  if (typeof value !== 'string') return []
+
+  const trimmed = value.trim()
+  if (!trimmed) return []
+
+  if ((trimmed.startsWith('[') && trimmed.endsWith(']')) || (trimmed.startsWith('{') && trimmed.endsWith('}'))) {
+    try {
+      return expandImageValue(JSON.parse(trimmed))
+    } catch {
+    }
+  }
+
+  if (trimmed.includes(',')) {
+    return trimmed.split(',').map((v) => v.trim()).filter(Boolean)
+  }
+
+  return [trimmed]
+}
+
+function isLikelyImageUrl(value: string): boolean {
+  const v = value.trim().toLowerCase()
+  if (!v) return false
+  if (v.startsWith('data:image/')) return true
+  if (v.startsWith('blob:')) return true
+  if (v.startsWith('http://') || v.startsWith('https://') || v.startsWith('//')) {
+    return /\.(png|jpe?g|gif|webp|bmp|svg|avif)(\?|#|$)/i.test(v) || /\/uploads?\//i.test(v) || /\/images?\//i.test(v)
+  }
+  if (v.startsWith('/')) {
+    return /\.(png|jpe?g|gif|webp|bmp|svg|avif)(\?|#|$)/i.test(v) || /\/uploads?\//i.test(v) || /\/images?\//i.test(v)
+  }
+  // 相对路径必须带目录或扩展名，避免把“有图片/12213”当成图片地址
+  return /[\\/]/.test(v) || /\.(png|jpe?g|gif|webp|bmp|svg|avif)(\?|#|$)/i.test(v)
+}
+
+function normalizeImages(list: any[]): string[] {
+  const flat = list.flatMap(expandImageValue)
+  const cleaned = flat
+    .map((v) => normalizeResourceUrl(v))
+    .map((v) => (typeof v === 'string' ? v.trim() : ''))
+    .filter((v) => isLikelyImageUrl(v))
+    .filter((v) => v.length > 0)
+  return Array.from(new Set(cleaned))
+}
+
+function collectImageFields(source: any, depth = 0): any[] {
+  if (!source || depth > 2) return []
+  const out: any[] = []
+  if (Array.isArray(source)) {
+    for (const item of source) out.push(...collectImageFields(item, depth + 1))
+    return out
+  }
+  if (typeof source !== 'object') return out
+
+  for (const [key, value] of Object.entries(source)) {
+    if (key === 'item') continue
+    if (/(img|image|photo|picture|attachment|voucher)/i.test(key)) {
+      out.push(value)
+    }
+    if (value && typeof value === 'object') {
+      out.push(...collectImageFields(value, depth + 1))
+    }
+  }
+  return out
+}
+
+function getPostImages(claim: any): string[] {
+  const item = claim?.item || {}
+  return normalizeImages([
+    item.img1, item.img2, item.img3, item.img4,
+    item.images, item.image_list, item.photos,
+    ...collectImageFields(item)
+  ])
+}
+
+function getApplicantImages(claim: any): string[] {
+  const c = claim || {}
+  const postImages = new Set(getPostImages(claim))
+  const all = normalizeImages([
+    c.img1, c.img2, c.img3, c.img4,
+    c.claim_img1, c.claim_img2, c.claim_img3, c.claim_img4,
+    c.proof_img1, c.proof_img2, c.proof_img3, c.proof_img4,
+    c.images, c.image_list, c.photos, c.proof_images,
+    c.claim_images, c.claim_photos, c.voucher_images, c.attachments,
+    c.claimant?.img1, c.claimant?.img2, c.claimant?.images, c.claimant?.photos,
+    ...collectImageFields(c)
+  ])
+  const filtered = all.filter((img) => !postImages.has(img))
+  return filtered.length > 0 ? filtered : all
 }
 
 function getClaimSpeech(claim: any): string {
-  return String(claim?.proof || claim?.reason || claim?.description || '').trim()
+  const candidates = [
+    claim?.proof,
+    claim?.claim_proof,
+    claim?.claim_reason,
+    claim?.apply_reason,
+    claim?.content,
+    claim?.message,
+    claim?.reason,
+    claim?.description,
+    claim?.remark,
+    claim?.item?.proof,
+    claim?.item?.claim_proof,
+    claim?.item?.claim_reason,
+    claim?.item?.apply_reason,
+    claim?.item?.content,
+    claim?.item?.message,
+    claim?.item?.reason,
+    claim?.item?.remark,
+  ]
+  const hit = candidates.find((v) => typeof v === 'string' && v.trim().length > 0)
+  return String(hit || '').trim()
 }
 
 function isLostPost(item: any): boolean {
@@ -338,9 +464,11 @@ onMounted(() => {
 .claim-detail-title { font-size: 22px; font-weight: bold; color: #333; margin: 0 0 16px; }
 .item-info-card { background: #fef8ee; border-radius: 8px; padding: 16px 20px; }
 .item-info-card p { margin: 8px 0; font-size: 14px; color: #333; line-height: 1.8; }
+.section-title { margin: 0 0 8px; font-size: 15px; color: #333; font-weight: 700; }
 .type-hint { color: #999; margin-left: 8px; font-size: 13px; }
 .claim-images { display: flex; gap: 12px; justify-content: center; margin: 16px 0; }
 .claim-img { width: 160px; height: 140px; border-radius: 8px; background: #f5f5f5; }
+.empty-hint { text-align: center; color: #999; font-size: 13px; margin: 8px 0 16px; }
 .reject-input-area { margin: 16px 0; background: #f9f9f9; padding: 16px; border-radius: 8px; }
 .reject-input-area h4 { margin: 0 0 10px; font-size: 15px; color: #333; }
 .claim-detail-footer { display: flex; justify-content: center; gap: 16px; margin-top: 20px; padding-bottom: 8px; }

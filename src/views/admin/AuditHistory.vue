@@ -1,7 +1,10 @@
 <template>
   <div class="history-page">
     <div class="page-header">
-      <h2 class="page-title">审核记录</h2>
+      <div class="title-wrap">
+        <h2 class="page-title">审核记录</h2>
+        <el-tag type="info" effect="plain" round>本地记录（仅当前浏览器）</el-tag>
+      </div>
       <el-button type="warning" size="large" round @click="router.back()">返回</el-button>
     </div>
 
@@ -194,7 +197,20 @@ function getImages(item: any): string[] {
 }
 
 function getClaimSpeech(record: AuditRecord): string {
-  return String(record?.item?._claim_proof || '').trim()
+  const item: any = record?.item || {}
+  const candidates = [
+    item._claim_proof,
+    item.claim_proof,
+    item.proof,
+    item.claim_reason,
+    item.apply_reason,
+    item.content,
+    item.message,
+    item.reason,
+    item.remark,
+  ]
+  const hit = candidates.find((v) => typeof v === 'string' && v.trim().length > 0)
+  return String(hit || '').trim()
 }
 
 function isLostPost(item: any): boolean {
@@ -236,6 +252,7 @@ function showDetail(record: AuditRecord) {
 <style scoped>
 .history-page { padding: 0; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.title-wrap { display: flex; align-items: center; gap: 10px; }
 .page-title { font-size: 24px; font-weight: bold; color: #333; margin: 0; }
 .table-wrapper { background: #fff; border-radius: 8px; overflow: hidden; }
 .no-image { color: #999; font-size: 13px; }

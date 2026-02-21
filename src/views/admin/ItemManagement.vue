@@ -248,7 +248,6 @@
             <el-select v-model="editStatus" size="small" style="width: 140px;">
               <el-option label="已归档" value="archived" />
               <el-option label="已匹配" value="matched" />
-              <el-option label="已认领" value="claimed" />
               <el-option label="无效（作废）" value="cancelled" />
             </el-select>
           </div>
@@ -689,13 +688,15 @@ async function handleSaveStatus() {
         ? '归档'
         : editStatus.value === 'matched'
           ? '标记为已匹配'
-          : editStatus.value === 'claimed'
-            ? '标记为已认领'
-            : '标记为无效'
+          : '标记为无效'
 
     await ElMessageBox.confirm(`确定要将该帖子${statusLabel}吗？`, '确认操作', { type: 'warning' })
 
     saveLoading.value = true
+    if (editStatus.value === 'claimed') {
+      ElMessage.warning('“已认领”需由发布者确认认领后自动流转，管理员不可手动设置')
+      return
+    }
     if (editStatus.value === 'archived') {
       const res = await archiveItem(id, { process_method: handleNote.value || '管理员归档' })
       const code = Number((res as any)?.data?.code ?? 200)

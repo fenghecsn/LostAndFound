@@ -81,7 +81,7 @@ const router = createRouter({
     {
       path: '/admin',
       component: () => import('../views/admin/AdminLayout.vue'),
-      redirect: '/admin/dashboard',
+      redirect: '/admin/audit',
       children: [
         {
           path: 'dashboard',
