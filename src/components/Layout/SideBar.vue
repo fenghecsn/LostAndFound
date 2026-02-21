@@ -27,22 +27,24 @@
         </div>
       </div>
 
-      <!-- 联系人列表模拟 -->
-      <div class="contact-list">
-        <div class="contact-card">
-          <img src="../../../public/头像框@7.png" style="width: 32px; height: 32px; background-color: #f97316; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></img>
+      <div class="contact-list" v-if="isMessageRoute">
+        <div
+          v-for="session in chatSessionStore.sessions"
+          :key="session.target_id"
+          class="contact-card"
+          :class="{ active: currentTargetId === session.target_id }"
+          @click="handleSessionClick(session.target_id, session.target_name)"
+        >
+          <img :src="session.avatar || '../../../public/头像框@7.png'" style="width: 32px; height: 32px; border-radius: 50%;"></img>
           <div class="contact-info">
-            <div class="contact-name">张晓明</div>
-            <div class="contact-status">在线</div>
+            <div class="contact-name">{{ session.target_name }}</div>
+            <div class="contact-status">{{ session.last_msg || '点击查看聊天记录' }}</div>
           </div>
+          <span v-if="session.unread_count > 0" class="session-badge">{{ session.unread_count }}</span>
         </div>
 
-        <div class="contact-card">
-          <img src="../../../public/头像框@7.png" style="width: 32px; height: 32px; background-color: #f97316; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;"></img>
-          <div class="contact-info">
-            <div class="contact-name">系统</div>
-            <div class="contact-status">在线</div>
-          </div>
+        <div v-if="!chatSessionStore.loading && chatSessionStore.sessions.length === 0" class="contact-empty">
+          暂无会话
         </div>
       </div>
     </div>
@@ -50,14 +52,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useMessageNoticeStore, type MessageScope } from '@/stores/messageNotice'
+import { useChatSessionStore } from '@/stores/chatSession'
 
 const router = useRouter()
 const route = useRoute()
 const isExpanded = ref(true)
 const messageNoticeStore = useMessageNoticeStore()
+const chatSessionStore = useChatSessionStore()
 
 type DotKey = MessageScope
 
@@ -95,10 +99,13 @@ const updateActiveIndex = () => {
     return
   }
   const idx = menuItems.findIndex(item => route.path.startsWith(item.route))
-  activeIndex.value = idx !== -1 ? idx : 0
+  activeIndex.value = idx !== -1 ? idx : -1
 }
 
 watch(() => route.path, updateActiveIndex, { immediate: true })
+
+const isMessageRoute = computed(() => route.path.startsWith('/StudentHome/message'))
+const currentTargetId = computed(() => Number(route.params.targetId || 0))
 
 watch(
   () => route.path,
@@ -110,6 +117,20 @@ watch(
   { immediate: true }
 )
 
+watch(
+  () => route.path,
+  async (path) => {
+    if (!path.startsWith('/StudentHome/message')) return
+    await chatSessionStore.fetchSessions()
+  },
+  { immediate: true }
+)
+
+onMounted(async () => {
+  if (!route.path.startsWith('/StudentHome/message')) return
+  await chatSessionStore.fetchSessions()
+})
+
 // 点击跳转
 const handleMenuClick = (idx: number) => {
   activeIndex.value = idx
@@ -120,6 +141,15 @@ const handleMenuClick = (idx: number) => {
     return
   }
   router.push('/')
+}
+
+const handleSessionClick = (targetId: number, targetName: string) => {
+  router.push({
+    path: `/StudentHome/message/chat/${targetId}`,
+    query: {
+      target_name: targetName
+    }
+  })
 }
 </script>
 
@@ -245,6 +275,10 @@ const handleMenuClick = (idx: number) => {
   position: relative;
 }
 
+.contact-card.active {
+  border: 1px solid #f6b65f;
+}
+
 .contact-info {
   display: flex;
   flex-direction: column;
@@ -259,6 +293,33 @@ const handleMenuClick = (idx: number) => {
 .contact-status {
   font-size: 12px;
   color: #888;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-badge {
+  position: absolute;
+  right: 10px;
+  top: 8px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #ff2222;
+  color: #fff;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.contact-empty {
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+  padding: 8px 0;
 }
 
 /* 联系人卡片左侧红色数字气泡 */

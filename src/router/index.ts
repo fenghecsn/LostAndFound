@@ -58,6 +58,11 @@ const router = createRouter({
               component: () => import('../views/Message/MessageProgress.vue'),
             },
             {
+              path: 'chat/:targetId',
+              name: '消息对话',
+              component: () => import('../views/Message/MessageChat.vue'),
+            },
+            {
               path: 'announce',
               name: '系统公告',
               component: () => import('../views/Message/MessageAnnounce.vue'),

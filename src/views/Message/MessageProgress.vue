@@ -62,17 +62,21 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getClaimProgressApi, getClaimReasonApi, type ClaimProgressItem } from '@/api/ClaimProgess'
 import { normalizeResourceUrl } from '@/utils/url'
 import { useMessageNoticeStore } from '@/stores/messageNotice'
+import { useChatSessionStore } from '@/stores/chatSession'
 
 const loading = ref(false)
 const progressList = ref<ClaimProgressItem[]>([])
 const pageNum = ref(1)
 const pageSize = 10
 const total = ref(0)
+const router = useRouter()
 const messageNoticeStore = useMessageNoticeStore()
+const chatSessionStore = useChatSessionStore()
 
 type ClaimStatusType = 'approved' | 'pending' | 'rejected' | 'unknown'
 
@@ -173,7 +177,29 @@ const handleAction = async (item: ClaimProgressItem) => {
     }
 
     if (status === 'approved') {
-      ElMessage.info('沟通功能开发中')
+      const targetId = Number(item.peer_user_id || 0)
+      if (!targetId) {
+        ElMessage.warning('缺少沟通对象ID，无法打开会话')
+        return
+      }
+
+      chatSessionStore.ensureSession({
+        target_id: targetId,
+        target_name: `用户${targetId}`
+      })
+
+      router.push({
+        path: `/StudentHome/message/chat/${targetId}`,
+        query: {
+          target_name: `用户${targetId}`,
+          item_id: String(item.item_id || ''),
+          item_name: item.item_name || '',
+          loss_time: item.loss_time || '',
+          location: item.location || '',
+          img: item.img || '',
+          can_confirm: '0'
+        }
+      })
       return
     }
 

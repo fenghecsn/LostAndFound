@@ -45,11 +45,10 @@ export interface GetChatHistoryResponse {
                 first_login?: boolean
             },
             content?: string,
-            type?: number,
+            type?: number,// 1=文本(默认)，2=图片
             is_read?: boolean,
             item_id?: number
         }[],
-        total?: number
     }
 }
 export interface SendMessageRequest {
@@ -62,13 +61,22 @@ export interface GetChatListResponse {
     code: number,
     msg: string,
     data: {
-          targiet_id?: number,
+          target_id?: number,
           target_name?: string,
           avatar?: string,
           last_msg?: string,
           last_time?: string,
           unread_count?: number
     }[]
+}
+
+export interface ChatSessionItem {
+    target_id?: number
+    target_name?: string
+    avatar?: string
+    last_msg?: string
+    last_time?: string
+    unread_count?: number
 }
 export interface SignReadResponse {
     code: number,
@@ -93,7 +101,14 @@ export function getChatHistory(params: GetChatHistoryParams) {
 export function sendMessage(data: SendMessageRequest) {
     return request.post('/api/v1/messages', data)
 }
+//例 {
+//     "receiver_id": 2,           // 必填，接收消息的用户ID
+//     "content": "请问这个物品还在吗？", // 必填，消息内容
+//     "type": 1,                  // 选填，消息类型：1=文本(默认)，2=图片
+//     "item_id": 105              // 选填，如果是针对某个物品发起的咨询，带上物品ID
+// }
+
 // 标记消息为已读接口
 export function signRead(target_id: number) {
-    return request.post<SignReadResponse>('/api/v1/messages/read', { target_id })
+    return request.put<SignReadResponse>('/api/v1/messages/read', { target_id }) // 必填，将与该用户(ID为2)的所有收到的消息标记为已读
 }
