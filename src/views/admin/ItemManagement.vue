@@ -99,9 +99,9 @@
             <span class="tag-dot orange"></span>
             <el-tag size="small" type="warning" effect="plain" round>物品类型：{{ item.category }}</el-tag>
           </div>
-          <div class="tag-item" v-if="item.is_bounty">
+          <div class="tag-item">
             <span class="tag-dot yellow"></span>
-            <el-tag size="small" type="warning" effect="plain" round>悬赏：10元</el-tag>
+            <el-tag size="small" type="warning" effect="plain" round>悬赏：{{ getBountyText(item) }}</el-tag>
           </div>
         </div>
 
@@ -253,9 +253,9 @@
             <span class="tag-dot orange"></span>
             <el-tag type="warning" effect="plain" round>物品类型：{{ currentItem.category || '--' }}</el-tag>
           </div>
-          <div class="tag-item" v-if="currentItem.is_bounty">
+          <div class="tag-item">
             <span class="tag-dot yellow"></span>
-            <el-tag type="warning" effect="plain" round>悬赏：10元</el-tag>
+            <el-tag type="warning" effect="plain" round>悬赏：{{ getBountyText(currentItem) }}</el-tag>
           </div>
         </div>
 
@@ -543,6 +543,12 @@ function parseTimeRange(val: string): { min: number; max: number | null } | null
   if (val === '15-30') return { min: 15, max: 30 }
   if (val === '30+') return { min: 30, max: null }
   return null
+}
+
+function getBountyText(item: any) {
+  const value = Number(item?.bounty ?? item?.reward ?? 0)
+  if (!Number.isFinite(value) || value < 0) return '0元'
+  return `${value}元`
 }
 
 function showItemDetail(item: any) {

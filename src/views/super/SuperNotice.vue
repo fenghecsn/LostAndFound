@@ -23,6 +23,7 @@
               <span>{{ item.publisher || '系统管理员' }}</span>
               <span>·</span>
               <span>{{ formatDate(item.CreatedAt) }}</span>
+              <span class="region-chip">区域：{{ getRegionLabel(item) }}</span>
               <el-tag size="small" round :type="statusTagType(item.status)" class="status-tag">
                 {{ statusText(item.status) }}
               </el-tag>
@@ -90,6 +91,7 @@
         <div class="detail-meta">
           <span>{{ currentNotice.publisher || '信息技术中心' }}</span>
           <span>发布时间{{ formatDate(currentNotice.CreatedAt) }}</span>
+          <span>区域：{{ getRegionLabel(currentNotice) }}</span>
         </div>
       </template>
       <template #footer>
@@ -128,6 +130,7 @@ type NoticeRow = {
   content: string
   status: 'pending' | 'approved' | 'rejected' | string
   type: string
+  region?: string
   publisher?: string
   CreatedAt: string
 }
@@ -220,6 +223,14 @@ function normalizeStatus(status?: string) {
   return 'pending'
 }
 
+function getRegionLabel(item: Partial<NoticeRow> | null | undefined) {
+  if (!item) return '未指定'
+  const type = String(item.type || '').toLowerCase()
+  const region = String(item.region || '').trim()
+  if (type === 'system') return '全体用户'
+  return region || '未指定'
+}
+
 async function fetchNotices() {
   loading.value = true
   try {
@@ -286,12 +297,14 @@ async function handleAudit(status: 'approved' | 'rejected') {
   if (!currentNotice.value) return
   auditLoading.value = true
   try {
-    await reviewAnnouncement({ id: currentNotice.value.ID, status })
+    const payloadStatus = status === 'approved' ? 'published' : 'rejected'
+    await reviewAnnouncement({ id: currentNotice.value.ID, status: payloadStatus })
     ElMessage.success(status === 'approved' ? '已通过' : '已驳回')
     allNotices.value = allNotices.value.map((item) =>
       item.ID === currentNotice.value?.ID ? { ...item, status } : item
     )
     auditVisible.value = false
+    await fetchNotices()
   } catch (error: unknown) {
     const err = error instanceof Error ? error.message : '审核失败'
     ElMessage.error(err)
@@ -424,6 +437,10 @@ onMounted(fetchNotices)
   gap: 8px;
   color: #9ca3af;
   font-size: 12px;
+}
+
+.region-chip {
+  color: #9ca3af;
 }
 
 .status-tag {

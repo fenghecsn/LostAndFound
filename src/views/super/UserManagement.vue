@@ -29,7 +29,6 @@
         <div class="left-actions">
           <el-button class="gray-btn" :loading="batchLoading" @click="handleBatchEnable">批量启用</el-button>
           <el-button class="gray-btn" :loading="batchLoading" @click="handleBatchDisable">批量禁用</el-button>
-          <el-button class="gray-btn" :disabled="batchLoading" @click="handleBatchResetPwd">重置密码</el-button>
         </div>
         <el-button class="add-btn" type="warning" @click="showCreateAdmin = true">+ 批量新增管理员</el-button>
       </div>
@@ -65,7 +64,14 @@
                 </span>
               </td>
               <td class="op-cell">
-                <el-button class="notify-btn" size="small" @click="openMessage(row)">发送通知</el-button>
+                <el-button
+                  class="notify-btn"
+                  size="small"
+                  :disabled="!canSendNotice(row)"
+                  @click="openMessage(row)"
+                >
+                  {{ canSendNotice(row) ? '发送通知' : '不可发送' }}
+                </el-button>
               </td>
               <td>
                 <el-checkbox
@@ -225,6 +231,10 @@ function getRowId(row: UserRow) {
   return row.ID || row.id || 0
 }
 
+function canSendNotice(row: UserRow) {
+  return row.role !== 2 && row.role !== 3
+}
+
 function statusKey(row: UserRow) {
   if (row.role !== 2 && row.role !== 3) return 'none'
   return row.is_active ? 'enabled' : 'disabled'
@@ -359,14 +369,6 @@ async function handleBatchDisable() {
   }
 }
 
-function handleBatchResetPwd() {
-  if (getSelectedRows().length === 0) {
-    ElMessage.warning('请先勾选用户')
-    return
-  }
-  ElMessage.success('已触发重置密码（演示）')
-}
-
 async function handleCreateAdmin() {
   if (!adminForm.username.trim() || !adminForm.name.trim() || !adminForm.password.trim()) {
     ElMessage.warning('请填写完整信息')
@@ -394,6 +396,10 @@ async function handleCreateAdmin() {
 }
 
 function openMessage(row: UserRow) {
+  if (!canSendNotice(row)) {
+    ElMessage.warning('管理员和超级管理员不可接收此通知')
+    return
+  }
   messageTargetId.value = getRowId(row)
   messageTargetName.value = row.name || row.username || '--'
   messageContent.value = ''

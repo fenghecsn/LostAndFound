@@ -1,7 +1,13 @@
 <template>
   <div class="claim-page">
     <div class="page-header">
-      <h2 class="page-title">认领审核</h2>
+      <div class="page-left">
+        <h2 class="page-title">审核管理</h2>
+        <div class="audit-tabs">
+          <el-button size="small" round @click="router.push('/admin/audit')">帖子审核</el-button>
+          <el-button type="warning" plain size="small" round>认领审核</el-button>
+        </div>
+      </div>
       <el-button type="warning" size="large" round @click="router.push('/admin/audit-history')">
         审核记录
       </el-button>
@@ -277,6 +283,8 @@ onMounted(() => {
 .claim-page { padding: 0; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .page-title { font-size: 24px; font-weight: bold; color: #333; margin: 0; }
+.page-left { display: flex; align-items: center; gap: 14px; }
+.audit-tabs { display: flex; gap: 8px; }
 .table-wrapper { background: #fff; border-radius: 8px; overflow: hidden; }
 .img-placeholder { width: 60px; height: 60px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; border-radius: 4px; margin: 0 auto; }
 .desc-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 13px; color: #666; }

@@ -84,7 +84,7 @@ export interface CreateSystemAnnouncementRequest {
 
 export interface ReviewAnnouncementRequest {
   id: number
-  status: 'approved' | 'rejected'
+  status: 'published' | 'rejected' | 'approved'
 }
 
 export interface GetFeedbacksParams extends PageParams {
