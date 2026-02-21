@@ -1,6 +1,5 @@
-<template>
+﻿<template>
   <div class="item-page">
-    <!-- 顶部搜索栏 -->
     <div class="search-bar">
       <el-input
         v-model="searchKeyword"
@@ -15,7 +14,6 @@
       </el-button>
     </div>
 
-    <!-- 批量操作栏 -->
     <div v-if="batchMode" class="batch-bar">
       <el-checkbox
         v-model="selectAll"
@@ -31,7 +29,6 @@
       </el-button>
     </div>
 
-    <!-- 筛选按钮组 -->
     <div class="filter-area">
       <div class="filter-groups">
         <div class="filter-row">
@@ -39,32 +36,58 @@
             v-for="opt in typeOptions"
             :key="opt.value"
             :type="filterType === opt.value ? 'warning' : 'default'"
-            round size="small"
+            round
+            size="small"
             @click="filterType = opt.value; currentPage = 1; fetchItemList()"
           >{{ opt.label }}</el-button>
         </div>
+
+        <div class="filter-row">
+          <el-button
+            v-for="opt in campusFilterOptions"
+            :key="opt.value"
+            :type="filterCampus === opt.value ? 'warning' : 'default'"
+            round
+            size="small"
+            @click="filterCampus = opt.value; currentPage = 1; fetchItemList()"
+          >{{ opt.label }}</el-button>
+        </div>
+
         <div class="filter-row">
           <el-button
             v-for="opt in statusOptions"
             :key="opt.value"
             :type="filterStatus === opt.value ? 'warning' : 'default'"
-            round size="small"
+            round
+            size="small"
             @click="filterStatus = opt.value; currentPage = 1; fetchItemList()"
           >{{ opt.label }}</el-button>
         </div>
+
         <div class="filter-row">
           <el-button
             v-for="opt in timeOptions"
             :key="opt.value"
             :type="filterTime === opt.value ? 'warning' : 'default'"
-            round size="small"
+            round
+            size="small"
             @click="filterTime = opt.value; currentPage = 1; fetchItemList()"
+          >{{ opt.label }}</el-button>
+        </div>
+
+        <div class="filter-row">
+          <el-button
+            v-for="opt in categoryFilterOptions"
+            :key="opt.value"
+            :type="filterCategory === opt.value ? 'warning' : 'default'"
+            round
+            size="small"
+            @click="filterCategory = opt.value; currentPage = 1; fetchItemList()"
           >{{ opt.label }}</el-button>
         </div>
       </div>
     </div>
 
-    <!-- 卡片列表 -->
     <div class="card-grid" v-loading="loading">
       <div
         v-for="item in itemList"
@@ -73,7 +96,6 @@
         :class="{ 'card-selected': batchMode && selectedIds.includes(item.id ?? item.ID) }"
         @click="batchMode ? toggleSelect(item) : showItemDetail(item)"
       >
-        <!-- 批量模式勾选框 -->
         <div v-if="batchMode" class="card-checkbox" @click.stop>
           <el-checkbox
             :model-value="selectedIds.includes(item.id ?? item.ID)"
@@ -84,13 +106,19 @@
         <div class="card-body">
           <div class="card-info">
             <p class="card-title">物品名称：{{ item.title || item.category || '--' }}</p>
-            <p>{{ item.lost_or_found === 1 ? '丢失' : '拾取' }}时间：{{ item.time || '--' }}</p>
-            <p>{{ item.lost_or_found === 1 ? '丢失' : '拾取' }}地点：{{ item.location || '--' }}</p>
+            <p>{{ isLost(item) ? '丢失' : '拾取' }}时间：{{ item.time || '--' }}</p>
+            <p>{{ isLost(item) ? '丢失' : '拾取' }}地点：{{ item.location || '--' }}</p>
           </div>
           <el-icon class="card-more" :size="20" color="#999"><MoreFilled /></el-icon>
         </div>
 
         <div class="card-tags">
+          <div class="tag-item">
+            <span class="tag-dot" :class="canEditInfo(item) ? 'green' : 'gray'"></span>
+            <el-tag size="small" :type="canEditInfo(item) ? 'success' : 'info'" effect="plain" round>
+              {{ canEditInfo(item) ? '可编辑（招领帖）' : '不可编辑（失物帖）' }}
+            </el-tag>
+          </div>
           <div class="tag-item" v-if="item.campus">
             <span class="tag-dot blue"></span>
             <el-tag size="small" type="info" effect="plain" round>校区：{{ item.campus }}</el-tag>
@@ -105,7 +133,7 @@
           </div>
         </div>
 
-        <div class="card-images">
+        <div class="card-images" v-if="[item.img1, item.img2].filter(Boolean).length">
           <el-image
             v-for="(img, idx) in [item.img1, item.img2].filter(Boolean)"
             :key="idx"
@@ -114,9 +142,6 @@
             class="card-img"
             @click.stop
           />
-          <div v-if="![item.img1, item.img2].filter(Boolean).length" class="card-img-placeholder">
-            <el-icon :size="30" color="#ccc"><Picture /></el-icon>
-          </div>
         </div>
 
         <div class="card-footer">
@@ -132,7 +157,6 @@
       </div>
     </div>
 
-    <!-- 分页 -->
     <div class="pagination-wrapper">
       <el-pagination
         v-model:current-page="currentPage"
@@ -143,49 +167,52 @@
       />
     </div>
 
-    <!-- 物品详情弹窗（支持编辑信息 + 改状态） -->
     <el-dialog v-model="detailVisible" width="720px" :show-close="true" top="6vh" @closed="resetDetail">
       <div class="item-detail" v-if="currentItem">
-        <!-- 模式切换 -->
         <div class="detail-mode-bar">
           <el-radio-group v-model="editMode" size="small">
             <el-radio-button value="view">查看</el-radio-button>
-            <el-radio-button value="editInfo">编辑信息</el-radio-button>
-            <el-radio-button value="editStatus">更改状态</el-radio-button>
+            <el-radio-button value="editInfo" :disabled="!canEditCurrentItem">编辑信息</el-radio-button>
+            <el-radio-button value="editStatus" :disabled="!canEditCurrentItem">更改状态</el-radio-button>
           </el-radio-group>
+          <p class="edit-tip" :class="{ 'edit-tip-disabled': !canEditCurrentItem }">
+            {{ canEditCurrentItem ? '当前为招领帖，可编辑信息和状态。' : '当前为失物帖，仅可查看。' }}
+          </p>
         </div>
 
-        <!-- 查看模式 -->
         <div v-if="editMode === 'view'">
           <div class="detail-top">
             <div class="detail-info">
               <p><strong>物品名称：</strong>{{ currentItem.title || currentItem.category }}</p>
-              <p><strong>{{ currentItem.lost_or_found === 1 ? '丢失' : '拾取' }}时间：</strong>{{ currentItem.time || '--' }}</p>
-              <p><strong>{{ currentItem.lost_or_found === 1 ? '丢失' : '拾取' }}地点：</strong>{{ currentItem.location || '--' }}</p>
+              <p><strong>{{ isLost(currentItem) ? '丢失' : '拾取' }}时间：</strong>{{ currentItem.time || '--' }}</p>
+              <p><strong>{{ isLost(currentItem) ? '丢失' : '拾取' }}地点：</strong>{{ currentItem.location || '--' }}</p>
               <p><strong>联系方式：</strong>{{ currentItem.contact_phone || '--' }}</p>
               <p><strong>联系人：</strong>{{ currentItem.contact_name || '--' }}</p>
               <p><strong>物品特征：</strong>{{ currentItem.description || '--' }}</p>
             </div>
-            <div class="detail-right-btns">
-              <el-button type="primary" @click="detailVisible = false">返回</el-button>
-            </div>
           </div>
         </div>
 
-        <!-- 编辑信息模式 -->
         <div v-if="editMode === 'editInfo'">
           <el-form :model="editForm" label-width="90px" class="edit-form">
             <el-form-item label="物品名称">
               <el-input v-model="editForm.title" />
             </el-form-item>
             <el-form-item label="校区">
-              <el-input v-model="editForm.campus" />
+              <el-select v-model="editForm.campus" style="width: 100%">
+                <el-option v-for="opt in campusOptions" :key="opt" :label="opt" :value="opt" />
+              </el-select>
             </el-form-item>
             <el-form-item label="存放地点">
               <el-input v-model="editForm.location" placeholder="更新物品当前存放地点" />
             </el-form-item>
             <el-form-item label="物品类型">
-              <el-input v-model="editForm.category" />
+              <el-select v-model="editForm.category" style="width: 100%">
+                <el-option v-for="opt in categoryOptions" :key="opt" :label="opt" :value="opt" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="悬赏">
+              <el-input-number v-model="editForm.bounty" :min="0" :step="1" style="width: 180px" />
             </el-form-item>
             <el-form-item label="时间">
               <el-input v-model="editForm.time" />
@@ -206,7 +233,6 @@
           </el-form>
         </div>
 
-        <!-- 更改状态模式 -->
         <div v-if="editMode === 'editStatus'">
           <div class="detail-top">
             <div class="detail-info">
@@ -243,7 +269,6 @@
           </div>
         </div>
 
-        <!-- 公共部分：标签 + 图片（所有模式都展示） -->
         <div class="detail-tags">
           <div class="tag-item">
             <span class="tag-dot blue"></span>
@@ -279,7 +304,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Picture, MoreFilled } from '@element-plus/icons-vue'
+import { Search, MoreFilled } from '@element-plus/icons-vue'
 import { getAllItems, archiveItem, updateItem } from '@/api/admin'
 
 const loading = ref(false)
@@ -293,21 +318,33 @@ const batchMode = ref(false)
 const selectedIds = ref<number[]>([])
 
 const filterType = ref('')
+const filterCampus = ref('')
 const filterStatus = ref('')
 const filterTime = ref('')
+const filterCategory = ref('')
 const fullItemList = ref<any[]>([])
+
+const campusOptions = ['朝晖', '屏峰', '莫干山']
+const categoryOptions = ['电子', '证件', '衣服', '书籍', '其他']
 
 const typeOptions = [
   { label: '全部帖子', value: '' },
   { label: '失物帖', value: '1' },
   { label: '捡到帖', value: '2' },
 ]
+
+const campusFilterOptions = [
+  { label: '全部校区', value: '' },
+  ...campusOptions.map((v) => ({ label: v, value: v })),
+]
+
 const statusOptions = [
   { label: '全部状态', value: '' },
   { label: '已通过', value: 'approved' },
   { label: '已匹配', value: 'matched' },
   { label: '已认领', value: 'claimed' },
 ]
+
 const timeOptions = [
   { label: '全部时间', value: '' },
   { label: '0~3', value: '0-3' },
@@ -317,34 +354,38 @@ const timeOptions = [
   { label: '>30', value: '30+' },
 ]
 
+const categoryFilterOptions = [
+  { label: '全部类型', value: '' },
+  ...categoryOptions.map((v) => ({ label: v, value: v })),
+]
+
 const detailVisible = ref(false)
 const currentItem = ref<any>(null)
 const editMode = ref<'view' | 'editInfo' | 'editStatus'>('view')
 const editStatus = ref('archived')
 const handleNote = ref('')
 
-// 编辑信息表单
 const editForm = reactive({
   title: '',
   campus: '',
   location: '',
   category: '',
+  bounty: 0,
   time: '',
   description: '',
   contact_name: '',
   contact_phone: '',
 })
 
-// ==================== 批量管理 ====================
-
 const selectAll = computed({
   get: () => itemList.value.length > 0 && selectedIds.value.length === itemList.value.length,
-  set: () => {}
+  set: () => {},
 })
 
 const isIndeterminate = computed(() => {
   return selectedIds.value.length > 0 && selectedIds.value.length < itemList.value.length
 })
+const canEditCurrentItem = computed(() => canEditInfo(currentItem.value))
 
 function toggleBatchMode() {
   batchMode.value = !batchMode.value
@@ -353,7 +394,7 @@ function toggleBatchMode() {
 
 function handleSelectAll(val: boolean) {
   if (val) {
-    selectedIds.value = itemList.value.map(item => item.id ?? item.ID)
+    selectedIds.value = itemList.value.map((item) => item.id ?? item.ID)
   } else {
     selectedIds.value = []
   }
@@ -374,11 +415,7 @@ const batchLoading = ref(false)
 async function handleBatchArchive() {
   if (batchLoading.value) return
   try {
-    await ElMessageBox.confirm(
-      `确定要归档选中的 ${selectedIds.value.length} 条帖子吗？`,
-      '批量归档',
-      { type: 'warning' }
-    )
+    await ElMessageBox.confirm(`确定要归档选中的 ${selectedIds.value.length} 条帖子吗？`, '批量归档', { type: 'warning' })
     batchLoading.value = true
     loading.value = true
     let success = 0
@@ -396,7 +433,6 @@ async function handleBatchArchive() {
     batchMode.value = false
     fetchItemList()
   } catch {
-    // 用户取消
   } finally {
     batchLoading.value = false
     loading.value = false
@@ -406,11 +442,7 @@ async function handleBatchArchive() {
 async function handleBatchCancel() {
   if (batchLoading.value) return
   try {
-    await ElMessageBox.confirm(
-      `确定要作废选中的 ${selectedIds.value.length} 条帖子吗？`,
-      '批量作废',
-      { type: 'warning' }
-    )
+    await ElMessageBox.confirm(`确定要作废选中的 ${selectedIds.value.length} 条帖子吗？`, '批量作废', { type: 'warning' })
     batchLoading.value = true
     loading.value = true
     let success = 0
@@ -428,19 +460,21 @@ async function handleBatchCancel() {
     batchMode.value = false
     fetchItemList()
   } catch {
-    // 用户取消
   } finally {
     batchLoading.value = false
     loading.value = false
   }
 }
 
-// ==================== 原有功能 ====================
-
 function getStatusLabel(status: string) {
   const map: Record<string, string> = {
-    pending: '待审核', approved: '已通过', matched: '已匹配',
-    claimed: '已认领', rejected: '已驳回', cancelled: '无效', archived: '已归档'
+    pending: '待审核',
+    approved: '已通过',
+    matched: '已匹配',
+    claimed: '已认领',
+    rejected: '已驳回',
+    cancelled: '无效',
+    archived: '已归档',
   }
   return map[status] || status
 }
@@ -454,10 +488,27 @@ function getStatusClass(status: string) {
 
 function getStatusTagType(status: string) {
   const map: Record<string, string> = {
-    approved: 'success', matched: '', claimed: 'success',
-    rejected: 'danger', cancelled: 'info', archived: 'info', pending: 'warning'
+    approved: 'success',
+    matched: '',
+    claimed: 'success',
+    rejected: 'danger',
+    cancelled: 'info',
+    archived: 'info',
+    pending: 'warning',
   }
   return map[status] || 'info'
+}
+
+function isLost(item: any) {
+  const t = String(item?.type || '').toLowerCase()
+  if (t === 'lost') return true
+  if (t === 'found') return false
+  return Number(item?.lost_or_found) === 1
+}
+
+function canEditInfo(item: any) {
+  if (!item) return false
+  return !isLost(item)
 }
 
 async function fetchItemList() {
@@ -465,7 +516,9 @@ async function fetchItemList() {
   try {
     const hasFilter =
       Boolean(filterType.value) ||
+      Boolean(filterCampus.value) ||
       Boolean(filterStatus.value) ||
+      Boolean(filterCategory.value) ||
       Boolean(searchKeyword.value.trim()) ||
       Boolean(filterTime.value)
 
@@ -473,40 +526,38 @@ async function fetchItemList() {
       ? { page: 1, pageSize: 9999 }
       : { page: currentPage.value, pageSize: pageSize.value }
 
-    if (!hasFilter) {
-      // 无筛选时，服务端分页直接返回，提高性能
-      const res = await getAllItems(params)
-      const resData = res.data?.data ?? res.data ?? {}
-      itemList.value = (resData.list ?? resData.items ?? []).map((item: any) => ({
-        ...item,
-        id: item.id ?? item.ID,
-      }))
-      total.value = resData.total ?? 0
-      fullItemList.value = itemList.value
-      return
-    }
-
-    // 有筛选时，前端兜底过滤，避免后端筛选不生效导致“显示全部”
     const res = await getAllItems(params)
     const resData = res.data?.data ?? res.data ?? {}
-    fullItemList.value = (resData.list ?? resData.items ?? []).map((item: any) => ({
+    const list = (resData.list ?? resData.items ?? []).map((item: any) => ({
       ...item,
       id: item.id ?? item.ID,
     }))
 
+    if (!hasFilter) {
+      itemList.value = list
+      total.value = resData.total ?? list.length ?? 0
+      fullItemList.value = list
+      return
+    }
+
+    fullItemList.value = list
     const keyword = searchKeyword.value.trim().toLowerCase()
     const daysRange = parseTimeRange(filterTime.value)
     const now = Date.now()
 
     const filtered = fullItemList.value.filter((item: any) => {
-      if (filterType.value && String(item.lost_or_found) !== String(filterType.value)) return false
+      if (!matchPostType(item, filterType.value)) return false
+      if (filterCampus.value && String(item.campus || '') !== String(filterCampus.value)) return false
+      if (filterCategory.value && String(item.category || '') !== String(filterCategory.value)) return false
       if (filterStatus.value && String(item.status) !== String(filterStatus.value)) return false
+
       if (keyword) {
         const title = String(item.title || '').toLowerCase()
         const category = String(item.category || '').toLowerCase()
         const location = String(item.location || '').toLowerCase()
         if (!title.includes(keyword) && !category.includes(keyword) && !location.includes(keyword)) return false
       }
+
       if (daysRange) {
         const created = new Date(item.CreatedAt || item.created_at || item.time || '').getTime()
         if (!created || Number.isNaN(created)) return false
@@ -514,6 +565,7 @@ async function fetchItemList() {
         if (diffDays < daysRange.min) return false
         if (daysRange.max !== null && diffDays >= daysRange.max) return false
       }
+
       return true
     })
 
@@ -545,6 +597,15 @@ function parseTimeRange(val: string): { min: number; max: number | null } | null
   return null
 }
 
+function matchPostType(item: any, filterTypeValue: string) {
+  if (!filterTypeValue) return true
+  const lf = Number(item?.lost_or_found)
+  const type = String(item?.type || '').toLowerCase()
+  if (filterTypeValue === '1') return lf === 1 || type === 'lost'
+  if (filterTypeValue === '2') return lf === 2 || type === 'found'
+  return true
+}
+
 function getBountyText(item: any) {
   const value = Number(item?.bounty ?? item?.reward ?? 0)
   if (!Number.isFinite(value) || value < 0) return '0元'
@@ -556,11 +617,11 @@ function showItemDetail(item: any) {
   editMode.value = 'view'
   editStatus.value = item.status || 'archived'
   handleNote.value = ''
-  // 填充编辑表单
   editForm.title = item.title || ''
-  editForm.campus = item.campus || ''
+  editForm.campus = item.campus || campusOptions[0]
   editForm.location = item.location || ''
-  editForm.category = item.category || ''
+  editForm.category = item.category || categoryOptions[0]
+  editForm.bounty = Number(item.bounty ?? item.reward ?? 0) || 0
   editForm.time = item.time || ''
   editForm.description = item.description || ''
   editForm.contact_name = item.contact_name || ''
@@ -568,20 +629,25 @@ function showItemDetail(item: any) {
   detailVisible.value = true
 }
 
-/** 保存编辑的物品信息（存放地点、联系方式等） */
 async function handleSaveInfo() {
   if (saveLoading.value) return
+  if (!canEditCurrentItem.value) {
+    ElMessage.warning('仅招领帖可修改信息')
+    editMode.value = 'view'
+    return
+  }
   try {
     await ElMessageBox.confirm('确定要保存修改的信息吗？', '确认', { type: 'warning' })
     saveLoading.value = true
     const id = currentItem.value.id ?? currentItem.value.ID
 
-    // 只传被修改过的字段
-    const data: Record<string, string> = {}
+    const data: Record<string, any> = {}
     if (editForm.title !== (currentItem.value.title || '')) data.title = editForm.title
     if (editForm.campus !== (currentItem.value.campus || '')) data.campus = editForm.campus
     if (editForm.location !== (currentItem.value.location || '')) data.location = editForm.location
     if (editForm.category !== (currentItem.value.category || '')) data.category = editForm.category
+    const currentBounty = Number(currentItem.value.bounty ?? currentItem.value.reward ?? 0) || 0
+    if (Number(editForm.bounty) !== currentBounty) data.bounty = Number(editForm.bounty)
     if (editForm.time !== (currentItem.value.time || '')) data.time = editForm.time
     if (editForm.description !== (currentItem.value.description || '')) data.description = editForm.description
     if (editForm.contact_name !== (currentItem.value.contact_name || '')) data.contact_name = editForm.contact_name
@@ -592,7 +658,11 @@ async function handleSaveInfo() {
       return
     }
 
-    await updateItem(id, data)
+    const res = await updateItem(id, data)
+    const code = Number((res as any)?.data?.code ?? 200)
+    if (code !== 200) {
+      throw new Error(String((res as any)?.data?.msg || '更新失败'))
+    }
     ElMessage.success('信息更新成功')
     detailVisible.value = false
     fetchItemList()
@@ -605,26 +675,39 @@ async function handleSaveInfo() {
   }
 }
 
-/** 保存状态更改（归档/匹配/认领/作废） */
 async function handleSaveStatus() {
   if (saveLoading.value) return
+  if (!canEditCurrentItem.value) {
+    ElMessage.warning('仅招领帖可修改状态')
+    editMode.value = 'view'
+    return
+  }
   try {
     const id = currentItem.value.id ?? currentItem.value.ID
-    const statusLabel = editStatus.value === 'archived' ? '归档' :
-                        editStatus.value === 'matched' ? '标记为已匹配' :
-                        editStatus.value === 'claimed' ? '标记为已认领' : '标记为无效'
+    const statusLabel =
+      editStatus.value === 'archived'
+        ? '归档'
+        : editStatus.value === 'matched'
+          ? '标记为已匹配'
+          : editStatus.value === 'claimed'
+            ? '标记为已认领'
+            : '标记为无效'
 
-    await ElMessageBox.confirm(
-      `确定要将该帖子${statusLabel}吗？`,
-      '确认操作',
-      { type: 'warning' }
-    )
+    await ElMessageBox.confirm(`确定要将该帖子${statusLabel}吗？`, '确认操作', { type: 'warning' })
 
     saveLoading.value = true
     if (editStatus.value === 'archived') {
-      await archiveItem(id, { process_method: handleNote.value || '管理员归档' })
+      const res = await archiveItem(id, { process_method: handleNote.value || '管理员归档' })
+      const code = Number((res as any)?.data?.code ?? 200)
+      if (code !== 200) {
+        throw new Error(String((res as any)?.data?.msg || '更新失败'))
+      }
     } else {
-      await updateItem(id, { status: editStatus.value, process_method: handleNote.value })
+      const res = await updateItem(id, { status: editStatus.value, process_method: handleNote.value })
+      const code = Number((res as any)?.data?.code ?? 200)
+      if (code !== 200) {
+        throw new Error(String((res as any)?.data?.msg || '更新失败'))
+      }
     }
     ElMessage.success('状态更新成功')
     detailVisible.value = false
@@ -656,7 +739,6 @@ onMounted(() => {
 .search-bar { display: flex; justify-content: center; gap: 12px; margin-bottom: 20px; }
 .search-input { width: 400px; }
 
-/* 批量操作栏 */
 .batch-bar {
   display: flex;
   align-items: center;
@@ -666,6 +748,7 @@ onMounted(() => {
   border-radius: 8px;
   margin-bottom: 16px;
 }
+
 .batch-count {
   font-size: 14px;
   color: #666;
@@ -687,7 +770,9 @@ onMounted(() => {
   transition: all 0.2s;
   position: relative;
 }
+
 .item-card:hover { box-shadow: 0 4px 16px rgba(230, 162, 60, 0.2); }
+
 .item-card.card-selected {
   border-color: #e6a23c;
   background: #fef9f0;
@@ -711,6 +796,8 @@ onMounted(() => {
 .tag-dot.blue { background: #409eff; }
 .tag-dot.orange { background: #e6a23c; }
 .tag-dot.yellow { background: #f5c242; }
+.tag-dot.green { background: #67c23a; }
+.tag-dot.gray { background: #909399; }
 
 .card-images { display: flex; gap: 8px; }
 .card-img { width: 120px; height: 90px; border-radius: 6px; background: #f5f5f5; }
@@ -727,12 +814,12 @@ onMounted(() => {
 .empty-state { grid-column: 1 / -1; padding: 60px 0; }
 .pagination-wrapper { display: flex; justify-content: center; margin-top: 24px; }
 
-/* ===== 弹窗详情 ===== */
 .item-detail { padding: 0 8px; }
 .detail-mode-bar { margin-bottom: 20px; }
+.edit-tip { margin: 10px 2px 0; font-size: 13px; color: #67c23a; }
+.edit-tip.edit-tip-disabled { color: #909399; }
 .detail-top { display: flex; justify-content: space-between; }
 .detail-info p { margin: 8px 0; font-size: 15px; color: #333; }
-.detail-right-btns { display: flex; flex-direction: column; gap: 10px; }
 .detail-tags { display: flex; gap: 16px; margin: 16px 0; flex-wrap: wrap; }
 .detail-images { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 16px 0; }
 .detail-img { width: 100%; height: 200px; border-radius: 8px; background: #f5f5f5; }
@@ -744,6 +831,5 @@ onMounted(() => {
 .handle-label { font-size: 14px; color: #666; margin-bottom: 8px; }
 .detail-time { text-align: center; color: #999; font-size: 13px; margin-top: 12px; }
 
-/* 编辑表单 */
 .edit-form { margin-top: 8px; }
 </style>

@@ -306,6 +306,20 @@ function countTop(items: any[], field: string, topN = 5): { name: string; count:
     .slice(0, topN)
 }
 
+function isLostPost(item: any): boolean {
+  const t = String(item?.type ?? '').toLowerCase()
+  if (t === 'lost') return true
+  if (t === 'found') return false
+  return Number(item?.lost_or_found) === 1
+}
+
+function isFoundPost(item: any): boolean {
+  const t = String(item?.type ?? '').toLowerCase()
+  if (t === 'found') return true
+  if (t === 'lost') return false
+  return Number(item?.lost_or_found) === 2
+}
+
 /** 统计最近7天趋势 */
 function calcTrend(items: any[]): { label: string; lost: number; found: number }[] {
   const result: { label: string; lost: number; found: number }[] = []
@@ -322,8 +336,8 @@ function calcTrend(items: any[]): { label: string; lost: number; found: number }
     items.forEach(item => {
       const t = new Date(item.CreatedAt || item.created_at).getTime()
       if (t >= dayStart && t < dayEnd) {
-        if (item.lost_or_found === 1) lost++
-        else found++
+        if (isLostPost(item)) lost++
+        else if (isFoundPost(item)) found++
       }
     })
     result.push({ label: dateStr, lost, found })
@@ -368,8 +382,8 @@ async function fetchItemsForCharts(needStatsFallback: boolean) {
       const total = allItems.length
       stats.value = {
         total_items: total,
-        lost_items: allItems.filter(i => i.lost_or_found === 1).length,
-        found_items: allItems.filter(i => i.lost_or_found !== 1).length,
+        lost_items: allItems.filter(i => isLostPost(i)).length,
+        found_items: allItems.filter(i => isFoundPost(i)).length,
         pending_items: allItems.filter(i => i.status === 'pending').length,
         approved_items: allItems.filter(i => i.status === 'approved').length,
         matched_items: allItems.filter(i => i.status === 'matched').length,

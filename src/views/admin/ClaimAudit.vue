@@ -5,7 +5,7 @@
         <h2 class="page-title">审核管理</h2>
         <div class="audit-tabs">
           <el-button size="small" round @click="router.push('/admin/audit')">帖子审核</el-button>
-          <el-button type="warning" plain size="small" round>认领审核</el-button>
+          <el-button type="warning" plain size="small" round>认领申请审核</el-button>
         </div>
       </div>
       <el-button type="warning" size="large" round @click="router.push('/admin/audit-history')">
@@ -26,16 +26,27 @@
             {{ (currentPage - 1) * pageSize + $index + 1 }}
           </template>
         </el-table-column>
-        <el-table-column label="认领时间" width="160" align="center">
+
+        <el-table-column label="申请类型" width="140" align="center">
+          <template #default="{ row }">
+            <el-tag :type="getClaimTypeTag(row)" round>
+              {{ getClaimTypeLabel(row) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="申请时间" width="170" align="center">
           <template #default="{ row }">
             {{ row.CreatedAt ? new Date(row.CreatedAt).toLocaleString('zh-CN') : '--' }}
           </template>
         </el-table-column>
-        <el-table-column label="物品名称" width="100" align="center">
+
+        <el-table-column label="物品名称" width="140" align="center">
           <template #default="{ row }">
-            {{ row.item?.category || row.item?.title || row.category || '--' }}
+            {{ row.item?.title || row.item?.category || row.category || '--' }}
           </template>
         </el-table-column>
+
         <el-table-column label="图片" width="100" align="center">
           <template #default="{ row }">
             <el-image
@@ -44,16 +55,16 @@
               fit="cover"
               style="width: 60px; height: 60px; border-radius: 4px;"
             />
-            <div v-else class="img-placeholder">
-              <el-icon :size="30" color="#ccc"><Picture /></el-icon>
-            </div>
+            <span v-else class="no-image">无图片</span>
           </template>
         </el-table-column>
-        <el-table-column label="申请内容" min-width="240">
+
+        <el-table-column label="申请内容" min-width="260">
           <template #default="{ row }">
-            <span class="desc-text">{{ row.proof || row.description || row.reason || '--' }}</span>
+            <span class="desc-text">{{ getClaimSpeech(row) || '--' }}</span>
           </template>
         </el-table-column>
+
         <el-table-column label="操作" width="260" align="center" fixed="right">
           <template #default="{ row }">
             <div class="action-btns">
@@ -76,25 +87,28 @@
       />
     </div>
 
-    <!-- 认领详情弹窗 -->
     <el-dialog v-model="detailVisible" width="700px" :show-close="true" top="8vh" @closed="resetDialog">
       <div class="claim-detail" v-if="currentClaim">
-        <h2 class="claim-detail-title">认领申请：</h2>
+        <h2 class="claim-detail-title">认领申请详情</h2>
 
         <div class="item-info-card">
-          <p>物品名称：{{ currentClaim.item?.title || currentClaim.item?.category || '--' }}</p>
-          <p>物品类型：{{ currentClaim.item?.category || '--' }}</p>
-          <p>拾取地点：{{ currentClaim.item?.location || '--' }}</p>
-          <p>拾取时间：{{ currentClaim.item?.time || '--' }}</p>
-          <p>物品特征：{{ currentClaim.item?.description || currentClaim.proof || '--' }}</p>
-          <p>联系人及联系电话：{{ currentClaim.claimant?.username || '--' }}</p>
-          <p>照片说明：已上传物品清晰照片（正面及反面，关键隐私信息已打码处理）</p>
-          <div class="word-count">{{ (currentClaim.proof || '').length }}/1000</div>
+          <p>
+            <strong>申请类型：</strong>
+            <el-tag :type="getClaimTypeTag(currentClaim)" round>
+              {{ getClaimTypeLabel(currentClaim) }}
+            </el-tag>
+            <span class="type-hint">{{ getClaimTypeHint(currentClaim) }}</span>
+          </p>
+          <p><strong>物品名称：</strong>{{ currentClaim.item?.title || currentClaim.item?.category || '--' }}</p>
+          <p><strong>物品类型：</strong>{{ currentClaim.item?.category || '--' }}</p>
+          <p><strong>{{ isLostPost(currentClaim.item) ? '丢失地点' : '拾取地点' }}：</strong>{{ currentClaim.item?.location || '--' }}</p>
+          <p><strong>{{ isLostPost(currentClaim.item) ? '丢失时间' : '拾取时间' }}：</strong>{{ currentClaim.item?.time || '--' }}</p>
+          <p><strong>物品描述：</strong>{{ currentClaim.item?.description || '--' }}</p>
+          <p><strong>申请说明：</strong>{{ getClaimSpeech(currentClaim) || '--' }}</p>
+          <p><strong>申请人：</strong>{{ currentClaim.claimant?.username || currentClaim.claimant?.name || '--' }}</p>
         </div>
 
-        <p class="claim-hint">需填写物品名称、类型、拾取地点、拾取时间、物品特征、联系人及联系电话</p>
-
-        <div class="claim-images">
+        <div class="claim-images" v-if="getClaimImages(currentClaim).length > 0">
           <el-image
             v-for="(img, idx) in getClaimImages(currentClaim)"
             :key="idx"
@@ -103,12 +117,7 @@
             class="claim-img"
             :preview-src-list="getClaimImages(currentClaim)"
           />
-          <div v-if="getClaimImages(currentClaim).length === 0" class="no-img-box">
-            <el-icon :size="40" color="#ccc"><Picture /></el-icon>
-          </div>
         </div>
-
-        <p class="claim-img-hint">必须上传物品清晰照片<br/>便于失主确认</p>
 
         <div v-if="showRejectInput" class="reject-input-area">
           <h4>填写驳回原因</h4>
@@ -116,7 +125,7 @@
             v-model="rejectReason"
             type="textarea"
             :rows="3"
-            placeholder="请输入文字"
+            placeholder="请输入驳回原因"
             maxlength="200"
             show-word-limit
           />
@@ -124,17 +133,16 @@
 
         <div class="claim-detail-footer">
           <el-button
-            :type="showRejectInput ? 'info' : 'primary'"
+            :type="showRejectInput ? 'info' : 'warning'"
             :loading="rejectLoading"
             @click="handleClaimRejectConfirm"
           >驳回</el-button>
           <el-button
-            :type="showRejectInput ? 'info' : 'primary'"
+            :type="showRejectInput ? 'info' : 'warning'"
             :loading="approveLoading"
             @click="handleClaimApprove(currentClaim)"
             :disabled="showRejectInput"
           >通过</el-button>
-          <el-button type="primary" @click="detailVisible = false">返回</el-button>
         </div>
       </div>
     </el-dialog>
@@ -145,7 +153,6 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Picture } from '@element-plus/icons-vue'
 import { getPendingClaims, approveClaim, rejectClaim } from '@/api/admin'
 import { useAuditHistoryStore } from '@/stores/auditHistory'
 
@@ -169,6 +176,30 @@ function getClaimImages(claim: any): string[] {
   if (!claim) return []
   const item = claim.item || claim
   return [item.img1, item.img2, item.img3, item.img4].filter(Boolean)
+}
+
+function getClaimSpeech(claim: any): string {
+  return String(claim?.proof || claim?.reason || claim?.description || '').trim()
+}
+
+function isLostPost(item: any): boolean {
+  const type = String(item?.type || '').toLowerCase()
+  if (type === 'lost') return true
+  if (type === 'found') return false
+  return Number(item?.lost_or_found) === 1
+}
+
+function getClaimTypeLabel(row: any): string {
+  return isLostPost(row?.item) ? '归还申请' : '认领申请'
+}
+
+function getClaimTypeTag(row: any): 'success' | 'warning' {
+  return isLostPost(row?.item) ? 'success' : 'warning'
+}
+
+function getClaimTypeHint(row: any): string {
+  if (isLostPost(row?.item)) return '申请人表示自己捡到物品，准备归还给失主。'
+  return '申请人表示该物品属于自己，正在申请认领。'
 }
 
 function resetDialog() {
@@ -215,6 +246,14 @@ function openClaimReject(row: any) {
   setTimeout(() => { showRejectInput.value = true }, 100)
 }
 
+function buildHistoryItemFromClaim(claimRow: any) {
+  const item = claimRow?.item || claimRow || {}
+  return {
+    ...item,
+    _claim_proof: getClaimSpeech(claimRow),
+  }
+}
+
 function handleClaimRejectConfirm() {
   if (!showRejectInput.value) {
     showRejectInput.value = true
@@ -232,9 +271,12 @@ async function doRejectClaim() {
   rejectLoading.value = true
   try {
     const id = currentClaim.value.id ?? currentClaim.value.ID
-    await rejectClaim(id, { reject_reason: rejectReason.value })
-    const itemForHistory = currentClaim.value.item || currentClaim.value
-    auditHistoryStore.addRecord(itemForHistory, 'rejected', rejectReason.value, 'claim')
+    const res = await rejectClaim(id, { reject_reason: rejectReason.value })
+    const code = Number((res as any)?.data?.code ?? 200)
+    if (code !== 200) {
+      throw new Error(String((res as any)?.data?.msg || '驳回失败'))
+    }
+    auditHistoryStore.addRecord(buildHistoryItemFromClaim(currentClaim.value), 'rejected', rejectReason.value, 'claim')
     ElMessage.success('已驳回')
     detailVisible.value = false
     showRejectInput.value = false
@@ -258,14 +300,16 @@ async function handleClaimApprove(row: any) {
     })
     approveLoading.value = true
     const id = row.id ?? row.ID
-    await approveClaim(id)
-    const itemForHistory = row.item || row
-    auditHistoryStore.addRecord(itemForHistory, 'approved', undefined, 'claim')
-    ElMessage.success('认领审核通过')
+    const res = await approveClaim(id)
+    const code = Number((res as any)?.data?.code ?? 200)
+    if (code !== 200) {
+      throw new Error(String((res as any)?.data?.msg || '审核失败'))
+    }
+    auditHistoryStore.addRecord(buildHistoryItemFromClaim(row), 'approved', undefined, 'claim')
+    ElMessage.success('认领申请审核通过')
     detailVisible.value = false
     fetchClaimList()
   } catch (error: unknown) {
-    // 区分用户取消和真实错误
     if (error === 'cancel' || error === 'close') return
     const errMsg = error instanceof Error ? error.message : '审核失败'
     ElMessage.error(errMsg)
@@ -286,26 +330,18 @@ onMounted(() => {
 .page-left { display: flex; align-items: center; gap: 14px; }
 .audit-tabs { display: flex; gap: 8px; }
 .table-wrapper { background: #fff; border-radius: 8px; overflow: hidden; }
-.img-placeholder { width: 60px; height: 60px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; border-radius: 4px; margin: 0 auto; }
+.no-image { color: #999; font-size: 13px; }
 .desc-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 13px; color: #666; }
 .action-btns { display: flex; gap: 6px; justify-content: center; }
 .pagination-wrapper { display: flex; justify-content: center; margin-top: 24px; }
-
 .claim-detail { padding: 0 8px; }
-.claim-detail-title { font-size: 22px; font-weight: bold; color: #333; margin: 0 0 16px 0; }
-
-.item-info-card { background: #fef8ee; border-radius: 8px; padding: 16px 20px; position: relative; }
-.item-info-card p { margin: 6px 0; font-size: 14px; color: #333; line-height: 1.8; }
-.word-count { position: absolute; right: 16px; bottom: 10px; font-size: 12px; color: #999; }
-
-.claim-hint { color: #e6a23c; font-size: 13px; text-align: center; margin: 12px 0; }
+.claim-detail-title { font-size: 22px; font-weight: bold; color: #333; margin: 0 0 16px; }
+.item-info-card { background: #fef8ee; border-radius: 8px; padding: 16px 20px; }
+.item-info-card p { margin: 8px 0; font-size: 14px; color: #333; line-height: 1.8; }
+.type-hint { color: #999; margin-left: 8px; font-size: 13px; }
 .claim-images { display: flex; gap: 12px; justify-content: center; margin: 16px 0; }
 .claim-img { width: 160px; height: 140px; border-radius: 8px; background: #f5f5f5; }
-.no-img-box { width: 160px; height: 140px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
-.claim-img-hint { color: #e6a23c; font-size: 13px; text-align: center; margin: 8px 0 16px; }
-
 .reject-input-area { margin: 16px 0; background: #f9f9f9; padding: 16px; border-radius: 8px; }
-.reject-input-area h4 { margin: 0 0 10px 0; font-size: 15px; color: #333; }
-
+.reject-input-area h4 { margin: 0 0 10px; font-size: 15px; color: #333; }
 .claim-detail-footer { display: flex; justify-content: center; gap: 16px; margin-top: 20px; padding-bottom: 8px; }
 </style>

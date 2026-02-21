@@ -1,15 +1,19 @@
-<template>
+﻿<template>
   <div class="audit-page">
-    <!-- 页头 -->
+    <!-- 页面头部 -->
     <div class="page-header">
       <div class="page-left">
         <h2 class="page-title">审核管理</h2>
         <div class="audit-tabs">
           <el-button type="warning" plain size="small" round>帖子审核</el-button>
-          <el-button size="small" round @click="router.push('/admin/claim-audit')">认领审核</el-button>
+          <el-button size="small" round @click="router.push('/admin/claim-audit')">认领申请审核</el-button>
         </div>
       </div>
       <el-button type="warning" size="large" round @click="router.push('/admin/audit-history')">审核记录</el-button>
+    </div>
+
+    <div class="audit-hint">
+      帖子审核只处理失物/招领帖是否通过；认领申请审核处理认领请求。认领请求通过后，需发布者确认才会变为已认领。
     </div>
 
     <!-- 表格 -->
@@ -19,6 +23,7 @@
         v-loading="loading"
         stripe
         :header-cell-style="{ background: '#fdf6ec', color: '#333', fontWeight: 'bold' }"
+        @row-click="handleRowClick"
         style="width: 100%"
       >
         <el-table-column label="索引" width="70" align="center">
@@ -42,11 +47,11 @@
               v-if="row.img1"
               :src="row.img1"
               fit="cover"
+              @click.stop
               style="width: 60px; height: 60px; border-radius: 4px;"
-              :preview-src-list="[row.img1, row.img2, row.img3, row.img4].filter(Boolean)"
             />
             <div v-else class="img-placeholder">
-              <el-icon :size="30" color="#ccc"><Picture /></el-icon>
+              无图片
             </div>
           </template>
         </el-table-column>
@@ -64,9 +69,8 @@
         <el-table-column label="操作" width="260" align="center" fixed="right">
           <template #default="{ row }">
             <div class="action-btns">
-              <el-button type="warning" round size="small" @click="showDetail(row)">详情</el-button>
-              <el-button type="warning" round size="small" plain :disabled="submitLoading" @click="openReject(row)">驳回</el-button>
-              <el-button type="warning" round size="small" :loading="submitLoading && submittingAction === 'approve'" @click="handleApprove(row)">通过</el-button>
+              <el-button class="op-btn" type="warning" round size="small" :disabled="submitLoading" @click.stop="openReject(row)">驳回</el-button>
+              <el-button class="op-btn" type="warning" round size="small" :loading="submitLoading && submittingAction === 'approve'" @click.stop="handleApprove(row)">通过</el-button>
             </div>
           </template>
         </el-table-column>
@@ -85,21 +89,16 @@
     </div>
 
     <!-- 详情弹窗 -->
-    <el-dialog v-model="detailVisible" width="700px" :show-close="true" top="8vh">
+    <el-dialog v-model="detailVisible" width="700px" :show-close="true" top="8vh" :close-on-click-modal="true">
       <div class="detail-dialog" v-if="currentItem">
         <div class="detail-header">
           <div class="detail-info">
             <p><strong>物品名称：</strong>{{ currentItem.title || currentItem.category }}</p>
-            <p><strong>{{ currentItem.lost_or_found === 1 ? '丢失' : '拾取' }}时间：</strong>{{ currentItem.time || '--' }}</p>
-            <p><strong>{{ currentItem.lost_or_found === 1 ? '丢失' : '拾取' }}地点：</strong>{{ currentItem.location || '--' }}</p>
+            <p><strong>{{ isLostPost(currentItem) ? '丢失' : '拾取' }}时间：</strong>{{ currentItem.time || '--' }}</p>
+            <p><strong>{{ isLostPost(currentItem) ? '丢失' : '拾取' }}地点：</strong>{{ currentItem.location || '--' }}</p>
             <p><strong>联系方式：</strong>{{ currentItem.contact_phone || currentItem.contact || '你没有权限知道' }}</p>
             <p><strong>联系人：</strong>{{ currentItem.contact_name || currentItem.name || '你没有权限知道' }}</p>
             <p><strong>物品特征：</strong>{{ currentItem.description || '--' }}</p>
-          </div>
-          <div class="detail-actions">
-            <el-button type="primary" @click="openReject(currentItem)">驳回</el-button>
-            <el-button type="primary" @click="handleApprove(currentItem)">通过</el-button>
-            <el-button type="primary" @click="detailVisible = false">返回</el-button>
           </div>
         </div>
 
@@ -132,6 +131,17 @@
           <div v-if="![currentItem.img1, currentItem.img2, currentItem.img3, currentItem.img4].filter(Boolean).length" class="no-img">暂无图片</div>
         </div>
 
+        <div class="detail-actions-bottom">
+          <el-button class="detail-action-btn" type="warning" :disabled="submitLoading" @click="openReject(currentItem)">驳回</el-button>
+          <el-button
+            class="detail-action-btn"
+            type="warning"
+            :loading="submitLoading && submittingAction === 'approve'"
+            :disabled="submitLoading && submittingAction !== 'approve'"
+            @click="handleApprove(currentItem)"
+          >通过</el-button>
+        </div>
+
         <p class="detail-time">{{ currentItem.CreatedAt ? new Date(currentItem.CreatedAt).toLocaleString('zh-CN') : '' }}发布</p>
       </div>
     </el-dialog>
@@ -142,7 +152,7 @@
         v-model="rejectReason"
         type="textarea"
         :rows="4"
-        placeholder="请输入文字"
+        placeholder="请输入驳回原因"
         maxlength="200"
         show-word-limit
       />
@@ -188,23 +198,26 @@ async function fetchPendingList() {
     const resData = res.data?.data ?? res.data ?? {}
     const list = normalizeList(resData)
     const normalized = list.map(normalizeItem)
-    let nextTotal = Number(resData.total ?? normalized.length ?? 0)
+    const primaryTotal = Number(resData.total ?? normalized.length ?? 0)
 
-    // Some backends return empty for pending endpoint while /admin/items still includes pending rows.
-    if (normalized.length === 0) {
-      const fallback = await getAllItems({ page: currentPage.value, pageSize: pageSize.value, status: 'pending' })
-      const fallbackData = fallback.data?.data ?? fallback.data ?? {}
-      const fallbackList = normalizeList(fallbackData)
-      const pendingOnly = fallbackList
-        .map(normalizeItem)
-        .filter((item: any) => String(item.status || '').toLowerCase() === 'pending')
+    // Compatibility fallback:
+    // some backends for /items/pending may return only one row due to paging param differences.
+    const fallback = await getAllItems({ page: currentPage.value, pageSize: pageSize.value, status: 'pending' })
+    const fallbackData = fallback.data?.data ?? fallback.data ?? {}
+    const fallbackList = normalizeList(fallbackData)
+    const pendingOnly = fallbackList
+      .map(normalizeItem)
+      .filter((item: any) => String(item.status || '').toLowerCase() === 'pending')
+    const fallbackTotal = Number(fallbackData.total ?? pendingOnly.length ?? 0)
+
+    if (pendingOnly.length > normalized.length) {
       auditList.value = pendingOnly
-      total.value = Number(fallbackData.total ?? pendingOnly.length ?? 0)
+      total.value = fallbackTotal
       return
     }
 
     auditList.value = normalized
-    total.value = nextTotal
+    total.value = primaryTotal
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : '获取待审核列表失败'
     ElMessage.error(errMsg)
@@ -235,17 +248,28 @@ function normalizeItem(item: any) {
 
 function getPostTypeLabel(row: any) {
   const t = String(row?.type ?? '').toLowerCase()
-  if (t === 'lost') return '丢失帖'
-  if (t === 'found') return '拾取帖'
+  if (t === 'lost') return '失物帖'
+  if (t === 'found') return '招领帖'
   const lf = Number(row?.lost_or_found)
-  if (lf === 1) return '丢失帖'
-  if (lf === 2) return '拾取帖'
+  if (lf === 1) return '失物帖'
+  if (lf === 2) return '招领帖'
   return '--'
+}
+
+function isLostPost(row: any) {
+  const t = String(row?.type ?? '').toLowerCase()
+  if (t === 'lost') return true
+  if (t === 'found') return false
+  return Number(row?.lost_or_found) === 1
 }
 
 function showDetail(row: any) {
   currentItem.value = row
   detailVisible.value = true
+}
+
+function handleRowClick(row: any) {
+  showDetail(row)
 }
 
 function getBountyText(item: any) {
@@ -342,10 +366,24 @@ onMounted(() => {
   margin: 0;
 }
 
+.audit-hint {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff7e6;
+  color: #8c6d1f;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .table-wrapper {
   background: #fff;
   border-radius: 8px;
   overflow: hidden;
+}
+
+.table-wrapper :deep(.el-table__row) {
+  cursor: pointer;
 }
 
 .img-placeholder {
@@ -357,6 +395,8 @@ onMounted(() => {
   justify-content: center;
   border-radius: 4px;
   margin: 0 auto;
+  color: #999;
+  font-size: 12px;
 }
 
 .desc-text {
@@ -374,20 +414,24 @@ onMounted(() => {
   justify-content: center;
 }
 
+.op-btn {
+  width: 56px;
+}
+
 .pagination-wrapper {
   display: flex;
   justify-content: center;
   margin-top: 24px;
 }
 
-/* 详情弹窗 */
+/* 璇︽儏寮圭獥 */
 .detail-dialog {
   padding: 0 8px;
 }
 
 .detail-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .detail-info p {
@@ -400,10 +444,15 @@ onMounted(() => {
   color: #333;
 }
 
-.detail-actions {
+.detail-action-btn {
+  min-width: 96px;
+}
+
+.detail-actions-bottom {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 10px;
 }
 
 .detail-tags {
@@ -457,3 +506,5 @@ onMounted(() => {
   margin-top: 12px;
 }
 </style>
+
+
