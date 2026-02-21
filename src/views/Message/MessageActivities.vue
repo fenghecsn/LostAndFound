@@ -158,8 +158,8 @@ const handleAction = async (item: ActivityItem) => {
   if (item.type === 'claim_received') {
     const dynamicItem = item as ActivityItem & Record<string, unknown>
     const targetId = Number(
+      item.peer_user_id ||
       dynamicItem.target_id ||
-      dynamicItem.peer_user_id ||
       dynamicItem.claimant_id ||
       0
     )

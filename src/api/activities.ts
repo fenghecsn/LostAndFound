@@ -13,6 +13,7 @@ export interface ActivityItem {
   title?: string
   time?: string
   item_id?: number
+  peer_user_id?: number
   item_name?: string
   loss_time?: string
   location?: string

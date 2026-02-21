@@ -20,7 +20,11 @@
       <el-empty v-if="!loading && messages.length === 0" description="暂无聊天记录" />
 
       <div v-for="msg in messages" :key="msg.ID || `${msg.CreatedAt}-${msg.content}`" class="message-row" :class="{ self: isSelfMessage(msg) }">
-        <div class="message-bubble">{{ msg.content || '[空消息]' }}</div>
+        <el-image :src="getMessageAvatar(msg)" fit="cover" class="message-avatar" />
+        <div class="message-main">
+          <div class="message-name">{{ getMessageName(msg) }}</div>
+          <div class="message-bubble">{{ msg.content || '[空消息]' }}</div>
+        </div>
       </div>
     </div>
 
@@ -69,6 +73,17 @@ const itemInfo = computed(() => ({
 
 const showConfirmButton = computed(() => String(route.query.can_confirm || '') === '1')
 
+const getSelfName = () => String(localStorage.getItem('nickname') || localStorage.getItem('username') || '我')
+
+const getSelfAvatar = () => String(localStorage.getItem('avatar') || '../../../public/头像框@7.png')
+
+const getPeerName = () => String(route.query.target_name || `用户${activeTargetId.value}`)
+
+const getPeerAvatar = () => {
+  const matched = chatSessionStore.sessions.find((item) => item.target_id === activeTargetId.value)
+  return String(matched?.avatar || '../../../public/头像框@7.png')
+}
+
 const getCurrentUserId = () => {
   const keys = ['user_id', 'userId', 'id', 'ID']
   for (const key of keys) {
@@ -78,10 +93,64 @@ const getCurrentUserId = () => {
   return 0
 }
 
+const getCurrentUsername = () => {
+  return String(localStorage.getItem('username') || '')
+}
+
+const normalizeText = (value: unknown) => String(value || '').trim().toLowerCase()
+
+const isPeerId = (id: unknown) => {
+  const peerId = activeTargetId.value
+  const parsed = Number(id || 0)
+  return Boolean(peerId && parsed && parsed === peerId)
+}
+
+const isPeerName = (name: unknown) => {
+  const peerName = normalizeText(route.query.target_name)
+  const parsed = normalizeText(name)
+  return Boolean(peerName && parsed && parsed === peerName)
+}
+
 const isSelfMessage = (msg: GetChatHistoryResponse['data']['list'][number]) => {
+  const senderId = Number(msg.sender_id || msg.sender?.ID || 0)
+  const receiverId = Number(msg.receiver_id || msg.receiver?.ID || 0)
+  const senderName = normalizeText(msg.sender?.username || msg.sender?.nickname || msg.sender?.name)
+  const receiverName = normalizeText(msg.receiver?.username || msg.receiver?.nickname || msg.receiver?.name)
+
   const currentUserId = getCurrentUserId()
-  if (currentUserId && Number(msg.sender_id || 0) === currentUserId) return true
-  return Number(msg.receiver_id || 0) === activeTargetId.value
+  if (currentUserId) {
+    if (senderId && senderId === currentUserId) return true
+    if (receiverId && receiverId === currentUserId) return false
+  }
+
+  const currentUsername = getCurrentUsername()
+  if (currentUsername) {
+    const normalizedCurrent = normalizeText(currentUsername)
+    if (senderName && senderName === normalizedCurrent) return true
+    if (receiverName && receiverName === normalizedCurrent) return false
+  }
+
+  if (isPeerId(senderId)) return false
+  if (isPeerId(receiverId)) return true
+
+  if (isPeerName(senderName)) return false
+  if (isPeerName(receiverName)) return true
+
+  return false
+}
+
+const getMessageName = (msg: GetChatHistoryResponse['data']['list'][number]) => {
+  if (isSelfMessage(msg)) {
+    return String(msg.sender?.nickname || msg.sender?.name || msg.sender?.username || getSelfName())
+  }
+  return String(msg.sender?.nickname || msg.sender?.name || msg.sender?.username || getPeerName())
+}
+
+const getMessageAvatar = (msg: GetChatHistoryResponse['data']['list'][number]) => {
+  if (isSelfMessage(msg)) {
+    return normalizeResourceUrl(String(msg.sender?.avatar || getSelfAvatar()))
+  }
+  return normalizeResourceUrl(String(msg.sender?.avatar || getPeerAvatar()))
 }
 
 const formatLossTime = (value?: string) => {
@@ -95,6 +164,36 @@ const scrollToBottom = async () => {
   await nextTick()
   if (!messageListRef.value) return
   messageListRef.value.scrollTop = messageListRef.value.scrollHeight
+}
+
+const resolveHistoryList = (payload: unknown): GetChatHistoryResponse['data']['list'] => {
+  if (Array.isArray(payload)) return payload as GetChatHistoryResponse['data']['list']
+  if (!payload || typeof payload !== 'object') return []
+
+  const dataObj = payload as Record<string, unknown>
+  if (Array.isArray(dataObj.list)) return dataObj.list as GetChatHistoryResponse['data']['list']
+  if (Array.isArray(dataObj.records)) return dataObj.records as GetChatHistoryResponse['data']['list']
+  if (Array.isArray(dataObj.messages)) return dataObj.messages as GetChatHistoryResponse['data']['list']
+  if (Array.isArray(dataObj.items)) return dataObj.items as GetChatHistoryResponse['data']['list']
+  return []
+}
+
+const normalizeSortedHistory = (list: GetChatHistoryResponse['data']['list']) => {
+  const copy = [...list]
+  copy.sort((left, right) => {
+    const leftTime = new Date(String(left.CreatedAt || left.UpdatedAt || '')).getTime()
+    const rightTime = new Date(String(right.CreatedAt || right.UpdatedAt || '')).getTime()
+
+    if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
+      return leftTime - rightTime
+    }
+
+    const leftId = Number(left.ID || 0)
+    const rightId = Number(right.ID || 0)
+    if (leftId && rightId && leftId !== rightId) return leftId - rightId
+    return 0
+  })
+  return copy
 }
 
 const loadHistory = async () => {
@@ -117,8 +216,8 @@ const loadHistory = async () => {
       return
     }
 
-    const list = Array.isArray(response?.data?.data?.list) ? response.data.data.list : []
-    messages.value = list
+    const list = resolveHistoryList(response?.data?.data)
+    messages.value = normalizeSortedHistory(list)
     try {
       await signRead(activeTargetId.value)
     } catch {
@@ -238,21 +337,55 @@ onMounted(async () => {
 
 .message-row {
   display: flex;
+  align-items: flex-start;
+  gap: 8px;
   margin-bottom: 12px;
+  width: 100%;
 }
 
 .message-row.self {
   justify-content: flex-end;
+  flex-direction: row-reverse;
+  margin-left: auto;
+}
+
+.message-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.message-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: min(72%, 680px);
+}
+
+.message-row.self .message-main {
+  align-items: flex-end;
+}
+
+.message-name {
+  font-size: 12px;
+  color: #8f8f8f;
 }
 
 .message-bubble {
-  max-width: 65%;
+  max-width: 100%;
+  min-width: 64px;
+  width: fit-content;
   background: #fff;
   border-radius: 6px;
   padding: 10px 12px;
   color: #333;
   line-height: 1.5;
-  word-break: break-word;
+  white-space: pre-wrap;
+  word-break: normal;
+  overflow-wrap: anywhere;
 }
 
 .message-row.self .message-bubble {
