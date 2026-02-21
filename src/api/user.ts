@@ -26,7 +26,19 @@ export interface ChangePasswordParams {
   new_password: string
 }
 
-export type MyItemStatus = '' | 'pending' | 'approved' | 'matched' | 'claimed' | 'rejected'
+export interface SubmitFeedbackParams {
+  type: string
+  content: string
+  contact: string
+}
+
+export interface SubmitFeedbackResponse {
+  code: number
+  msg: string
+  data: null
+}
+
+export type MyItemStatus = '' | 'pending' | 'approved' | 'matched' | 'claimed' | 'archived' | 'rejected'
 
 export interface MyItemsParams {
   status?: MyItemStatus
@@ -207,7 +219,7 @@ export const getMyClaimDetailApi = (id: number) => {
     method: 'get'
   })
 }
-
+// 退出登录接口
 export const logoutApi = () => {
   return request<LogoutResponse>({
     headers: {
@@ -215,5 +227,16 @@ export const logoutApi = () => {
     },
     url: '/api/v1/logout',
     method: 'post'
+  })
+}
+//提交反馈接口
+export const submitFeedbackApi = (data: SubmitFeedbackParams) => {
+  return request<SubmitFeedbackResponse>({
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    url: '/api/v1/feedbacks',
+    method: 'post',
+    data
   })
 }

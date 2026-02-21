@@ -17,16 +17,16 @@
 import { onBeforeUnmount, onMounted } from 'vue'
 import NavBar from '@/components/Layout/NavBar.vue'
 import SideBar from '@/components/Layout/SideBar.vue'
-import { useClaimProgressStore } from '@/stores/ClaimProgess'
+import { useMessageNoticeStore } from '@/stores/messageNotice'
 
-const claimProgressStore = useClaimProgressStore()
+const messageNoticeStore = useMessageNoticeStore()
 
 onMounted(() => {
-  claimProgressStore.initConnection()
+  messageNoticeStore.initConnection()
 })
 
 onBeforeUnmount(() => {
-  claimProgressStore.closeConnection()
+  messageNoticeStore.closeConnection()
 })
 </script>
 

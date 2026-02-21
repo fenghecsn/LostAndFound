@@ -18,12 +18,20 @@
 
       <div class="announce-divider" />
       <div class="announce-footer">
+        <el-button
+          :type="isCurrentNoticeReceived ? 'info' : 'primary'"
+          class="confirm-btn"
+          :class="{ 'is-received': isCurrentNoticeReceived }"
+          :disabled="isCurrentNoticeReceived"
+          @click="handleConfirmReceive"
+        >
+          {{ isCurrentNoticeReceived ? '已接收' : '确认接收' }}
+        </el-button>
         <div class="announce-nav">
           <el-button :disabled="currentIndex <= 0" @click="goPrev">上一条</el-button>
           <span class="announce-index">{{ currentIndex + 1 }} / {{ announceList.length }}</span>
           <el-button :disabled="currentIndex >= announceList.length - 1" @click="goNext">下一条</el-button>
         </div>
-        <el-button type="primary" class="confirm-btn" @click="handleConfirmReceive">确认接收</el-button>
       </div>
     </el-card>
   </div>
@@ -33,6 +41,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getAnnouncements } from '@/api/super'
+import { useMessageNoticeStore } from '@/stores/messageNotice'
 
 type AnnouncementItem = {
   ID?: number
@@ -51,8 +60,20 @@ type AnnouncementItem = {
 const loading = ref(false)
 const announceList = ref<AnnouncementItem[]>([])
 const currentIndex = ref(0)
+const receivedNoticeKeys = ref<string[]>([])
+const messageNoticeStore = useMessageNoticeStore()
 
 const currentNotice = computed(() => announceList.value[currentIndex.value] || null)
+const getNoticeKey = (notice: AnnouncementItem | null | undefined, index: number) => {
+  if (!notice) return `index:${index}`
+  if (notice.ID !== undefined && notice.ID !== null) return `id:${notice.ID}`
+  const time = notice.UpdatedAt || notice.CreatedAt || notice.updatedAt || notice.createdAt || ''
+  return `mix:${notice.title || ''}|${time}|${index}`
+}
+
+const isCurrentNoticeReceived = computed(() => {
+  return receivedNoticeKeys.value.includes(getNoticeKey(currentNotice.value, currentIndex.value))
+})
 
 const isSuccessResponse = (resData: unknown) => {
   return Number((resData as { code?: number } | null | undefined)?.code) === 200
@@ -116,15 +137,16 @@ const goNext = () => {
 
 const handleConfirmReceive = () => {
   if (announceList.value.length === 0) return
-  if (currentIndex.value < announceList.value.length - 1) {
-    currentIndex.value += 1
-    ElMessage.success('已确认，已切换到下一条公告')
+  const key = getNoticeKey(currentNotice.value, currentIndex.value)
+  if (receivedNoticeKeys.value.includes(key)) {
     return
   }
-  ElMessage.success('已确认，当前已是最后一条公告')
+  receivedNoticeKeys.value.push(key)
+  ElMessage.success('已确认接收')
 }
 
 onMounted(() => {
+  messageNoticeStore.clearScopeUnread('announcement')
   fetchAnnouncements()
 })
 </script>
@@ -187,7 +209,8 @@ onMounted(() => {
 .announce-footer {
   padding: 14px 0 4px;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
@@ -207,6 +230,12 @@ onMounted(() => {
 
 .confirm-btn {
   min-width: 120px;
+}
+
+.confirm-btn.is-received {
+  --el-button-bg-color: #c0c4cc;
+  --el-button-border-color: #c0c4cc;
+  --el-button-text-color: #ffffff;
 }
 
 @media (max-width: 768px) {
