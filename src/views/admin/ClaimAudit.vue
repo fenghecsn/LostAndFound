@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="claim-page">
     <div class="page-header">
       <div class="page-left">
@@ -50,8 +50,8 @@
         <el-table-column label="图片" width="100" align="center">
           <template #default="{ row }">
             <el-image
-              v-if="getApplicantImages(row)[0] || getPostImages(row)[0]"
-              :src="getApplicantImages(row)[0] || getPostImages(row)[0]"
+              v-if="getPostImages(row)[0]"
+              :src="getPostImages(row)[0]"
               fit="cover"
               style="width: 60px; height: 60px; border-radius: 4px;"
             />
@@ -125,17 +125,6 @@
           <p><strong>申请说明：</strong>{{ getClaimSpeech(currentClaim) || '--' }}</p>
         </div>
 
-        <div class="claim-images" v-if="getApplicantImages(currentClaim).length > 0">
-          <el-image
-            v-for="(img, idx) in getApplicantImages(currentClaim)"
-            :key="`claim-${idx}`"
-            :src="img"
-            fit="cover"
-            class="claim-img"
-            :preview-src-list="getApplicantImages(currentClaim)"
-          />
-        </div>
-        <p v-else class="empty-hint">认领人未上传图片</p>
 
         <div v-if="showRejectInput" class="reject-input-area">
           <h4>填写驳回原因</h4>
@@ -238,6 +227,10 @@ function normalizeImages(list: any[]): string[] {
   return Array.from(new Set(cleaned))
 }
 
+function hasImageValue(value: any): boolean {
+  return expandImageValue(value).some((v) => isLikelyImageUrl(String(v || '')))
+}
+
 function collectImageFields(source: any, depth = 0): any[] {
   if (!source || depth > 2) return []
   const out: any[] = []
@@ -268,22 +261,6 @@ function getPostImages(claim: any): string[] {
   ])
 }
 
-function getApplicantImages(claim: any): string[] {
-  const c = claim || {}
-  const postImages = new Set(getPostImages(claim))
-  const all = normalizeImages([
-    c.img1, c.img2, c.img3, c.img4,
-    c.claim_img1, c.claim_img2, c.claim_img3, c.claim_img4,
-    c.proof_img1, c.proof_img2, c.proof_img3, c.proof_img4,
-    c.images, c.image_list, c.photos, c.proof_images,
-    c.claim_images, c.claim_photos, c.voucher_images, c.attachments,
-    c.claimant?.img1, c.claimant?.img2, c.claimant?.images, c.claimant?.photos,
-    ...collectImageFields(c)
-  ])
-  const filtered = all.filter((img) => !postImages.has(img))
-  return filtered.length > 0 ? filtered : all
-}
-
 function getClaimSpeech(claim: any): string {
   const candidates = [
     claim?.proof,
@@ -304,7 +281,12 @@ function getClaimSpeech(claim: any): string {
     claim?.item?.reason,
     claim?.item?.remark,
   ]
-  const hit = candidates.find((v) => typeof v === 'string' && v.trim().length > 0)
+  const hit = candidates.find((v) => {
+    if (typeof v !== 'string') return false
+    const text = v.trim()
+    if (!text) return false
+    return !hasImageValue(text)
+  })
   return String(hit || '').trim()
 }
 
@@ -473,3 +455,4 @@ onMounted(() => {
 .reject-input-area h4 { margin: 0 0 10px; font-size: 15px; color: #333; }
 .claim-detail-footer { display: flex; justify-content: center; gap: 16px; margin-top: 20px; padding-bottom: 8px; }
 </style>
+
