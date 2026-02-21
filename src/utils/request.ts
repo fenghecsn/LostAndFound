@@ -34,7 +34,10 @@ request.interceptors.request.use(
 request.interceptors.response.use(
   (response) => response,
   (error) => {
-    ElMessage.error(error?.response?.data?.msg || '请求失败，请稍后重试')
+    const silentError = Boolean((error?.config as any)?.silentError)
+    if (!silentError) {
+      ElMessage.error(error?.response?.data?.msg || '请求失败，请稍后重试')
+    }
     return Promise.reject(error)
   }
 )

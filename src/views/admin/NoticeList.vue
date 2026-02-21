@@ -57,7 +57,10 @@
                 <span class="notice-status" :class="getStatusClass(notice)">
                   {{ getStatusText(notice) }}
                 </span>
-                <span class="notice-date">发布时间：{{ formatTime(notice.CreatedAt || notice.created_at || notice._localTime) }}</span>
+                <div class="notice-meta-right">
+                  <span class="notice-region">区域：{{ getRegionLabel(notice) }}</span>
+                  <span class="notice-date">发布时间：{{ formatTime(notice.CreatedAt || notice.created_at || notice._localTime) }}</span>
+                </div>
               </div>
             </div>
             <el-empty v-if="noticeList.length === 0" description="暂无公告" />
@@ -76,6 +79,17 @@
                   :rows="10"
                   placeholder="请输入公告内容"
                 />
+              </el-form-item>
+              <el-form-item label="发布区域">
+                <el-select
+                  v-model="publishForm.region"
+                  placeholder="请选择发布区域"
+                  style="width: 100%;"
+                >
+                  <el-option label="朝晖校区" value="朝晖校区" />
+                  <el-option label="屏风校区" value="屏风校区" />
+                  <el-option label="莫干山校区" value="莫干山校区" />
+                </el-select>
               </el-form-item>
               <el-form-item label="是否置顶">
                 <el-switch v-model="publishForm.is_top" />
@@ -101,9 +115,12 @@
               <h3 class="notice-title">{{ notice.title }}</h3>
               <div class="notice-body">{{ notice.content }}</div>
               <div class="notice-footer">
-                <span class="notice-date">
-                  发布时间：{{ formatTime(notice.CreatedAt || notice.created_at) }}
-                </span>
+                <div class="notice-meta-right">
+                  <span class="notice-region">区域：{{ getRegionLabel(notice) }}</span>
+                  <span class="notice-date">
+                    发布时间：{{ formatTime(notice.CreatedAt || notice.created_at) }}
+                  </span>
+                </div>
                 <el-button
                   v-if="!notice.confirmed"
                   type="warning"
@@ -127,9 +144,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Bell, ArrowDown, FolderOpened, Flag } from '@element-plus/icons-vue'
+import { useUserStore } from '@/stores/user'
 import {
   getAnnouncements,
   createAnnouncement,
@@ -137,7 +155,7 @@ import {
 
 const currentTab = ref('region')
 const regionSubTab = ref('history')
-const hasUnread = ref(true)
+const userStore = useUserStore()
 
 const loading = ref(false)
 const publishing = ref(false)
@@ -150,11 +168,14 @@ const systemNoticeList = ref<any[]>([])
 // 本地发布的公告（解决发布接口和获取接口不在同一数据源的问题）
 const localPublished = ref<any[]>([])
 
+const hasUnread = computed(() => systemNoticeList.value.some((n: any) => !n.confirmed))
+
 let localIdCounter = 0
 
 const publishForm = reactive({
   title: '',
   content: '',
+  region: '',
   is_top: false,
 })
 
@@ -177,17 +198,68 @@ function saveConfirmedNoticeIds() {
   localStorage.setItem('admin_confirmed_notice_ids', JSON.stringify(confirmedNoticeIds.value))
 }
 
+function localRegionDraftKey() {
+  return `admin_region_notice_drafts_${userStore.username || 'unknown'}`
+}
+
+function loadLocalPublished() {
+  try {
+    const raw = localStorage.getItem(localRegionDraftKey())
+    const list = raw ? JSON.parse(raw) : []
+    localPublished.value = Array.isArray(list) ? list : []
+    localIdCounter = localPublished.value.reduce((max: number, item: any) => {
+      const id = Number(item?._localId || 0)
+      return id > max ? id : max
+    }, 0)
+  } catch {
+    localPublished.value = []
+    localIdCounter = 0
+  }
+}
+
+function saveLocalPublished() {
+  localStorage.setItem(localRegionDraftKey(), JSON.stringify(localPublished.value))
+}
+
 function getStatusText(notice: any): string {
-  if (notice._isLocal) return '已发布（本地）'
-  if (notice.status === 'approved') return '已通过'
-  if (notice.status === 'pending') return '待审核'
-  return notice.status || '已发布'
+  const status = normalizeNoticeStatus(notice)
+  if (status === 'approved') return '已审核'
+  if (status === 'rejected') return '已驳回'
+  return '未审核'
 }
 
 function getStatusClass(notice: any): string {
-  if (notice._isLocal) return 'local'
-  if (notice.status === 'approved') return 'pass'
-  return ''
+  const status = normalizeNoticeStatus(notice)
+  if (status === 'approved') return 'pass'
+  if (status === 'rejected') return 'reject'
+  return 'pending'
+}
+
+function normalizeNoticeStatus(notice: any): string {
+  const s = String(notice?.status ?? notice?.review_status ?? '').toLowerCase()
+  if (['approved', 'allow', 'allowed', 'pass', 'passed', 'published', 'success'].includes(s)) return 'approved'
+  if (['rejected', 'reject', 'denied', 'deny', 'failed', 'refused'].includes(s)) return 'rejected'
+  return 'pending'
+}
+
+function getRegionLabel(notice: any): string {
+  const type = String(notice?.type ?? notice?.announcement_type ?? notice?.notice_type ?? '').toLowerCase()
+  const region = String(notice?.region ?? '').trim()
+  if (type.includes('system')) return '全体用户'
+  return region || '未指定'
+}
+
+function isNoticeOwnedByCurrentUser(notice: any): boolean {
+  const currentUsername = String(userStore.username || '').toLowerCase()
+  if (!currentUsername) return false
+  const publisherCandidates = [
+    notice?.publisher,
+    notice?.publisher_name,
+    notice?.publisher_username,
+    notice?.creator,
+    notice?.created_by,
+  ]
+  return publisherCandidates.some((v) => String(v ?? '').toLowerCase() === currentUsername)
 }
 
 /** 获取公告列表 - 合并后端数据和本地发布的 */
@@ -196,34 +268,56 @@ async function fetchNoticeList() {
   try {
     const res = await getAnnouncements({ page: 1, pageSize: 50 })
     const resData = res.data?.data ?? res.data ?? {}
-    const list: any[] = resData.list ?? resData.items ?? []
+    const list: any[] = Array.isArray(resData)
+      ? resData
+      : (resData.list ?? resData.items ?? [])
 
-    // 后端返回的按类型分
-    const regionFromApi = list.filter((n: any) => n.type !== 'system')
-    systemNoticeList.value = list
-      .filter((n: any) => n.type === 'system')
-      .map((n: any) => ({
-        ...n,
-        confirmed: confirmedNoticeIds.value.includes(Number(n.ID ?? n.id ?? 0)),
-      }))
+    const getType = (n: any) => String(n?.type ?? n?.announcement_type ?? n?.notice_type ?? '').toLowerCase()
+    const isSystem = (n: any) => {
+      const type = getType(n)
+      return type.includes('system')
+    }
 
-    // 合并：本地发布的排在最前面 + 后端返回的
-    // 用 title+content 去重，避免后端已经入库了还重复显示
-    const merged = [...localPublished.value]
-    regionFromApi.forEach(apiItem => {
-      const isDuplicate = localPublished.value.some(
-        local => local.title === apiItem.title && local.content === apiItem.content
+    const regionFromApi = list.filter((n: any) => !isSystem(n))
+    let systemFromApi = list.filter((n: any) => isSystem(n))
+    if (systemFromApi.length === 0 && regionFromApi.length === 0 && list.length > 0) {
+      systemFromApi = list
+    }
+
+    systemNoticeList.value = systemFromApi.map((n: any) => ({
+      ...n,
+      confirmed: confirmedNoticeIds.value.includes(Number(n.ID ?? n.id ?? 0)),
+    }))
+
+    // If backend has already returned this draft with a final status, drop local placeholder.
+    localPublished.value = localPublished.value.filter((local: any) => {
+      return !regionFromApi.some((apiItem: any) => {
+        const sameContent = apiItem.title === local.title && apiItem.content === local.content
+        const status = normalizeNoticeStatus(apiItem)
+        return sameContent && status !== 'pending'
+      })
+    })
+    saveLocalPublished()
+
+    // Backend data has higher priority than local placeholders.
+    const mergedAfterSync = [...regionFromApi]
+    localPublished.value.forEach((local: any) => {
+      const existsInApi = regionFromApi.some(
+        (apiItem: any) => apiItem.title === local.title && apiItem.content === local.content,
       )
-      if (!isDuplicate) {
-        merged.push(apiItem)
+      if (!existsInApi) {
+        mergedAfterSync.push(local)
       }
     })
 
-    noticeList.value = merged
+    noticeList.value = mergedAfterSync.filter((n: any) => {
+      const status = normalizeNoticeStatus(n)
+      if (status === 'approved') return true
+      return isNoticeOwnedByCurrentUser(n) || Boolean(n._isLocal)
+    })
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : '获取公告失败'
     ElMessage.error(errMsg)
-    // 即使获取失败，本地发布的也要显示
     noticeList.value = [...localPublished.value]
   } finally {
     loading.value = false
@@ -231,18 +325,24 @@ async function fetchNoticeList() {
 }
 
 async function handlePublish() {
-  if (!publishForm.title.trim() || !publishForm.content.trim()) {
-    ElMessage.warning('请填写标题和内容')
+  if (!publishForm.title.trim() || !publishForm.content.trim() || !publishForm.region.trim()) {
+    ElMessage.warning('请填写标题、内容和发布区域')
     return
   }
 
   publishing.value = true
   try {
-    await createAnnouncement({
+    const res = await createAnnouncement({
       title: publishForm.title,
       content: publishForm.content,
+      region: publishForm.region,
       is_top: publishForm.is_top,
     })
+    const code = Number((res as any)?.data?.code ?? 200)
+    if (code !== 200) {
+      const msg = String((res as any)?.data?.msg || '发布失败')
+      throw new Error(msg)
+    }
 
     // 发布成功后，立即把这条公告加到本地列表
     const newNotice = {
@@ -253,12 +353,16 @@ async function handlePublish() {
       content: publishForm.content,
       status: 'pending',
       type: 'region',
+      region: publishForm.region,
+      publisher: userStore.username,
     }
     localPublished.value.unshift(newNotice)
+    saveLocalPublished()
 
     ElMessage.success('发布成功')
     publishForm.title = ''
     publishForm.content = ''
+    publishForm.region = ''
     regionSubTab.value = 'history'
 
     // 重新拉取列表（合并本地数据）
@@ -283,6 +387,7 @@ function confirmNotice(notice: any) {
 
 onMounted(() => {
   loadConfirmedNoticeIds()
+  loadLocalPublished()
   fetchNoticeList()
 })
 </script>
@@ -398,6 +503,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
 .notice-status {
@@ -408,7 +514,11 @@ onMounted(() => {
   color: #67c23a;
   font-weight: bold;
 }
-.notice-status.local {
+.notice-status.reject {
+  color: #f56c6c;
+  font-weight: bold;
+}
+.notice-status.pending {
   color: #e6a23c;
   font-weight: bold;
 }
@@ -418,10 +528,23 @@ onMounted(() => {
   color: #999;
 }
 
+.notice-region {
+  font-size: 13px;
+  color: #999;
+}
+
+.notice-meta-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
 /* 发布表单 */
 .publish-form {
   background: #fff;
   border-radius: 8px;
   padding: 24px;
 }
+
 </style>

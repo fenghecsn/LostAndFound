@@ -2,10 +2,14 @@
   <div class="audit-page">
     <!-- 页头 -->
     <div class="page-header">
-      <h2 class="page-title">发布审核</h2>
-      <el-button type="warning" size="large" round @click="router.push('/admin/audit-history')">
-        审核记录
-      </el-button>
+      <div class="page-left">
+        <h2 class="page-title">审核管理</h2>
+        <div class="audit-tabs">
+          <el-button type="warning" plain size="small" round>帖子审核</el-button>
+          <el-button size="small" round @click="router.push('/admin/claim-audit')">认领审核</el-button>
+        </div>
+      </div>
+      <el-button type="warning" size="large" round @click="router.push('/admin/audit-history')">审核记录</el-button>
     </div>
 
     <!-- 表格 -->
@@ -24,7 +28,7 @@
         </el-table-column>
         <el-table-column label="发帖类型" width="100" align="center">
           <template #default="{ row }">
-            {{ row.lost_or_found === 1 ? '丢失帖' : '拾取帖' }}
+            {{ getPostTypeLabel(row) }}
           </template>
         </el-table-column>
         <el-table-column label="物品名称" width="100" align="center">
@@ -88,8 +92,8 @@
             <p><strong>物品名称：</strong>{{ currentItem.title || currentItem.category }}</p>
             <p><strong>{{ currentItem.lost_or_found === 1 ? '丢失' : '拾取' }}时间：</strong>{{ currentItem.time || '--' }}</p>
             <p><strong>{{ currentItem.lost_or_found === 1 ? '丢失' : '拾取' }}地点：</strong>{{ currentItem.location || '--' }}</p>
-            <p><strong>联系方式：</strong>你没有权限知道</p>
-            <p><strong>联系人：</strong>你没有权限知道</p>
+            <p><strong>联系方式：</strong>{{ currentItem.contact_phone || currentItem.contact || '你没有权限知道' }}</p>
+            <p><strong>联系人：</strong>{{ currentItem.contact_name || currentItem.name || '你没有权限知道' }}</p>
             <p><strong>物品特征：</strong>{{ currentItem.description || '--' }}</p>
           </div>
           <div class="detail-actions">
@@ -109,9 +113,9 @@
             <span class="tag-dot orange"></span>
             <el-tag type="warning" effect="plain" round>物品类型：{{ currentItem.category || '--' }}</el-tag>
           </div>
-          <div class="tag-item" v-if="currentItem.is_bounty">
+          <div class="tag-item">
             <span class="tag-dot yellow"></span>
-            <el-tag type="warning" effect="plain" round>悬赏：10元</el-tag>
+            <el-tag type="warning" effect="plain" round>悬赏：{{ getBountyText(currentItem) }}</el-tag>
           </div>
         </div>
 
@@ -155,7 +159,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Picture } from '@element-plus/icons-vue'
-import { getPendingItems, approveItem, rejectItem } from '@/api/admin'
+import { getPendingItems, approveItem, rejectItem, getAllItems } from '@/api/admin'
 import { useAuditHistoryStore } from '@/stores/auditHistory'
 
 const router = useRouter()
@@ -182,12 +186,25 @@ async function fetchPendingList() {
       pageSize: pageSize.value
     })
     const resData = res.data?.data ?? res.data ?? {}
-    const list = resData.list ?? resData.items ?? []
-    auditList.value = list.map((item: any) => ({
-      ...item,
-      id: item.id ?? item.ID,
-    }))
-    total.value = resData.total ?? 0
+    const list = normalizeList(resData)
+    const normalized = list.map(normalizeItem)
+    let nextTotal = Number(resData.total ?? normalized.length ?? 0)
+
+    // Some backends return empty for pending endpoint while /admin/items still includes pending rows.
+    if (normalized.length === 0) {
+      const fallback = await getAllItems({ page: currentPage.value, pageSize: pageSize.value, status: 'pending' })
+      const fallbackData = fallback.data?.data ?? fallback.data ?? {}
+      const fallbackList = normalizeList(fallbackData)
+      const pendingOnly = fallbackList
+        .map(normalizeItem)
+        .filter((item: any) => String(item.status || '').toLowerCase() === 'pending')
+      auditList.value = pendingOnly
+      total.value = Number(fallbackData.total ?? pendingOnly.length ?? 0)
+      return
+    }
+
+    auditList.value = normalized
+    total.value = nextTotal
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : '获取待审核列表失败'
     ElMessage.error(errMsg)
@@ -198,9 +215,43 @@ async function fetchPendingList() {
   }
 }
 
+function normalizeList(data: any): any[] {
+  if (Array.isArray(data)) return data
+  if (Array.isArray(data?.list)) return data.list
+  if (Array.isArray(data?.items)) return data.items
+  if (Array.isArray(data?.records)) return data.records
+  if (Array.isArray(data?.rows)) return data.rows
+  if (Array.isArray(data?.data?.list)) return data.data.list
+  if (Array.isArray(data?.data?.items)) return data.data.items
+  return []
+}
+
+function normalizeItem(item: any) {
+  return {
+    ...item,
+    id: item.id ?? item.ID,
+  }
+}
+
+function getPostTypeLabel(row: any) {
+  const t = String(row?.type ?? '').toLowerCase()
+  if (t === 'lost') return '丢失帖'
+  if (t === 'found') return '拾取帖'
+  const lf = Number(row?.lost_or_found)
+  if (lf === 1) return '丢失帖'
+  if (lf === 2) return '拾取帖'
+  return '--'
+}
+
 function showDetail(row: any) {
   currentItem.value = row
   detailVisible.value = true
+}
+
+function getBountyText(item: any) {
+  const value = Number(item?.bounty ?? item?.reward ?? 0)
+  if (!Number.isFinite(value) || value < 0) return '0元'
+  return `${value}元`
 }
 
 function openReject(row: any) {
@@ -271,6 +322,17 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+}
+
+.page-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.audit-tabs {
+  display: flex;
+  gap: 8px;
 }
 
 .page-title {

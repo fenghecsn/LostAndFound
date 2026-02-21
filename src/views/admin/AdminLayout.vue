@@ -10,7 +10,7 @@
         <nav class="nav-links">
           <router-link
             to="/admin/audit"
-            :class="{ active: route.path.includes('/admin/audit') && !route.path.includes('history') }"
+            :class="{ active: (route.path.startsWith('/admin/audit') || route.path.startsWith('/admin/claim-audit')) && !route.path.includes('history') }"
           >
             审核管理
             <el-badge
@@ -40,7 +40,7 @@
           <div class="avatar-wrapper">
             <img src="/头像框@2.png" alt="avatar-frame" class="avatar-frame" />
           </div>
-          <span class="user-name">{{ userStore.nickname || userStore.username || '管理员' }}</span>
+          <span class="user-name">{{ userStore.username || '管理员' }}</span>
         </div>
       </div>
     </header>
@@ -102,7 +102,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
-import { getPendingItems, getPendingClaims, getAnnouncements } from '@/api/admin'
+import { getPendingItems, getAnnouncements } from '@/api/admin'
 import { logoutApi } from '@/api/user'
 
 const route = useRoute()
@@ -110,8 +110,7 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const pendingItemCount = ref(0)
-const pendingClaimCount = ref(0)
-const totalPending = computed(() => pendingItemCount.value + pendingClaimCount.value)
+const totalPending = computed(() => pendingItemCount.value)
 
 // ==================== 登录后公告弹窗 ====================
 const noticeDialogVisible = ref(false)
@@ -122,25 +121,34 @@ async function fetchAndShowNotices() {
   try {
     const res = await getAnnouncements({ page: 1, pageSize: 50 })
     const resData = res.data?.data ?? res.data ?? {}
-    const list: any[] = resData.list ?? resData.items ?? []
+    const list: any[] = Array.isArray(resData)
+      ? resData
+      : (resData.list ?? resData.items ?? [])
 
-    // 只显示系统公告 + 已通过的
+    const isSystemNotice = (n: any) => {
+      const type = String(n?.type ?? n?.announcement_type ?? n?.notice_type ?? '').toLowerCase()
+      if (!type) return true
+      return type.includes('system')
+    }
+    const isApproved = (n: any) => {
+      const status = String(n?.status ?? n?.review_status ?? '').toLowerCase()
+      if (!status) return true
+      return ['approved', 'allow', 'allowed', 'pass', 'passed'].includes(status)
+    }
+
     systemNotices.value = list
-      .filter((n: any) => n.type === 'system' && n.status === 'approved')
+      .filter((n: any) => isSystemNotice(n) && isApproved(n))
       .sort((a: any, b: any) => {
-        // 置顶的排前面
         if (a.is_top && !b.is_top) return -1
         if (!a.is_top && b.is_top) return 1
         return 0
       })
 
-    // 用 sessionStorage 标记本次会话已看过公告
     const hasShown = sessionStorage.getItem('admin_notice_shown')
     if (!hasShown && systemNotices.value.length > 0) {
       noticeDialogVisible.value = true
     }
   } catch {
-    // 获取失败不阻塞进入系统
     console.warn('[AdminLayout] 获取系统公告失败')
   }
 }
@@ -158,13 +166,6 @@ async function fetchPendingCounts() {
     pendingItemCount.value = data.total ?? 0
   } catch {
     pendingItemCount.value = 0
-  }
-  try {
-    const res = await getPendingClaims({ page: 1, pageSize: 1 })
-    const data = res.data?.data ?? res.data ?? {}
-    pendingClaimCount.value = data.total ?? 0
-  } catch {
-    pendingClaimCount.value = 0
   }
 }
 

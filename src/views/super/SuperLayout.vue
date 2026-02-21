@@ -21,7 +21,7 @@
           <div class="avatar-wrapper">
             <img src="/头像框@2.png" alt="avatar-frame" class="avatar-frame" />
           </div>
-          <span class="user-name">{{ userStore.nickname || userStore.username || '超管' }}</span>
+          <span class="user-name">{{ userStore.username || '超管' }}</span>
         </div>
       </div>
     </header>
@@ -92,4 +92,3 @@ async function handleLogout() {
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>
-
