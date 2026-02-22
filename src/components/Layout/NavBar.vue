@@ -2,7 +2,7 @@
   <div class="nav-bar">
     <div class="left-section">
       <div class="logo-circle">
-        <img src="../../../public/DIV@1x.png" style="width: 16px; height: 16px;"> <!-- 使用公共资源中的图片 -->
+        <img src="/DIV@1x.png" style="width: 16px; height: 16px;"> <!-- 使用公共资源中的图片 -->
       </div>
       <span class="system-title">失物招领</span>
     </div>
@@ -47,7 +47,7 @@
       <div class="user-dropdown-wrapper">
         <div class="user-trigger">
           <div class="user-info" style="padding-top: 3px; display: flex; align-items: center;">
-             <img :src="userStore.avatar || '../../../public/头像框@7.png'" style="align-items: center; padding: 0; width: 16px; height: 16px;">
+             <img :src="userStore.avatar || '/头像框@7.png'" style="align-items: center; padding: 0; width: 16px; height: 16px;">
           </div>
           <span class="user-name">{{ userStore.nickname}}</span>
         </div>
@@ -93,24 +93,24 @@ const navs: NavItem[] = [
     label: '首页',
     path: '/StudentHome',
     icon: {
-      normal: '../../public/路径@1x.png',
-      active: '../../public/路径@13.png',
+      normal: '/路径@1x.png',
+      active: '/路径@13.png',
     },
   },
   {
     label: '消息',
     path: '/StudentHome/message/activities',
     icon: {
-      normal: '../../public/路径@14.png',
-      active: '../../public/路径@2.png',
+      normal: '/路径@14.png',
+      active: '/路径@2.png',
     },
   },
   {
     label: '个人中心',
     path: '/StudentHome/profile',
     icon: {
-      normal: '../../public/路径@3.png',
-      active: '../../public/路径@15.png',
+      normal: '/路径@3.png',
+      active: '/路径@15.png',
     },
   },
 ]

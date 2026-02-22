@@ -4,7 +4,7 @@
       <div class="menu-group">
         <div class="group-title" @click="isExpanded = !isExpanded">
           <div class="title-left">
-            <img src="../../../public/路径@2.png" style="width: 16px; height: 16px;">
+            <img src="/路径@2.png" style="width: 16px; height: 16px;">
             <span>消息通知</span>
           </div>
           <span :class="['arrow-icon', { 'is-rotated': !isExpanded }]">&#9662;</span>
@@ -21,7 +21,7 @@
             <span class="red-dot-placeholder">
               <span v-if="shouldShowDot(item.dotKey)" class="red-dot"></span>
             </span>
-            <img :src="`../../../public/路径@${4+idx}.png`" style="width: 16px; height: 16px;">
+            <img :src="`/路径@${4+idx}.png`" style="width: 16px; height: 16px;">
             <span>{{ item.label }}</span>
           </div>
         </div>
@@ -35,7 +35,7 @@
           :class="{ active: currentTargetId === session.target_id }"
           @click="handleSessionClick(session.target_id, session.target_name)"
         >
-          <img :src="session.avatar || '../../../public/头像框@7.png'" style="width: 32px; height: 32px; border-radius: 50%;"></img>
+          <img :src="session.avatar || '/头像框@7.png'" style="width: 32px; height: 32px; border-radius: 50%;"></img>
           <div class="contact-info">
             <div class="contact-name">{{ session.target_name }}</div>
             <div class="contact-status">{{ session.last_msg || '点击查看聊天记录' }}</div>
