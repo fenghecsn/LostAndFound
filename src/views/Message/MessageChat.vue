@@ -344,7 +344,6 @@ onMounted(async () => {
 }
 
 .message-row.self {
-  justify-content: flex-end;
   flex-direction: row-reverse;
   margin-left: auto;
 }
