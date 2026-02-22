@@ -125,6 +125,18 @@
           <p><strong>申请说明：</strong>{{ getClaimSpeech(currentClaim) || '--' }}</p>
         </div>
 
+        <div class="claim-images" v-if="getApplicantImages(currentClaim).length > 0">
+          <el-image
+            v-for="(img, idx) in getApplicantImages(currentClaim)"
+            :key="`claim-${idx}`"
+            :src="img"
+            fit="cover"
+            class="claim-img"
+            :preview-src-list="getApplicantImages(currentClaim)"
+          />
+        </div>
+        <p v-else class="empty-hint">认领人未上传图片</p>
+
 
         <div v-if="showRejectInput" class="reject-input-area">
           <h4>填写驳回原因</h4>
@@ -259,6 +271,22 @@ function getPostImages(claim: any): string[] {
     item.images, item.image_list, item.photos,
     ...collectImageFields(item)
   ])
+}
+
+function getApplicantImages(claim: any): string[] {
+  const c = claim || {}
+  const postImages = new Set(getPostImages(claim))
+  const all = normalizeImages([
+    c.img1, c.img2, c.img3, c.img4,
+    c.claim_img1, c.claim_img2, c.claim_img3, c.claim_img4,
+    c.proof_img1, c.proof_img2, c.proof_img3, c.proof_img4,
+    c.claim_images, c.proof_images, c.images, c.image_list, c.photos,
+    c.proof_url, c.file_url, c.url, c.path,
+    c.proof, c.claim_proof,
+    ...collectImageFields(c)
+  ])
+  const filtered = all.filter((img) => !postImages.has(img))
+  return filtered.length > 0 ? filtered : all
 }
 
 function getClaimSpeech(claim: any): string {

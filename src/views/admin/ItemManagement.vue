@@ -143,7 +143,9 @@
             @click.stop
           />
         </div>
-
+        <div class="card-images" v-else>
+          <div class="card-img-placeholder">无图片</div>
+        </div>
         <div class="card-footer">
           <span class="card-date">{{ item.CreatedAt ? new Date(item.CreatedAt).toLocaleString('zh-CN') : '' }}发布</span>
           <span class="card-status" :class="getStatusClass(item.status)">
@@ -293,7 +295,6 @@
             :preview-src-list="[currentItem.img1, currentItem.img2, currentItem.img3, currentItem.img4].filter(Boolean)"
           />
         </div>
-
         <p class="detail-time">{{ currentItem.CreatedAt ? new Date(currentItem.CreatedAt).toLocaleString('zh-CN') : '' }}发布</p>
       </div>
     </el-dialog>
@@ -510,6 +511,7 @@ function canEditInfo(item: any) {
   return !isLost(item)
 }
 
+
 async function fetchItemList() {
   loading.value = true
   try {
@@ -531,7 +533,6 @@ async function fetchItemList() {
       ...item,
       id: item.id ?? item.ID,
     }))
-
     if (!hasFilter) {
       itemList.value = list
       total.value = resData.total ?? list.length ?? 0

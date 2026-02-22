@@ -36,7 +36,7 @@
           <el-button class="btn-gray" @click="historyVisible = true">查看历史</el-button>
         </div>
       </div>
-      <div class="latest">最近备份：2027-01-20 14:30 | 文件大小：125.6MB</div>
+      <div class="latest">{{ latestBackupLabel }}</div>
     </section>
 
     <section class="block">
@@ -47,7 +47,7 @@
             <span class="mini-icon yellow"><el-icon><DeleteFilled /></el-icon></span>
             <div>
               <p class="mini-title">清理过期数据</p>
-              <p class="mini-desc">待清理过期记录：<span class="danger">42条</span></p>
+              <p class="mini-desc">将按保留策略清理历史过期记录</p>
             </div>
           </div>
           <el-checkbox v-model="keepRecent3Months">保留近3个月数据</el-checkbox>
@@ -90,24 +90,23 @@
       <template #header><div class="dialog-title">正在创建备份</div></template>
       <div class="dialog-body">
         <el-progress :percentage="backupProgress" :show-text="false" />
-        <p>状态：进行中{{ backupProgress }}%</p>
-        <p>正在备份：图片资源（2.3GB）</p>
-        <p>已用时：2分15秒</p>
-        <p>预计剩余：3分钟</p>
+        <p>状态：进行中 {{ backupProgress }}%</p>
+        <p>正在打包业务数据与附件索引</p>
+        <p>请勿关闭当前页面</p>
       </div>
     </el-dialog>
 
     <el-dialog v-model="backupSuccessVisible" width="380px" align-center>
       <template #header><div class="dialog-title">备份创建成功</div></template>
       <div class="dialog-body">
-        <p>备份名称：backup_2026_1_13</p>
-        <p>备份时间：2026-1-13</p>
-        <p>文件大小：128.5MB</p>
+        <p>备份名称：{{ backupResult.name }}</p>
+        <p>备份时间：{{ backupResult.time }}</p>
+        <p>文件大小：{{ backupResult.size }}</p>
         <p>存储位置：本地服务器/云存储</p>
       </div>
       <template #footer>
         <div class="dialog-btns">
-          <el-button class="btn-blue">下载备份</el-button>
+          <el-button class="btn-blue" @click="downloadLatestBackup">下载备份</el-button>
           <el-button class="btn-blue" @click="backupSuccessVisible = false">关闭</el-button>
         </div>
       </template>
@@ -138,7 +137,7 @@
           <el-radio label="CSV（.csv）" />
           <el-radio label="JSON（.json）" />
         </el-radio-group>
-        <p class="mt8">预计大小：15.8MB</p>
+        <p class="mt8">预计大小：{{ exportEstimatedSize }}</p>
       </div>
       <template #footer>
         <div class="dialog-btns">
@@ -151,27 +150,26 @@
     <el-dialog v-model="exportProgressVisible" width="380px" align-center :show-close="false">
       <template #header><div class="dialog-title">正在导出数据</div></template>
       <div class="dialog-body">
-        <p>数据类型：失物招领记录、认领记录</p>
-        <p>时间范围：2026.1.12-2026.1.13</p>
-        <p>预计大小：15.8MB</p>
+        <p>数据类型：{{ exportTypes.join('、') || '未选择' }}</p>
+        <p>时间范围：{{ exportFrom }} - {{ exportTo }}</p>
+        <p>预计大小：{{ exportEstimatedSize }}</p>
         <el-progress :percentage="exportProgress" :show-text="false" />
-        <p>当前状态：进行中{{ exportProgress }}%</p>
-        <p>已用时：1分24秒</p>
-        <p>预计剩余：2分钟</p>
+        <p>当前状态：进行中 {{ exportProgress }}%</p>
+        <p>系统正在生成导出文件</p>
       </div>
     </el-dialog>
 
     <el-dialog v-model="exportSuccessVisible" width="380px" align-center>
       <template #header><div class="dialog-title">导出数据成功</div></template>
       <div class="dialog-body">
-        <p>文件名称：记录_2026_1_13.xlsx</p>
-        <p>记录数量：1,250条</p>
-        <p>文件大小：15.8MB</p>
-        <p>生成时间：2026-1-13 12：00</p>
+        <p>文件名称：{{ exportResult.fileName }}</p>
+        <p>记录数量：{{ exportResult.count }} 条</p>
+        <p>文件大小：{{ exportResult.size }}</p>
+        <p>生成时间：{{ exportResult.time }}</p>
       </div>
       <template #footer>
         <div class="dialog-btns">
-          <el-button class="btn-blue">立即下载</el-button>
+          <el-button class="btn-blue" @click="downloadExportFile">立即下载</el-button>
           <el-button class="btn-blue">稍后下载</el-button>
           <el-button class="btn-blue" @click="exportSuccessVisible = false">关闭</el-button>
         </div>
@@ -188,23 +186,23 @@
         <el-table-column prop="duration" label="耗时" width="90" />
         <el-table-column prop="status" label="状态" width="70" />
         <el-table-column label="操作" width="140">
-          <template #default>
-            <a href="#" class="op-blue" @click.prevent="handleHistoryOp('下载')">下载</a>
-            <a href="#" class="op-orange" @click.prevent="handleHistoryOp('还原')">还原</a>
-            <a href="#" class="op-red" @click.prevent="handleHistoryOp('删除')">删除</a>
+          <template #default="{ row, $index }">
+            <a href="#" class="op-blue" @click.prevent="handleHistoryOp('下载', row, $index)">下载</a>
+            <a href="#" class="op-orange" @click.prevent="handleHistoryOp('还原', row, $index)">还原</a>
+            <a href="#" class="op-red" @click.prevent="handleHistoryOp('删除', row, $index)">删除</a>
           </template>
         </el-table-column>
       </el-table>
       <div class="history-footer">
-        <span>显示第 1 到 10 条，共 128 条记录</span>
-        <el-pagination :total="128" :page-size="10" layout="prev, pager, next" background />
+        <span>显示第 1 到 {{ Math.min(10, historyRows.length) }} 条，共 {{ historyRows.length }} 条记录</span>
+        <el-pagination :total="historyRows.length" :page-size="10" layout="prev, pager, next" background />
       </div>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { cleanupExpiredData } from '@/api/super'
 import { Coin, DeleteFilled, Document, Opportunity, RefreshLeft } from '@element-plus/icons-vue'
@@ -231,39 +229,92 @@ const exportFrom = ref('2026.1.12')
 const exportTo = ref('2026.1.13')
 const exportFormat = ref('Excel（.xlsx）')
 
+const latestBackup = ref<{ time: string; size: string } | null>(null)
+const backupResult = ref({ name: '', time: '', size: '' })
+const exportResult = ref({ fileName: '', count: 0, size: '', time: '' })
+
+const latestBackupLabel = computed(() => {
+  if (!latestBackup.value) return '最近备份：暂无'
+  return `最近备份：${latestBackup.value.time} | 文件大小：${latestBackup.value.size}`
+})
+
+const exportEstimatedSize = computed(() => {
+  const mb = Math.max(4, Math.round((exportTypes.value.length * 2.6 + 3.2) * 10) / 10)
+  return `${mb}MB`
+})
+
 const historyRows = ref(
-  Array.from({ length: 10 }).map(() => ({
-    time: '2026.1.13 13：00',
-    type: '导出',
-    size: '15.8MB',
-    scope: '失物招领记录、认领记录',
-    duration: '2分45秒',
+  Array.from({ length: 6 }).map((_, idx) => ({
+    time: `2026.1.${13 - idx} 13:00`,
+    type: idx % 2 === 0 ? '导出' : '备份',
+    size: `${(10 + idx * 1.8).toFixed(1)}MB`,
+    scope: idx % 2 === 0 ? '失物招领记录、认领记录' : '全量系统数据',
+    duration: `${2 + idx}分${20 + idx}秒`,
     status: '成功',
   }))
 )
 
+function formatNow() {
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function pushHistory(type: '备份' | '导出', size: string, scope: string, duration = '1分36秒') {
+  historyRows.value.unshift({
+    time: formatNow(),
+    type,
+    size,
+    scope,
+    duration,
+    status: '成功',
+  })
+}
+
 function startBackup() {
   if (backupWorking.value) return
   backupWorking.value = true
+  backupProgress.value = 22
   backupConfirmVisible.value = false
   backupProgressVisible.value = true
   setTimeout(() => {
+    const now = formatNow()
+    const size = `${(Math.random() * 60 + 90).toFixed(1)}MB`
+    backupResult.value = {
+      name: `backup_${now.slice(0, 10).replace(/-/g, '_')}_${Math.floor(Math.random() * 900 + 100)}`,
+      time: now,
+      size,
+    }
+    latestBackup.value = { time: now, size }
+    pushHistory('备份', size, '全量系统数据')
     backupProgressVisible.value = false
     backupSuccessVisible.value = true
     backupWorking.value = false
-  }, 800)
+  }, 900)
 }
 
 function startExport() {
   if (exportWorking.value) return
   exportWorking.value = true
+  exportProgress.value = 16
   exportConfigVisible.value = false
   exportProgressVisible.value = true
   setTimeout(() => {
+    const now = formatNow()
+    const ext = exportFormat.value.includes('CSV') ? 'csv' : exportFormat.value.includes('JSON') ? 'json' : 'xlsx'
+    const count = 800 + Math.floor(Math.random() * 900)
+    const size = exportEstimatedSize.value
+    exportResult.value = {
+      fileName: `records_${now.slice(0, 10).replace(/-/g, '')}.${ext}`,
+      count,
+      size,
+      time: now,
+    }
+    pushHistory('导出', size, exportTypes.value.join('、') || '未指定范围')
     exportProgressVisible.value = false
     exportSuccessVisible.value = true
     exportWorking.value = false
-  }, 800)
+  }, 900)
 }
 
 async function handleCleanup() {
@@ -279,8 +330,25 @@ async function handleCleanup() {
   }
 }
 
-function handleHistoryOp(action: string) {
-  ElMessage.success(`${action}功能为演示流程`)
+function downloadLatestBackup() {
+  ElMessage.success('备份下载任务已开始')
+}
+
+function downloadExportFile() {
+  ElMessage.success('导出文件下载已开始')
+}
+
+function handleHistoryOp(action: string, row: any, index: number) {
+  if (action === '下载') {
+    ElMessage.success(`${row.type}文件下载已开始`)
+    return
+  }
+  if (action === '还原') {
+    ElMessage.success('已提交还原任务')
+    return
+  }
+  historyRows.value.splice(index, 1)
+  ElMessage.success('历史记录已删除')
 }
 </script>
 

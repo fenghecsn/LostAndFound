@@ -3,7 +3,10 @@ import request from '@/utils/request'
 export interface ClaimItemPayload {
   item_id: number
   proof?: string
-  img?: string
+  img1?: string
+  img2?: string
+  img3?: string
+  img4?: string
 }
 export interface ClaimItemResponse {
   code: number

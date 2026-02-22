@@ -194,7 +194,10 @@ const handleApplySubmit = async (payload: { content: string; file: File | null; 
         const claimRes = await claimItemApi({
             item_id: currentItem.value?.id ?? 0,
             proof: payload.content,
-            img: imageUrl,
+            img1: imageUrl || '',
+            img2: '',
+            img3: '',
+            img4: '',
         })
         if (Number(claimRes?.data?.code) !== 200) {
             ElMessage.error(claimRes?.data?.msg || '提交申请失败')
