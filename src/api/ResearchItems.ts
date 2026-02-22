@@ -24,7 +24,7 @@ export interface RawItemFromApi {
   contact_person?: string
   contact_name?: string
   contact_phone?: string
-  status?: number | 'pending' | 'approved' | 'displaying' | 'matched' | 'claimed' | 'archived'
+  status?: number | 'pending' | 'approved' | 'displaying' | 'matched' | 'claimed' | 'archived' | 'rejected'
   create_time?: string
   CreatedAt?: string
   UpdatedAt?: string
@@ -39,7 +39,7 @@ export interface Item {
   location: string
   event_time: string
   cover_image: string
-  status: number | 'pending' | 'approved' | 'displaying' | 'matched' | 'claimed' | 'archived' // 兼容文档字符串状态
+  status: number | 'pending' | 'approved' | 'displaying' | 'matched' | 'claimed' | 'archived' | 'rejected' // 兼容文档字符串状态
   description?: string
   category?: string
   reward?: number
@@ -77,7 +77,7 @@ export interface ItemQuery {
   lost_or_found?: number//1: lost, 2: found
   campus?: string
   location?: string//粗略搜索
-  status?: 'pending' | 'matched' | 'approved'
+  status?: 'pending' | 'approved' | 'matched' | 'claimed' | 'archived' | 'rejected'
   page_num?: number
   page_size?: number
   days?: number
