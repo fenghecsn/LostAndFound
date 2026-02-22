@@ -3,7 +3,7 @@
     <div class="content-container">
       <!-- 左侧插画区域 -->
       <div class="illustration-section">
-        <img src="../../public/6.png">
+        <img src="/6.png">
       </div>
 
       <!-- 右侧登录卡片 -->

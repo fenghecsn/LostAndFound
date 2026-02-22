@@ -33,8 +33,11 @@ const queryParams = reactive<ItemQuery>({
 const statusFilterOptions: Array<{ label: string; value: ItemQuery['status'] }> = [
     { label: '全部状态', value: undefined },
     { label: '待审核', value: 'pending' },
-    { label: '已匹配', value: 'matched' },
     { label: '已通过', value: 'approved' },
+    { label: '已匹配', value: 'matched' },
+    { label: '已认领', value: 'claimed' },
+    { label: '已归档', value: 'archived' },
+    { label: '已拒绝', value: 'rejected' },
 ]
 
 const filterOptions = {
@@ -82,6 +85,7 @@ const normalizeStatus = (status: RawItemFromApi['status'], fallback: Item['statu
     if (status === 'displaying') return 1
     if (status === 'matched') return 2
     if (status === 'claimed') return 3
+    if (status === 'rejected') return 'rejected'
     if (typeof status === 'number') return status
     if (status === 'archived') return 'archived'
     return fallback
@@ -230,6 +234,8 @@ const getStatusText = (status: number | string) => {
             return '已认领'
         case 'archived':
             return '已归档'
+        case 'rejected':
+            return '已拒绝'
         default:
             return '未知'
     }
@@ -239,19 +245,21 @@ const getStatusText = (status: number | string) => {
 const getStatusColor = (status: number | string) => {
     switch(status) {
                 case 'pending':
-                    return 'rgb(230, 162, 60)'
+                        return 'rgb(230, 162, 60)'
         case 2:
         case 'matched':
-          return 'rgb(245, 108, 108)'
+                        return 'rgb(245, 108, 108)'
                 case 'approved':
         case 3:
         case 'claimed':
-          return 'rgb(103, 194, 58)'
+                        return 'rgb(103, 194, 58)'
+                case 'rejected':
+                        return 'rgb(245, 108, 108)'
         case 1:
         case 'displaying':
         case 'archived':
         default:
-          return 'rgb(245, 108, 108)'
+                        return 'rgb(245, 108, 108)'
     }
 }
 

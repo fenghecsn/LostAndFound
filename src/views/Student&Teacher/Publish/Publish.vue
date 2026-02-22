@@ -10,7 +10,7 @@
         <div class="left-col">
           <div class="row">
             <div class="tag with-icon">
-              <img src="../../../public/路径@8.png">
+              <img src="/路径@8.png">
               <span>校区</span>
             </div>
             <div class="options">
@@ -23,7 +23,7 @@
 
           <div class="row">
             <div class="tag with-icon">
-              <img src="../../../public/路径@9.png">
+              <img src="/路径@9.png">
               <span>物品类型</span>
             </div>
             <div class="options">
@@ -36,7 +36,7 @@
 
           <div class="row">
             <div class="tag with-icon">
-              <img src="../../../public/路径@10.png">
+              <img src="/路径@10.png">
               <span>赏金</span>
             </div>
             <div class="input-wrap short">

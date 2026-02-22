@@ -23,17 +23,17 @@ const router = createRouter({
         {
           path: '',
           name: 'StudentHome',
-          component: () => import('../views/StudentView.vue'),
+          component: () => import('../views/Student&Teacher/StudentView.vue'),
         },
         {
           path: 'profile',
           name: '个人中心',
-          component: () => import('../views/Profile.vue'),
+          component: () => import('../views/Student&Teacher/Profile.vue'),
         },
         {
           path: 'publish',
           name: 'Publish',
-          component: () => import('../views/Publish/Publish.vue'),
+          component: () => import('../views/Student&Teacher/Publish/Publish.vue'),
         },
         {
           path: 'publish-found',
@@ -50,22 +50,22 @@ const router = createRouter({
             {
               path: 'activities',
               name: '帖子动态',
-              component: () => import('../views/Message/MessageActivities.vue'),
+              component: () => import('../views/Student&Teacher/Message/MessageActivities.vue'),
             },
             {
               path: 'progress',
               name: '招领进度',
-              component: () => import('../views/Message/MessageProgress.vue'),
+              component: () => import('../views/Student&Teacher/Message/MessageProgress.vue'),
             },
             {
               path: 'chat/:targetId',
               name: '消息对话',
-              component: () => import('../views/Message/MessageChat.vue'),
+              component: () => import('../views/Student&Teacher/Message/MessageChat.vue'),
             },
             {
               path: 'announce',
               name: '系统公告',
-              component: () => import('../views/Message/MessageAnnounce.vue'),
+              component: () => import('../views/Student&Teacher/Message/MessageAnnounce.vue'),
             }
           ]
         },
