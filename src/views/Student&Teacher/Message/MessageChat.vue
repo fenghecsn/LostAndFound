@@ -23,12 +23,30 @@
         <el-image :src="getMessageAvatar(msg)" fit="cover" class="message-avatar" />
         <div class="message-main">
           <div class="message-name">{{ getMessageName(msg) }}</div>
-          <div class="message-bubble">{{ msg.content || '[空消息]' }}</div>
+          <div class="message-bubble" :class="{ 'image-bubble': isImageMessage(msg) }">
+            <el-image
+              v-if="isImageMessage(msg)"
+              :src="getMessageImageSrc(msg)"
+              fit="cover"
+              class="message-image"
+              :preview-src-list="[getMessageImageSrc(msg)]"
+              preview-teleported
+            />
+            <span v-else>{{ msg.content || '[空消息]' }}</span>
+          </div>
         </div>
       </div>
     </div>
 
     <div class="input-bar">
+      <input
+        ref="imageInputRef"
+        type="file"
+        accept="image/*"
+        class="hidden-image-input"
+        @change="handleImageFileChange"
+      />
+      <el-button class="image-btn" :loading="sending" @click="triggerImageSelect">发图片</el-button>
       <el-input
         v-model="content"
         type="textarea"
@@ -50,6 +68,7 @@ import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getChatHistory, sendMessage, signRead, type GetChatHistoryResponse } from '@/api/chat'
 import { normalizeResourceUrl } from '@/utils/url'
+import { uploadImagesAndGetUrls } from '@/utils/imageUpload'
 import { useChatSessionStore } from '@/stores/chatSession'
 
 const route = useRoute()
@@ -58,6 +77,7 @@ const chatSessionStore = useChatSessionStore()
 const loading = ref(false)
 const sending = ref(false)
 const content = ref('')
+const imageInputRef = ref<HTMLInputElement | null>(null)
 const messageListRef = ref<HTMLElement | null>(null)
 const messages = ref<GetChatHistoryResponse['data']['list']>([])
 
@@ -75,13 +95,13 @@ const showConfirmButton = computed(() => String(route.query.can_confirm || '') =
 
 const getSelfName = () => String(localStorage.getItem('nickname') || localStorage.getItem('username') || '我')
 
-const getSelfAvatar = () => String(localStorage.getItem('avatar') || '../../../public/头像框@7.png')
+const getSelfAvatar = () => String(localStorage.getItem('avatar') || '/头像框@7.png')
 
 const getPeerName = () => String(route.query.target_name || `用户${activeTargetId.value}`)
 
 const getPeerAvatar = () => {
   const matched = chatSessionStore.sessions.find((item) => item.target_id === activeTargetId.value)
-  return String(matched?.avatar || '../../../public/头像框@7.png')
+  return String(matched?.avatar || '/头像框@7.png')
 }
 
 const getCurrentUserId = () => {
@@ -152,6 +172,10 @@ const getMessageAvatar = (msg: GetChatHistoryResponse['data']['list'][number]) =
   }
   return normalizeResourceUrl(String(msg.sender?.avatar || getPeerAvatar()))
 }
+
+const isImageMessage = (msg: GetChatHistoryResponse['data']['list'][number]) => Number(msg.type || 1) === 2
+
+const getMessageImageSrc = (msg: GetChatHistoryResponse['data']['list'][number]) => normalizeResourceUrl(String(msg.content || ''))
 
 const formatLossTime = (value?: string) => {
   if (!value) return '-'
@@ -256,6 +280,51 @@ const handleSend = async () => {
     await chatSessionStore.fetchSessions()
   } catch {
     ElMessage.error('发送失败，请稍后重试')
+  } finally {
+    sending.value = false
+  }
+}
+
+const triggerImageSelect = () => {
+  if (sending.value) return
+  imageInputRef.value?.click()
+}
+
+const handleImageFileChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+
+  if (!file.type.startsWith('image/')) {
+    ElMessage.warning('请选择图片文件')
+    return
+  }
+
+  const targetId = activeTargetId.value
+  if (!targetId) {
+    ElMessage.warning('目标会话无效')
+    return
+  }
+
+  sending.value = true
+  try {
+    const [url] = await uploadImagesAndGetUrls([file])
+    if (!url) {
+      throw new Error('图片URL为空')
+    }
+
+    await sendMessage({
+      receiver_id: targetId,
+      content: url,
+      type: 2,
+      item_id: itemInfo.value.item_id || undefined
+    })
+
+    await loadHistory()
+    await chatSessionStore.fetchSessions()
+  } catch {
+    ElMessage.error('图片发送失败，请稍后重试')
   } finally {
     sending.value = false
   }
@@ -387,14 +456,40 @@ onMounted(async () => {
   overflow-wrap: anywhere;
 }
 
+.message-bubble.image-bubble {
+  background: transparent;
+  padding: 0;
+  min-width: 0;
+}
+
+.message-image {
+  width: 220px;
+  max-width: min(50vw, 320px);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
 .message-row.self .message-bubble {
   background: #fef0db;
+}
+
+.message-row.self .message-bubble.image-bubble {
+  background: transparent;
 }
 
 .input-bar {
   display: flex;
   gap: 10px;
   align-items: flex-end;
+}
+
+.hidden-image-input {
+  display: none;
+}
+
+.image-btn {
+  flex-shrink: 0;
+  height: 36px;
 }
 
 .send-btn {
