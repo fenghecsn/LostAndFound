@@ -11,7 +11,7 @@
             </template>
 					</el-avatar>
 					<div class="avatar-actions">
-						<el-button class="pill-btn" round @click="handleStaticAction('修改头像')">修改头像</el-button>
+						<el-button style="margin-left: 12px;" class="pill-btn" round @click="handleStaticAction('修改头像')">修改头像</el-button>
 						<el-button class="pill-btn" round @click="handleStaticAction('修改昵称')">
 							{{ displayName }}
 							<el-icon class="btn-icon"><EditPen /></el-icon>
@@ -540,7 +540,7 @@ const normalizeStatus = (status?: string | number): string => {
 	const raw = String(status || '').trim().toLowerCase()
 	if (!raw) return '待审核'
 	if (raw === '待审核' || raw === 'pending' || raw === 'in' || raw === 'reviewing') return '待审核'
-	if (raw === '已通过' || raw === 'approved' || raw === 'displaying' || raw === 'pass' || raw === 'passed') return '已通过'
+	if (raw === '已通过' || raw === 'approved' || raw === 'pass' || raw === 'passed') return '已通过'
 	if (raw === '已匹配' || raw === 'matched') return '已匹配'
 	if (raw === '已认领' || raw === 'claimed' || raw === 'archived') return '已认领'
 	if (raw === '已驳回' || raw === 'rejected' || raw === 'reject') return '已驳回'
@@ -1246,13 +1246,17 @@ onMounted(async () => {
 .avatar-actions {
 	display: flex;
 	flex-direction: column;
+  justify-content: center;
+  align-items: center;
 	gap: 10px;
 }
 
 .pill-btn {
-	justify-content: flex-start;
-	width: fit-content;
-	padding: 0 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: fit-content;
+  padding: 0 14px;
 }
 
 .btn-icon {
