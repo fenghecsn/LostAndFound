@@ -14,6 +14,11 @@ const router = createRouter({
       name: 'PasswordChange',
       component: () => import('../views/Password_change.vue'),
     },
+    {
+      path: '/forget_password',
+      name: 'ForgetPassword',
+      component: () => import('../views/ForgetPassword.vue'),
+    },
     // --- 学生端 ---
     {
       path: '/StudentHome',
@@ -66,6 +71,11 @@ const router = createRouter({
               path: 'announce',
               name: '系统公告',
               component: () => import('../views/Student&Teacher/Message/MessageAnnounce.vue'),
+            },
+            {
+              path: 'notice_board',
+              name: '公告栏',
+              component: () => import('../views/Student&Teacher/Message/NoticeBoard.vue'),
             }
           ]
         },
@@ -158,7 +168,7 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const whiteList = ['/', '/NotFound']
+  const whiteList = ['/', '/NotFound', '/forget_password']
   const userStore = useUserStore()
   const token = userStore.token
   const normalizeRole = (role: unknown) => {

@@ -82,6 +82,11 @@ const menuItems = [
     route: '/StudentHome/message/announce',
     dotKey: 'announcement' as DotKey,
   },
+  {
+    label: '公告栏',
+    route: '/StudentHome/message/notice_board',
+    dotKey: '' as DotKey,
+  },
 ]
 
 const shouldShowDot = (dotKey: DotKey) => {

@@ -44,7 +44,7 @@
               <input type="checkbox" />
               <span>记住我</span>
             </label>
-            <a href="#" class="forgot-pwd">忘记密码?</a>
+            <a href="javascript:void(0)" class="forgot-pwd" @click.prevent="router.push('/forget_password')">忘记密码?</a>
           </div>
 
           <button type="submit" class="submit-btn" @click="handleLogin">登录系统</button>
