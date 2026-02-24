@@ -36,8 +36,7 @@ const statusFilterOptions: Array<{ label: string; value: ItemQuery['status'] }> 
     { label: '已通过', value: 'approved' },
     { label: '已匹配', value: 'matched' },
     { label: '已认领', value: 'claimed' },
-    { label: '已归档', value: 'archived' },
-    { label: '已拒绝', value: 'rejected' },
+
 ]
 
 const filterOptions = {
@@ -400,7 +399,7 @@ onMounted(() => {
                     </div>
                     <div class="images-col">
                             <el-image
-                            style="width: 80px; height: 80px; border-radius: 4px;"
+                            style="width: 140px; height: 80px; border-radius: 4px;"
                             :src="item.cover_image"
                             fit="cover"
                         >
