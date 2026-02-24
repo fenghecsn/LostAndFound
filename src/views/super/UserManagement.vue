@@ -11,8 +11,8 @@
         />
         <el-select v-model="filterRole" class="filter-select" placeholder="全部角色">
           <el-option label="全部角色" value="" />
-          <el-option label="教师" value="teacher" />
-          <el-option label="学生" value="student" />
+          <el-option label="超级管理员" value="super" />
+          <el-option label="学生/老师" value="student" />
           <el-option label="管理员" value="admin" />
         </el-select>
         <el-select v-model="filterStatus" class="filter-select" placeholder="全部状态">
@@ -236,17 +236,17 @@ function canSendNotice(row: UserRow) {
 }
 
 function statusKey(row: UserRow) {
-  if (row.role !== 2 && row.role !== 3) return 'none'
+  if (row.role !== 2) return 'none'
   return row.is_active ? 'enabled' : 'disabled'
 }
 
 function statusText(row: UserRow) {
-  if (row.role !== 2 && row.role !== 3) return '无'
+  if (row.role !== 2) return '无'
   return row.is_active ? '启用' : '禁用'
 }
 
 function statusClass(row: UserRow) {
-  if (row.role !== 2 && row.role !== 3) return 'status-none'
+  if (row.role !== 2) return 'status-none'
   return row.is_active ? 'status-enabled' : 'status-disabled'
 }
 
@@ -263,6 +263,7 @@ async function fetchUsers() {
   loading.value = true
   try {
     const roleMap: Record<string, number | undefined> = {
+      super: 3,
       student: 1,
       teacher: 1,
       admin: 2,

@@ -115,34 +115,77 @@
     </div>
 
     <el-dialog v-model="previewVisible" width="1100px" destroy-on-close>
-      <div class="preview-wrap">
+      <div class="preview-wrap publish-like">
+        <div class="preview-mode-tabs">
+          <button type="button" class="mode-btn" :class="{ active: previewMode === 'lost' }" @click="previewMode = 'lost'">失物帖</button>
+          <button type="button" class="mode-btn" :class="{ active: previewMode === 'found' }" @click="previewMode = 'found'">捡到帖</button>
+        </div>
+
         <div class="preview-top">
           <div class="left-tags">
-            <span class="tag blue"><el-icon><Location /></el-icon>校区</span>
-            <span class="tag orange"><el-icon><CollectionTag /></el-icon>物品类型</span>
-            <span class="tag yellow"><el-icon><Coin /></el-icon>资金</span>
+            <div class="preview-option-row">
+              <span class="tag blue"><el-icon><Location /></el-icon>校区</span>
+              <div class="option-chips">
+                <span
+                  v-for="campus in previewCampusOptions"
+                  :key="campus"
+                  class="option-chip"
+                  :class="{ active: previewCampus === campus }"
+                  @click="previewCampus = campus"
+                >
+                  {{ campus }}
+                </span>
+              </div>
+            </div>
+
+            <div class="preview-option-row">
+              <span class="tag orange"><el-icon><CollectionTag /></el-icon>物品类型</span>
+              <div class="option-chips">
+                <span
+                  v-for="category in previewCategoryOptions"
+                  :key="category"
+                  class="option-chip"
+                  :class="{ active: previewCategory === category }"
+                  @click="previewCategory = category"
+                >
+                  {{ category }}
+                </span>
+              </div>
+            </div>
+
+            <div class="preview-option-row">
+              <span class="tag yellow"><el-icon><Coin /></el-icon>赏金</span>
+              <el-input model-value="请输入数字（非必填）" disabled />
+            </div>
+            <div class="preview-option-row">
+              <span class="left-label">联系方式</span>
+              <el-input model-value="请输入文字" disabled />
+            </div>
           </div>
 
           <div class="right-fields">
-            <div class="line"><label>物品名称</label><el-input model-value="请输入文字" disabled /></div>
-            <div class="line"><label>捡到/丢失时间</label><el-input model-value="请输入时间" disabled /></div>
-            <div class="line"><label>捡到/丢失地点</label><el-input model-value="请输入文字" disabled /></div>
+            <div class="line"><label>物品名称</label><el-input :model-value="previewTitleText" disabled /></div>
+            <div class="line"><label>{{ previewTimeLabel }}</label><el-input model-value="请输入时间" disabled /></div>
+            <div class="line"><label>{{ previewLocationLabel }}</label><el-input model-value="请输入文字" disabled /></div>
             <div class="line"><label>联系人</label><el-input model-value="请输入文字（非必填）" disabled /></div>
           </div>
         </div>
 
-        <div class="line full"><label>联系方式</label><el-input model-value="请输入文字" disabled /></div>
         <div class="line full">
           <label>物品特征</label>
-          <el-input type="textarea" :rows="3" model-value="请输入文字" disabled />
+          <el-input type="textarea" :rows="4" model-value="请输入文字" disabled />
         </div>
 
         <div class="preview-images">
-          <div class="img-placeholder"><el-icon><Picture /></el-icon></div>
-          <div class="img-placeholder"><el-icon><Picture /></el-icon></div>
+          <div v-for="n in previewImageSlots" :key="n" class="img-placeholder"><el-icon><Picture /></el-icon></div>
           <div class="img-placeholder add"><el-icon><Plus /></el-icon></div>
         </div>
-        <p class="tip-text">照片最多上传4张（选填）</p>
+        <p class="tip-text">照片最多上传{{ form.maxImages }}张（选填）</p>
+        <div class="preview-config-tip">
+          <span>认领时效：{{ form.claimDays }}天</span>
+          <span v-if="form.limitEnabled">发布频率：每天最多{{ form.maxPostsPerDay }}帖</span>
+          <span v-else>发布频率：不限</span>
+        </div>
 
         <div class="preview-btns">
           <el-button class="blue-btn">发布</el-button>
@@ -195,10 +238,29 @@ const form = reactive({
   maxImages: 4,
 })
 
+const previewCampusOptions = ['朝晖', '屏峰', '莫干山']
+const previewCampus = ref('朝晖')
+const previewCategory = ref('电子')
+const previewMode = ref<'lost' | 'found'>('found')
+
 const requiredRules = ['物品名称', '拾取/丢失地点', '拾取/丢失时间', '联系人', '联系方式', '物品特点']
 const sensitiveRules = ['转账', '银行卡密码', '兼职招聘']
 
 const pendingCount = computed(() => Math.max(stats.total_items - stats.solved_items, 0))
+const previewCategoryOptions = computed(() => {
+  if (categories.value.length > 0) return categories.value.map((item) => item.kind_name)
+  return form.categoryText
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+})
+const previewTitleText = computed(() => (previewMode.value === 'found' ? '请输入捡到物品名称' : '请输入丢失物品名称'))
+const previewTimeLabel = computed(() => (previewMode.value === 'found' ? '捡到时间' : '丢失时间'))
+const previewLocationLabel = computed(() => (previewMode.value === 'found' ? '捡到地点' : '丢失地点'))
+const previewImageSlots = computed(() => {
+  const n = Number(form.maxImages || 1)
+  return Math.max(1, Math.min(n, 6))
+})
 
 async function fetchBaseData() {
   baseLoading.value = true
@@ -225,6 +287,9 @@ async function fetchBaseData() {
         .filter((item: { id: number; kind_name: string }) => Boolean(item.kind_name))
       const names = categories.value.map((item) => item.kind_name)
       if (names.length > 0) form.categoryText = names.join(',')
+      if (names.length > 0 && !names.includes(previewCategory.value)) {
+        previewCategory.value = names[0] || '电子'
+      }
     } else {
       ElMessage.warning('分类数据获取失败，已使用默认值')
     }
@@ -235,6 +300,10 @@ async function fetchBaseData() {
 
 function syncCategoryText() {
   form.categoryText = categories.value.map((item) => item.kind_name).join(',')
+  const names = categories.value.map((item) => item.kind_name)
+  if (names.length > 0 && !names.includes(previewCategory.value)) {
+    previewCategory.value = names[0] || '电子'
+  }
 }
 
 async function handleAddCategory() {
@@ -470,6 +539,15 @@ onMounted(fetchBaseData)
   font-size: 12px;
 }
 
+.preview-config-tip {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  color: #4b5563;
+  font-size: 12px;
+}
+
 .btn-row {
   margin-top: 14px;
   display: flex;
@@ -487,6 +565,32 @@ onMounted(fetchBaseData)
 .preview-wrap {
   padding: 6px;
 }
+.publish-like {
+  border: 1px solid #f3e2c7;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fffaf2;
+}
+
+.preview-mode-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.mode-btn {
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 6px 16px;
+  background: #fff;
+  color: #6b7280;
+}
+
+.mode-btn.active {
+  background: #e6a23c;
+  border-color: #e6a23c;
+  color: #fff;
+}
 
 .preview-top {
   display: grid;
@@ -500,10 +604,19 @@ onMounted(fetchBaseData)
   gap: 10px;
 }
 
+.preview-option-row {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  align-items: flex-start;
+  gap: 10px;
+}
+
 .tag {
   width: fit-content;
+  min-width: 88px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   border-radius: 999px;
   padding: 4px 12px;
@@ -513,6 +626,42 @@ onMounted(fetchBaseData)
 .tag.blue { background: #6e92c8; }
 .tag.orange { background: #cd9360; }
 .tag.yellow { background: #c8a658; }
+.left-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88px;
+  border-radius: 999px;
+  padding: 4px 12px;
+  background: #bca273;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.option-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+:deep(.preview-option-row .el-input) {
+  width: 100%;
+}
+
+.option-chip {
+  border: 1px solid #d9dde3;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: #667085;
+  background: #fff;
+}
+
+.option-chip.active {
+  border-color: #e6a23c;
+  color: #e6a23c;
+  background: #fdf6ec;
+}
 
 .right-fields {
   display: flex;
@@ -522,7 +671,7 @@ onMounted(fetchBaseData)
 
 .line {
   display: grid;
-  grid-template-columns: 130px 1fr;
+  grid-template-columns: 130px minmax(0, 1fr);
   align-items: center;
   gap: 8px;
 }
@@ -539,12 +688,13 @@ onMounted(fetchBaseData)
 .preview-images {
   margin-top: 12px;
   display: flex;
-  gap: 18px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .img-placeholder {
-  width: 156px;
-  height: 108px;
+  width: 138px;
+  height: 96px;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
   background: #f3f4f6;

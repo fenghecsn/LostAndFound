@@ -3,10 +3,9 @@
     <NavBar :is-collapsed="isCollapsed" @toggle-collapse="isCollapsed = !isCollapsed" />
     <div class="content-wrapper">
       <div class="sidebar-wrapper" :class="{ collapsed: isCollapsed }">
-         <SideBar />
+        <SideBar />
       </div>
       <div class="main-content">
-        <!-- 这里放页面主要内容 -->
         <RouterView />
       </div>
     </div>
@@ -34,9 +33,9 @@ onBeforeUnmount(() => {
 <style scoped>
 .main-layout {
   min-height: 100vh;
-  max-width: 1800px; /* 限制最大宽度 */
-
-  background-color: #fdf6ec; /* 浅橙色背景*/
+  max-width: 1800px;
+  margin: 0 auto;
+  background-color: #fdf6ec;
   display: flex;
   flex-direction: column;
 }
@@ -44,12 +43,10 @@ onBeforeUnmount(() => {
 .content-wrapper {
   display: flex;
   flex: 1;
-  max-width: 1800px; /* 限制最大宽度 */
-  margin: 0 auto;
   width: 100%;
   padding: 20px;
   gap: 20px;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .sidebar-wrapper {
@@ -58,9 +55,8 @@ onBeforeUnmount(() => {
   position: sticky;
   top: 80px;
   align-self: flex-start;
-  max-height: calc(100vh - 100px);
-  overflow-y: auto;
-  transition: all 0.3s ease;
+  height: calc(100vh - 100px);
+  transition: all 0.25s ease;
 }
 
 .sidebar-wrapper.collapsed {
@@ -72,9 +68,10 @@ onBeforeUnmount(() => {
 
 .main-content {
   flex: 1;
-  background: white;
+  background: #fff;
   border-radius: 8px;
   padding: 20px;
   min-width: 0;
+  min-height: calc(100vh - 100px);
 }
 </style>

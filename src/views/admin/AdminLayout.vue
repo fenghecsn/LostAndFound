@@ -1,6 +1,5 @@
 <template>
   <div class="admin-layout">
-    <!-- 顶部导航栏 -->
     <header class="top-nav">
       <div class="nav-left">
         <div class="logo" @click="router.push('/admin/dashboard')">
@@ -13,39 +12,31 @@
             :class="{ active: (route.path.startsWith('/admin/audit') || route.path.startsWith('/admin/claim-audit')) && !route.path.includes('history') }"
           >
             审核管理
-            <el-badge
-              v-if="totalPending > 0"
-              :value="totalPending"
-              :max="99"
-              class="nav-badge"
-            />
+            <el-badge v-if="totalPending > 0" :value="totalPending" :max="99" class="nav-badge" />
           </router-link>
-          <router-link
-            to="/admin/items"
-            :class="{ active: route.path === '/admin/items' }"
-          >物品管理</router-link>
-          <router-link
-            to="/admin/notices"
-            :class="{ active: route.path === '/admin/notices' }"
-          >公告信息</router-link>
-          <router-link
-            to="/admin/dashboard"
-            :class="{ active: route.path === '/admin/dashboard' }"
-          >数据总览</router-link>
+          <router-link to="/admin/items" :class="{ active: route.path === '/admin/items' }">物品管理</router-link>
+          <router-link to="/admin/notices" :class="{ active: route.path === '/admin/notices' }">公告信息</router-link>
+          <router-link to="/admin/dashboard" :class="{ active: route.path === '/admin/dashboard' }">数据总览</router-link>
         </nav>
       </div>
       <div class="nav-right">
-        <el-button type="danger" round size="small" @click="handleLogout">退出登录</el-button>
-        <div class="user-info">
-          <div class="avatar-wrapper">
-            <img src="/头像框@2.png" alt="avatar-frame" class="avatar-frame" />
+        <el-dropdown trigger="click" placement="bottom-end">
+          <div class="user-info">
+            <div class="avatar-wrapper">
+              <img src="/头像框@2.png" alt="avatar-frame" class="avatar-frame" />
+            </div>
+            <span class="user-name">{{ userStore.username || '管理员' }}</span>
+            <el-icon class="arrow-icon"><ArrowDown /></el-icon>
           </div>
-          <span class="user-name">{{ userStore.username || '管理员' }}</span>
-        </div>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item @click="handleLogout">退出登录</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </header>
 
-    <!-- 主内容区 -->
     <main class="main-content">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
@@ -54,10 +45,9 @@
       </router-view>
     </main>
 
-    <!-- 登录后系统公告弹窗 -->
     <el-dialog
       v-model="noticeDialogVisible"
-      title="📢 系统通知与公告"
+      title="系统通知与公告"
       width="600px"
       :close-on-click-modal="false"
       :close-on-press-escape="false"
@@ -69,11 +59,7 @@
           <el-empty description="暂无系统公告" :image-size="80" />
         </div>
         <div v-else class="notice-scroll">
-          <div
-            v-for="notice in systemNotices"
-            :key="notice.ID || notice.id"
-            class="notice-item"
-          >
+          <div v-for="notice in systemNotices" :key="notice.ID || notice.id" class="notice-item">
             <div class="notice-item-header">
               <el-tag v-if="notice.is_top" type="danger" size="small" effect="dark">置顶</el-tag>
               <h4>{{ notice.title }}</h4>
@@ -88,9 +74,7 @@
       <template #footer>
         <div class="notice-dialog-footer">
           <span class="notice-count">共 {{ systemNotices.length }} 条公告</span>
-          <el-button type="warning" size="large" @click="confirmNotices">
-            我已知悉，进入系统
-          </el-button>
+          <el-button type="warning" size="large" @click="confirmNotices">我已知悉，进入系统</el-button>
         </div>
       </template>
     </el-dialog>
@@ -101,6 +85,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
+import { ArrowDown } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { getPendingItems, getAnnouncements } from '@/api/admin'
 import { logoutApi } from '@/api/user'
@@ -112,18 +97,14 @@ const userStore = useUserStore()
 const pendingItemCount = ref(0)
 const totalPending = computed(() => pendingItemCount.value)
 
-// ==================== 登录后公告弹窗 ====================
 const noticeDialogVisible = ref(false)
 const systemNotices = ref<any[]>([])
 
-/** 拉取系统公告并弹窗展示 */
 async function fetchAndShowNotices() {
   try {
     const res = await getAnnouncements({ page: 1, pageSize: 50 })
     const resData = res.data?.data ?? res.data ?? {}
-    const list: any[] = Array.isArray(resData)
-      ? resData
-      : (resData.list ?? resData.items ?? [])
+    const list: any[] = Array.isArray(resData) ? resData : (resData.list ?? resData.items ?? [])
 
     const isSystemNotice = (n: any) => {
       const type = String(n?.type ?? n?.announcement_type ?? n?.notice_type ?? '').toLowerCase()
@@ -158,7 +139,6 @@ function confirmNotices() {
   sessionStorage.setItem('admin_notice_shown', 'true')
 }
 
-// ==================== 待审核数量 ====================
 async function fetchPendingCounts() {
   try {
     const res = await getPendingItems({ page: 1, pageSize: 1 })
@@ -189,7 +169,7 @@ async function handleLogout() {
     router.push('/')
     ElMessage.success('已安全退出')
   } catch {
-    // 用户取消
+    // user cancelled
   }
 }
 
@@ -239,7 +219,7 @@ onMounted(() => {
 
 .logo-text {
   font-size: 18px;
-  font-weight: bold;
+  font-weight: 700;
   color: #e6a23c;
 }
 
@@ -274,13 +254,14 @@ onMounted(() => {
 .nav-right {
   display: flex;
   align-items: center;
-  gap: 16px;
 }
 
 .user-info {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
+  cursor: pointer;
+  user-select: none;
 }
 
 .avatar-wrapper {
@@ -304,52 +285,42 @@ onMounted(() => {
   color: #333;
 }
 
+.arrow-icon {
+  color: #999;
+  font-size: 12px;
+}
+
 .main-content {
   padding: 24px 40px;
   max-width: 1400px;
   margin: 0 auto;
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-/* ===== 公告弹窗 ===== */
 .notice-dialog-body {
-  max-height: 400px;
-  overflow: hidden;
+  max-height: 50vh;
 }
 
 .notice-scroll {
-  max-height: 380px;
+  max-height: 42vh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding-right: 8px;
-}
-
-.notice-empty {
-  padding: 40px 0;
+  gap: 12px;
+  padding-right: 6px;
 }
 
 .notice-item {
-  background: #fef8ee;
-  border: 1px solid #f5d4a0;
+  background: #fff7e6;
+  border: 1px solid #f8d9a5;
   border-radius: 8px;
-  padding: 16px;
+  padding: 12px;
 }
 
 .notice-item-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .notice-item-header h4 {
@@ -359,26 +330,34 @@ onMounted(() => {
 }
 
 .notice-item-content {
-  font-size: 14px;
+  margin: 0 0 8px;
   color: #555;
-  line-height: 1.8;
   white-space: pre-wrap;
-  margin: 0 0 8px 0;
 }
 
 .notice-item-time {
-  font-size: 12px;
   color: #999;
+  font-size: 12px;
 }
 
 .notice-dialog-footer {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
 }
 
 .notice-count {
+  color: #666;
   font-size: 13px;
-  color: #999;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

@@ -56,8 +56,8 @@
         </el-table-column>
         <el-table-column label="操作" width="100" align="center" fixed="right">
           <template #default="{ row }">
-            <el-button type="warning" plain size="small" round @click="openReply(row)">
-              {{ row.reply ? '编辑' : '回复' }}
+            <el-button type="warning" plain size="small" round :disabled="Boolean(row.reply)" @click="openReply(row)">
+              回复
             </el-button>
           </template>
         </el-table-column>

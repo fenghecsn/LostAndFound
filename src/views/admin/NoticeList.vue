@@ -1,50 +1,49 @@
 <template>
   <div class="notice-page">
     <div class="notice-layout">
-      <!-- 左侧菜单 -->
       <aside class="notice-sidebar">
-        <div class="sidebar-title">
-          <el-icon color="#e6a23c"><Bell /></el-icon>
-          <span>公告</span>
-          <el-icon><ArrowDown /></el-icon>
+        <div class="sidebar-title" @click="sidebarExpanded = !sidebarExpanded">
+          <div class="title-left">
+            <el-icon color="#e6a23c"><Bell /></el-icon>
+            <span>公告</span>
+          </div>
+          <el-icon class="arrow" :class="{ folded: !sidebarExpanded }"><ArrowDown /></el-icon>
         </div>
-        <div
-          class="sidebar-item"
-          :class="{ active: currentTab === 'region' }"
-          @click="currentTab = 'region'"
-        >
-          <el-icon color="#e6a23c"><FolderOpened /></el-icon>
-          <span>发布区域公告</span>
-        </div>
-        <div
-          class="sidebar-item"
-          :class="{ active: currentTab === 'system' }"
-          @click="currentTab = 'system'"
-        >
-          <span class="dot-red" v-if="hasUnread"></span>
-          <el-icon color="#666"><Flag /></el-icon>
-          <span>系统公告</span>
+
+        <div v-show="sidebarExpanded" class="sidebar-body">
+          <div
+            class="sidebar-item"
+            :class="{ active: currentTab === 'region' }"
+            @click="switchMainTab('region')"
+          >
+            <el-icon color="#e6a23c"><FolderOpened /></el-icon>
+            <span>发布区域公告</span>
+          </div>
+          <div
+            class="sidebar-item"
+            :class="{ active: currentTab === 'system' }"
+            @click="switchMainTab('system')"
+          >
+            <span class="dot-red" v-if="hasUnread"></span>
+            <el-icon color="#666"><Flag /></el-icon>
+            <span>系统公告</span>
+          </div>
         </div>
       </aside>
 
-      <!-- 右侧内容 -->
       <div class="notice-content">
-        <!-- 区域公告 -->
+        <transition name="tab-fade" mode="out-in">
+          <div :key="`${currentTab}-${regionSubTab}`">
         <div v-if="currentTab === 'region'">
           <div class="tab-header">
-            <el-button
-              :type="regionSubTab === 'history' ? 'warning' : 'default'"
-              round
-              @click="regionSubTab = 'history'"
-            >历史区域公告</el-button>
-            <el-button
-              :type="regionSubTab === 'publish' ? 'warning' : 'default'"
-              round
-              @click="regionSubTab = 'publish'"
-            >发布区域公告</el-button>
+            <el-button :type="regionSubTab === 'history' ? 'warning' : 'default'" class="switch-btn" round @click="switchRegionSubTab('history')">
+              历史区域公告
+            </el-button>
+            <el-button :type="regionSubTab === 'publish' ? 'warning' : 'default'" class="switch-btn" round @click="switchRegionSubTab('publish')">
+              发布区域公告
+            </el-button>
           </div>
 
-          <!-- 历史公告列表 -->
           <div v-if="regionSubTab === 'history'" class="notice-list" v-loading="loading">
             <div
               v-for="notice in noticeList"
@@ -59,16 +58,17 @@
                 </span>
                 <div class="notice-meta-right">
                   <span class="notice-region">区域：{{ getRegionLabel(notice) }}</span>
-                  <span class="notice-date">发布时间：{{ formatTime(notice.CreatedAt || notice.created_at || notice._localTime) }}</span>
+                  <span class="notice-date">
+                    发布时间：{{ formatTime(notice.CreatedAt || notice.created_at || notice._localTime) }}
+                  </span>
                 </div>
               </div>
             </div>
             <el-empty v-if="noticeList.length === 0" description="暂无公告" />
           </div>
 
-          <!-- 发布公告表单 -->
           <div v-if="regionSubTab === 'publish'" class="publish-form">
-            <el-form :model="publishForm" label-width="80px">
+            <el-form :model="publishForm" label-width="84px">
               <el-form-item label="公告标题">
                 <el-input v-model="publishForm.title" placeholder="请输入公告标题" />
               </el-form-item>
@@ -87,7 +87,7 @@
                   style="width: 100%;"
                 >
                   <el-option label="朝晖校区" value="朝晖校区" />
-                  <el-option label="屏风校区" value="屏风校区" />
+                  <el-option label="屏峰校区" value="屏峰校区" />
                   <el-option label="莫干山校区" value="莫干山校区" />
                 </el-select>
               </el-form-item>
@@ -95,7 +95,7 @@
                 <el-switch v-model="publishForm.is_top" />
               </el-form-item>
               <el-form-item>
-                <div style="text-align: right; width: 100%;">
+                <div class="publish-submit">
                   <el-button type="primary" :loading="publishing" @click="handlePublish">发布</el-button>
                 </div>
               </el-form-item>
@@ -103,7 +103,6 @@
           </div>
         </div>
 
-        <!-- 系统公告 -->
         <div v-if="currentTab === 'system'">
           <h2 class="section-title">系统公告</h2>
           <div class="notice-list">
@@ -126,18 +125,19 @@
                   type="warning"
                   size="small"
                   @click="confirmNotice(notice)"
-                >确认</el-button>
-                <el-button
-                  v-else
-                  type="info"
-                  size="small"
-                  disabled
-                >已确认</el-button>
+                >
+                  确认
+                </el-button>
+                <el-button v-else type="info" size="small" disabled>
+                  已确认
+                </el-button>
               </div>
             </div>
             <el-empty v-if="systemNoticeList.length === 0" description="暂无系统公告" />
           </div>
         </div>
+          </div>
+        </transition>
       </div>
     </div>
   </div>
@@ -148,24 +148,18 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Bell, ArrowDown, FolderOpened, Flag } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
-import {
-  getAnnouncements,
-  createAnnouncement,
-} from '@/api/admin'
+import { getAnnouncements, createAnnouncement } from '@/api/admin'
 
 const currentTab = ref('region')
 const regionSubTab = ref('history')
+const sidebarExpanded = ref(true)
 const userStore = useUserStore()
 
 const loading = ref(false)
 const publishing = ref(false)
 const confirmedNoticeIds = ref<number[]>([])
-
-// 区域公告列表（包含后端返回的 + 本地刚发布的）
 const noticeList = ref<any[]>([])
-// 系统公告列表
 const systemNoticeList = ref<any[]>([])
-// 本地发布的公告（解决发布接口和获取接口不在同一数据源的问题）
 const localPublished = ref<any[]>([])
 
 const hasUnread = computed(() => systemNoticeList.value.some((n: any) => !n.confirmed))
@@ -178,6 +172,16 @@ const publishForm = reactive({
   region: '',
   is_top: false,
 })
+
+function switchMainTab(tab: 'region' | 'system') {
+  if (currentTab.value === tab) return
+  currentTab.value = tab
+}
+
+function switchRegionSubTab(tab: 'history' | 'publish') {
+  if (regionSubTab.value === tab) return
+  regionSubTab.value = tab
+}
 
 function formatTime(t: string | undefined): string {
   if (!t) return ''
@@ -221,6 +225,13 @@ function saveLocalPublished() {
   localStorage.setItem(localRegionDraftKey(), JSON.stringify(localPublished.value))
 }
 
+function normalizeNoticeStatus(notice: any): string {
+  const s = String(notice?.status ?? notice?.review_status ?? '').toLowerCase()
+  if (['approved', 'allow', 'allowed', 'pass', 'passed', 'published', 'success'].includes(s)) return 'approved'
+  if (['rejected', 'reject', 'denied', 'deny', 'failed', 'refused'].includes(s)) return 'rejected'
+  return 'pending'
+}
+
 function getStatusText(notice: any): string {
   const status = normalizeNoticeStatus(notice)
   if (status === 'approved') return '已审核'
@@ -232,13 +243,6 @@ function getStatusClass(notice: any): string {
   const status = normalizeNoticeStatus(notice)
   if (status === 'approved') return 'pass'
   if (status === 'rejected') return 'reject'
-  return 'pending'
-}
-
-function normalizeNoticeStatus(notice: any): string {
-  const s = String(notice?.status ?? notice?.review_status ?? '').toLowerCase()
-  if (['approved', 'allow', 'allowed', 'pass', 'passed', 'published', 'success'].includes(s)) return 'approved'
-  if (['rejected', 'reject', 'denied', 'deny', 'failed', 'refused'].includes(s)) return 'rejected'
   return 'pending'
 }
 
@@ -262,21 +266,15 @@ function isNoticeOwnedByCurrentUser(notice: any): boolean {
   return publisherCandidates.some((v) => String(v ?? '').toLowerCase() === currentUsername)
 }
 
-/** 获取公告列表 - 合并后端数据和本地发布的 */
 async function fetchNoticeList() {
   loading.value = true
   try {
     const res = await getAnnouncements({ page: 1, pageSize: 50 })
     const resData = res.data?.data ?? res.data ?? {}
-    const list: any[] = Array.isArray(resData)
-      ? resData
-      : (resData.list ?? resData.items ?? [])
+    const list: any[] = Array.isArray(resData) ? resData : (resData.list ?? resData.items ?? [])
 
     const getType = (n: any) => String(n?.type ?? n?.announcement_type ?? n?.notice_type ?? '').toLowerCase()
-    const isSystem = (n: any) => {
-      const type = getType(n)
-      return type.includes('system')
-    }
+    const isSystem = (n: any) => getType(n).includes('system')
 
     const regionFromApi = list.filter((n: any) => !isSystem(n))
     let systemFromApi = list.filter((n: any) => isSystem(n))
@@ -289,7 +287,6 @@ async function fetchNoticeList() {
       confirmed: confirmedNoticeIds.value.includes(Number(n.ID ?? n.id ?? 0)),
     }))
 
-    // If backend has already returned this draft with a final status, drop local placeholder.
     localPublished.value = localPublished.value.filter((local: any) => {
       return !regionFromApi.some((apiItem: any) => {
         const sameContent = apiItem.title === local.title && apiItem.content === local.content
@@ -299,7 +296,6 @@ async function fetchNoticeList() {
     })
     saveLocalPublished()
 
-    // Backend data has higher priority than local placeholders.
     const mergedAfterSync = [...regionFromApi]
     localPublished.value.forEach((local: any) => {
       const existsInApi = regionFromApi.some(
@@ -344,7 +340,6 @@ async function handlePublish() {
       throw new Error(msg)
     }
 
-    // 发布成功后，立即把这条公告加到本地列表
     const newNotice = {
       _localId: ++localIdCounter,
       _isLocal: true,
@@ -364,8 +359,6 @@ async function handlePublish() {
     publishForm.content = ''
     publishForm.region = ''
     regionSubTab.value = 'history'
-
-    // 重新拉取列表（合并本地数据）
     await fetchNoticeList()
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : '发布失败'
@@ -393,7 +386,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.notice-page { padding: 0; }
+.notice-page {
+  padding: 0;
+}
 
 .notice-layout {
   display: flex;
@@ -401,25 +396,48 @@ onMounted(() => {
   min-height: calc(100vh - 120px);
 }
 
-/* 左侧菜单 */
 .notice-sidebar {
-  width: 200px;
+  width: 220px;
   flex-shrink: 0;
   background: #fff;
   border-radius: 8px;
   padding: 16px;
-  height: fit-content;
+  position: sticky;
+  top: 80px;
+  align-self: flex-start;
+  min-height: calc(100vh - 120px);
 }
 
 .sidebar-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  font-weight: bold;
-  color: #333;
+  justify-content: space-between;
   padding: 8px 0;
   margin-bottom: 8px;
+  cursor: pointer;
+  color: #333;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.title-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.arrow {
+  transition: transform 0.2s;
+}
+
+.arrow.folded {
+  transform: rotate(-90deg);
+}
+
+.sidebar-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .sidebar-item {
@@ -452,7 +470,6 @@ onMounted(() => {
   transform: translateY(-50%);
 }
 
-/* 右侧内容 */
 .notice-content {
   flex: 1;
   min-width: 0;
@@ -464,11 +481,19 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
+.switch-btn {
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.switch-btn:active {
+  transform: scale(0.97);
+}
+
 .section-title {
   font-size: 22px;
-  font-weight: bold;
+  font-weight: 700;
   color: #333;
-  margin: 0 0 20px 0;
+  margin: 0 0 20px;
 }
 
 .notice-list {
@@ -486,9 +511,9 @@ onMounted(() => {
 
 .notice-title {
   font-size: 18px;
-  font-weight: bold;
+  font-weight: 700;
   color: #333;
-  margin: 0 0 12px 0;
+  margin: 0 0 12px;
 }
 
 .notice-body {
@@ -510,27 +535,20 @@ onMounted(() => {
   font-size: 13px;
   color: #999;
 }
+
 .notice-status.pass {
   color: #67c23a;
-  font-weight: bold;
+  font-weight: 700;
 }
+
 .notice-status.reject {
   color: #f56c6c;
-  font-weight: bold;
+  font-weight: 700;
 }
+
 .notice-status.pending {
   color: #e6a23c;
-  font-weight: bold;
-}
-
-.notice-date {
-  font-size: 13px;
-  color: #999;
-}
-
-.notice-region {
-  font-size: 13px;
-  color: #999;
+  font-weight: 700;
 }
 
 .notice-meta-right {
@@ -540,11 +558,31 @@ onMounted(() => {
   margin-left: auto;
 }
 
-/* 发布表单 */
+.notice-region,
+.notice-date {
+  font-size: 13px;
+  color: #999;
+}
+
 .publish-form {
   background: #fff;
   border-radius: 8px;
   padding: 24px;
 }
 
+.publish-submit {
+  text-align: right;
+  width: 100%;
+}
+
+.tab-fade-enter-active,
+.tab-fade-leave-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.tab-fade-enter-from,
+.tab-fade-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
+}
 </style>
