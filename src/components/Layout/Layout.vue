@@ -1,8 +1,8 @@
 <template>
   <div class="main-layout">
-    <NavBar />
+    <NavBar :is-collapsed="isCollapsed" @toggle-collapse="isCollapsed = !isCollapsed" />
     <div class="content-wrapper">
-      <div class="sidebar-wrapper">
+      <div class="sidebar-wrapper" :class="{ collapsed: isCollapsed }">
          <SideBar />
       </div>
       <div class="main-content">
@@ -14,12 +14,13 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import NavBar from '@/components/Layout/NavBar.vue'
 import SideBar from '@/components/Layout/SideBar.vue'
 import { useMessageNoticeStore } from '@/stores/messageNotice'
 
 const messageNoticeStore = useMessageNoticeStore()
+const isCollapsed = ref(false)
 
 onMounted(() => {
   messageNoticeStore.initConnection()
@@ -59,6 +60,14 @@ onBeforeUnmount(() => {
   align-self: flex-start;
   max-height: calc(100vh - 100px);
   overflow-y: auto;
+  transition: all 0.3s ease;
+}
+
+.sidebar-wrapper.collapsed {
+  width: 0;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
 }
 
 .main-content {
@@ -66,5 +75,6 @@ onBeforeUnmount(() => {
   background: white;
   border-radius: 8px;
   padding: 20px;
+  min-width: 0;
 }
 </style>

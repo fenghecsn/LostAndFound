@@ -162,7 +162,7 @@ const handleSessionClick = (targetId: number, targetName: string) => {
 .side-bar-container {
   display: flex;
   background-color: #fff; /* 白色*/
-
+  min-width: 240px;
 }
 .side-bar {
   width: 240px;

@@ -1,6 +1,11 @@
 <template>
   <div class="nav-bar">
     <div class="left-section">
+      <button class="collapse-btn" @click="handleCollapse" :title="isCollapsed ? '展开侧栏' : '折叠侧栏'">
+        <el-icon>
+          <Fold />
+        </el-icon>
+      </button>
       <div class="logo-circle">
         <img src="/DIV@1x.png" style="width: 16px; height: 16px;"> <!-- 使用公共资源中的图片 -->
       </div>
@@ -70,14 +75,31 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { Fold } from '@element-plus/icons-vue'
+import { ElIcon } from 'element-plus'
 import ConfirmButton from '../ConfirmButton.vue'
 import {useUserStore} from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import { logoutApi } from '@/api/user'
 
+interface Props {
+  isCollapsed?: boolean
+}
+
+interface Emits {
+  (e: 'toggle-collapse'): void
+}
+
+defineProps<Props>()
+const emit = defineEmits<Emits>()
+
 const userStore = useUserStore()
 const router = useRouter()
 const route = useRoute()
+
+const handleCollapse = () => {
+  emit('toggle-collapse')
+}
 
 interface NavItem {
   label: string;
@@ -196,6 +218,26 @@ const handleLogout = async () => {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.collapse-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #f6e7d8;
+  border-radius: 6px;
+  background-color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f97316;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.collapse-btn:hover {
+  background-color: #fff7ed;
+  border-color: #f97316;
 }
 
 .logo-circle {
