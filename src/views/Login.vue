@@ -82,7 +82,7 @@
     </div>
 
     <footer class="copyright">
-      © 2026 校园失物招领系统. 用心找回每一份珍贵.
+      © 校园失物招领系统. 用心找回每一份珍贵.
     </footer>
   </div>
 </template>
@@ -193,10 +193,10 @@ const handleLogin = async () => {
 .content-container {
   display: flex;
   align-items: center;
-  justify-content: flex-end; /* 让内容整体向右靠 */
-  gap:0;
+  justify-content: space-between;
+  gap: 0;
   width: 100%;
-  max-width: 1400px;
+  max-width: 1600px;
   padding: 0 40px;
   transform-origin: center center;
 }
@@ -207,31 +207,31 @@ const handleLogin = async () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-right: 10vw; /* 让登录框更靠近中间 */
+  flex: 0 0 70%;
+  margin-right: 0;
 }
 
-.illustration-placeholder {
-  position: relative;
-  width: 320px;
-  height: 240px;
-  /* 这里的样式是为了模拟截图的视觉占位，实际应该放img标签 */
+.illustration-section img {
+  width: 100%;
+  height: auto;
+  max-width: 100%;
 }
 
 
 /* 右侧登录卡片 */
 .login-card {
-  width: 420px; /* 稍微加宽一点 */
+  flex: 0 0 30%;
   background: #ffffff;
   border-radius: 16px;
-  padding: 40px 50px; /* 内部留白加大 */
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08); /* 阴影加重一点 */
+  padding: 40px 50px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
 }
 
 .card-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 24px;
 }
 
 .logo-circle {
@@ -260,7 +260,7 @@ const handleLogin = async () => {
 }
 
 .form-group {
-  margin-bottom: 24px;
+  margin-bottom: 18px;
   text-align: left;
 }
 
@@ -294,7 +294,7 @@ const handleLogin = async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 28px;
+  margin-bottom: 20px;
   font-size: 13px;
 }
 
@@ -325,7 +325,7 @@ const handleLogin = async () => {
   font-weight: bold;
   cursor: pointer;
   transition: background-color 0.2s;
-  margin-bottom: 28px;
+  margin-bottom: 20px;
 }
 
 .submit-btn:hover {
@@ -335,15 +335,15 @@ const handleLogin = async () => {
 .role-selector {
   display: flex;
   justify-content: center;
-  gap: 15px; /* 间距控制 */
-  margin-bottom: 24px;
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
 .role-item {
-  font-size: 12px;
+  font-size: 11px;
   color: #666;
   cursor: pointer;
-  padding: 4px 12px;
+  padding: 6px 14px;
   border-radius: 20px;
   font-weight: 600;
   white-space: nowrap;
@@ -362,7 +362,7 @@ const handleLogin = async () => {
 .card-footer {
   text-align: center;
   border-top: 1px solid #f5f5f5;
-  padding-top: 20px;
+  padding-top: 14px;
 }
 
 .card-footer p {
@@ -388,6 +388,7 @@ const handleLogin = async () => {
   }
   .content-container {
     transform: scale(0.9); /* 整体缩放 */
+    margin-right: 10%;
   }
   .copyright {
     bottom: 10px;

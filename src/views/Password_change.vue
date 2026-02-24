@@ -5,6 +5,27 @@
         <div class="logo-circle"></div>
         <h2 class="force-title">强制修改密码</h2>
         <p class="force-subtitle">首次登录需修改初始密码</p>
+
+        <div class="role-selector">
+          <div
+            class="role-item"
+            :class="{ active: userStore.role === 1, disabled: userStore.role !== 1 }"
+          >
+            学生 / 老师
+          </div>
+          <div
+            class="role-item"
+            :class="{ active: userStore.role === 2, disabled: userStore.role !== 2 }"
+          >
+            失物招领管理员
+          </div>
+          <div
+            class="role-item"
+            :class="{ active: userStore.role === 3, disabled: userStore.role !== 3 }"
+          >
+            系统管理员
+          </div>
+        </div>
       </div>
 
       <el-form
@@ -201,6 +222,35 @@ const handleChangePassword = async () => {
   color: #98a2b3;
   font-size: 12px;
   line-height: 1.7;
+}
+
+.role-selector {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.role-item {
+  font-size: 12px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.2s;
+  background-color: #f5f5f5;
+  color: #999;
+}
+
+.role-item.active {
+  background-color: #f97316;
+  color: white;
+}
+
+.role-item.disabled {
+  background-color: #f5f5f5;
+  color: #bbb;
+  cursor: not-allowed;
 }
 
 </style>
