@@ -181,7 +181,6 @@ const handleLogout = async () => {
 <style scoped>
 .nav-bar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   height: 60px;
   padding: 0 20px;
@@ -190,6 +189,7 @@ const handleLogout = async () => {
   position: sticky;
   top: 0;
   z-index: 100;
+  gap: 30px;
 }
 
 .left-section {
@@ -217,6 +217,7 @@ const handleLogout = async () => {
 .center-nav {
   display: flex;
   gap: 40px;
+  flex: 0 0 auto;
 }
 
 .nav-item {
@@ -238,6 +239,7 @@ const handleLogout = async () => {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-left: auto;
 }
 
 .publish-btn {
