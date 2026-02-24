@@ -395,7 +395,7 @@ onMounted(() => {
                     <div class="tags-col">
                         <el-tag size="small" effect="plain" class="custom-tag location-tag">校区: {{ item.campus || '未知' }}</el-tag>
                         <el-tag size="small" effect="plain" type="warning" class="custom-tag type-tag">物品类型: {{ item.category || '未知' }}</el-tag>
-                        <el-tag v-if="item.reward" size="small" effect="plain" type="warning" class="custom-tag reward-tag">悬赏: {{ item.reward }}元</el-tag>
+                        <el-tag v-if="item.reward" size="small" effect="plain" type="warning" class="custom-tag reward-tag" style="color: #FFD700;">悬赏: {{ item.reward }}元</el-tag>
                     </div>
                     <div class="images-col">
                             <el-image
