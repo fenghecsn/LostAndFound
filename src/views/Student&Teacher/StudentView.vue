@@ -20,7 +20,7 @@ const applyMode = ref<'picked' | 'mine'>('picked')
 // 筛选参数状态
 const queryParams = reactive<ItemQuery>({
     page_num: 1,
-    page_size: 10,
+    page_size: 12,
     location:"", // 搜索关键词
     lost_or_found: undefined,
     campus: undefined,
