@@ -1,5 +1,11 @@
 <template>
-  <button class="confirm-button" type="button" @click="open">
+  <button
+    class="confirm-button"
+    type="button"
+    @click="open"
+    :disabled="disabled"
+    :class="{ 'disabled': disabled }"
+  >
     <span>{{ label }}</span>
   </button>
 
@@ -26,6 +32,7 @@ interface Props {
   message?: string
   confirmText?: string
   cancelText?: string
+  disabled?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -34,6 +41,7 @@ const props = withDefaults(defineProps<Props>(), {
   message: '确定执行该操作吗？',
   confirmText: '确认',
   cancelText: '取消',
+  disabled: false
 })
 
 const emit = defineEmits<{ (e: 'confirm'): void }>()
@@ -41,6 +49,7 @@ const emit = defineEmits<{ (e: 'confirm'): void }>()
 const visible = ref(false)
 
 const open = () => {
+  if (props.disabled) return
   visible.value = true
 }
 
@@ -55,24 +64,32 @@ const confirm = () => {
 </script>
 
 <style scoped>
-.confirm-button {
-  background: #f97316;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
-}
+ .confirm-button {
+   background: #f97316;
+   color: #fff;
+   border: none;
+   border-radius: 6px;
+   padding: 6px 12px;
+   font-size: 14px;
+   cursor: pointer;
+   transition: background 0.2s, transform 0.1s;
+ }
 
-.confirm-button:hover {
-  background: #ea6a0f;
-}
+ .confirm-button:hover {
+   background: #ea6a0f;
+ }
 
-.confirm-button:active {
-  transform: scale(0.98);
-}
+ .confirm-button:active {
+   transform: scale(0.98);
+ }
+
+ .confirm-button.disabled,
+ .confirm-button:disabled {
+   background: #dcdfe6;
+   color: #fff;
+   cursor: not-allowed;
+   opacity: 0.7;
+ }
 
 .confirm-mask {
   position: fixed;

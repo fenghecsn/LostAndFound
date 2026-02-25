@@ -205,6 +205,17 @@
 								@confirm="handleDeletePublished(scope.row)"
 							/>
 							<el-button v-else size="small" round disabled>删除</el-button>
+							<ConfirmButton
+                class="table-confirm-btn"
+                label="取消"
+                title="确认取消发布"
+                message="确定要取消发布吗？取消后帖子将不可见，但不会删除记录。"
+                confirm-text="确认取消"
+                cancel-text="取消"
+								:type="(scope.row.statusLabel === '已取消' || cancellingIds.includes(scope.row.id)) ? 'info' : 'warning'"
+								:disabled="scope.row.statusLabel === '已取消' || cancellingIds.includes(scope.row.id)"
+								@confirm="handleCancelPublished(scope.row)"
+							>取消</ConfirmButton>
 							<el-button size="small" round class="detail-btn" @click="openPublishedDetail(scope.row)">详情</el-button>
 						</div>
 					</template>
@@ -357,7 +368,7 @@ import { useUserStore } from '@/stores/user'
 import ConfirmButton from '@/components/ConfirmButton.vue'
 import { uploadImagesAndGetUrls } from '@/utils/imageUpload'
 import { normalizeResourceUrl } from '@/utils/url'
-
+import {cancelMyItemApi} from "@/api/Publish";
 const userStore = useUserStore()
 const router = useRouter()
 
@@ -869,6 +880,27 @@ const handleDeletePublished = async (row: ManagePublishedRow) => {
 		ElMessage.error('删除失败，请稍后重试')
 	} finally {
 		deletingPublishedId.value = null
+	}
+}
+
+const cancellingIds = ref<number[]>([])
+const handleCancelPublished = async (row: ManagePublishedRow) => {
+	if (row.statusLabel === '已取消' || cancellingIds.value.includes(row.id)) return;
+	cancellingIds.value.push(row.id);
+	try {
+		await cancelMyItemApi(row.id);
+		// 可根据实际情况刷新列表或更新状态
+    if (!hasCodeField({ code: 20000 })) {
+      ElMessage.error('取消失败');
+      return;
+    }
+		ElMessage.success('取消成功');
+		// 这里建议刷新managePublishedList或单独更新row.statusLabel为'已取消'
+		row.statusLabel = '已取消';
+	} catch (e) {
+		ElMessage.error('取消失败');
+	} finally {
+		cancellingIds.value = cancellingIds.value.filter(id => id !== row.id);
 	}
 }
 
