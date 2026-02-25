@@ -34,18 +34,12 @@
             <el-button
               link
               type="primary"
+              class="action-link"
+              :class="{ 'action-link-disabled': normalizeStatus(item.status) === 'approved' || normalizeStatus(item.status) === 'rejected' }"
               :disabled="normalizeStatus(item.status) === 'approved' || normalizeStatus(item.status) === 'rejected'"
               @click="openAuditDialog(item)"
             >
               审核
-            </el-button>
-            <el-button
-              link
-              type="warning"
-              :disabled="normalizeStatus(item.status) === 'pending'"
-              @click="openEditDialog(item)"
-            >
-              修改
             </el-button>
             <el-button link type="danger" @click="handleDelete(item)">删除</el-button>
           </div>
@@ -102,20 +96,6 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="editVisible" title="编辑公告" width="900px" destroy-on-close>
-      <el-form :model="editForm" label-position="top">
-        <el-form-item label="标题">
-          <el-input v-model="editForm.title" placeholder="请输入公告标题" />
-        </el-form-item>
-        <el-form-item label="内容">
-          <el-input v-model="editForm.content" type="textarea" :rows="6" placeholder="请输入公告内容" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button type="warning" :loading="editing" @click="handleSaveEdit">保存修改</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -137,7 +117,6 @@ type NoticeRow = {
 
 const loading = ref(false)
 const publishing = ref(false)
-const editing = ref(false)
 const auditLoading = ref(false)
 
 const allNotices = ref<NoticeRow[]>([])
@@ -148,7 +127,6 @@ const keyword = ref('')
 
 const publishVisible = ref(false)
 const auditVisible = ref(false)
-const editVisible = ref(false)
 
 const currentNotice = ref<NoticeRow | null>(null)
 
@@ -156,12 +134,6 @@ const publishForm = reactive({
   title: '',
   content: '',
   type: 'system',
-})
-
-const editForm = reactive({
-  id: 0,
-  title: '',
-  content: '',
 })
 
 const filteredNotices = computed(() => {
@@ -260,13 +232,6 @@ function openAuditDialog(row: NoticeRow) {
   auditVisible.value = true
 }
 
-function openEditDialog(row: NoticeRow) {
-  editForm.id = row.ID
-  editForm.title = row.title
-  editForm.content = row.content
-  editVisible.value = true
-}
-
 async function handlePublish() {
   if (!publishForm.title.trim() || !publishForm.content.trim()) {
     ElMessage.warning('请填写标题和内容')
@@ -310,28 +275,6 @@ async function handleAudit(status: 'approved' | 'rejected') {
     ElMessage.error(err)
   } finally {
     auditLoading.value = false
-  }
-}
-
-async function handleSaveEdit() {
-  if (!editForm.title.trim() || !editForm.content.trim()) {
-    ElMessage.warning('请填写标题和内容')
-    return
-  }
-  editing.value = true
-  try {
-    allNotices.value = allNotices.value.map((item) => {
-      if (item.ID !== editForm.id) return item
-      return {
-        ...item,
-        title: editForm.title,
-        content: editForm.content,
-      }
-    })
-    ElMessage.success('保存成功（前端演示）')
-    editVisible.value = false
-  } finally {
-    editing.value = false
   }
 }
 
@@ -451,6 +394,12 @@ onMounted(fetchNotices)
   display: flex;
   gap: 6px;
   padding-left: 16px;
+}
+.action-link-disabled {
+  color: #b7bdc8 !important;
+}
+:deep(.el-button.is-disabled.action-link-disabled) {
+  color: #b7bdc8 !important;
 }
 
 .footer-bar {

@@ -177,8 +177,8 @@
     </el-dialog>
 
     <el-dialog v-model="historyVisible" width="920px" align-center>
-      <template #header><div class="dialog-title">历史记录</div></template>
-      <el-table :data="historyRows" size="small">
+      <template #header><div class="dialog-title dialog-title-dark">历史记录</div></template>
+      <el-table :data="historyRows" size="small" :row-class-name="getHistoryRowClass">
         <el-table-column prop="time" label="时间" width="120" />
         <el-table-column prop="type" label="类型" width="70" />
         <el-table-column prop="size" label="大小" width="80" />
@@ -245,12 +245,14 @@ const exportEstimatedSize = computed(() => {
 
 const historyRows = ref(
   Array.from({ length: 6 }).map((_, idx) => ({
+    id: idx + 1,
     time: `2026.1.${13 - idx} 13:00`,
     type: idx % 2 === 0 ? '导出' : '备份',
     size: `${(10 + idx * 1.8).toFixed(1)}MB`,
     scope: idx % 2 === 0 ? '失物招领记录、认领记录' : '全量系统数据',
     duration: `${2 + idx}分${20 + idx}秒`,
     status: '成功',
+    deleted: false,
   }))
 )
 
@@ -262,12 +264,14 @@ function formatNow() {
 
 function pushHistory(type: '备份' | '导出', size: string, scope: string, duration = '1分36秒') {
   historyRows.value.unshift({
+    id: Date.now(),
     time: formatNow(),
     type,
     size,
     scope,
     duration,
     status: '成功',
+    deleted: false,
   })
 }
 
@@ -339,16 +343,26 @@ function downloadExportFile() {
 }
 
 function handleHistoryOp(action: string, row: any, index: number) {
+  if (!row) return
   if (action === '下载') {
+    if (row.deleted) {
+      ElMessage.warning('该记录已删除，请先还原')
+      return
+    }
     ElMessage.success(`${row.type}文件下载已开始`)
     return
   }
   if (action === '还原') {
+    row.deleted = false
     ElMessage.success('已提交还原任务')
     return
   }
-  historyRows.value.splice(index, 1)
+  row.deleted = true
   ElMessage.success('历史记录已删除')
+}
+
+function getHistoryRowClass({ row }: { row: any }) {
+  return row?.deleted ? 'history-row-deleted' : ''
 }
 </script>
 
@@ -386,6 +400,7 @@ function handleHistoryOp(action: string, row: any, index: number) {
 .danger { color: #dc2626; font-weight: 700; }
 .tips { margin: 8px 0 0 16px; padding: 0; color: #374151; font-size: 13px; line-height: 1.6; }
 .dialog-title { text-align: center; font-size: 18px; font-weight: 700; }
+.dialog-title-dark { color: #111827; }
 .dialog-body { font-size: 14px; color: #1f2937; line-height: 1.8; }
 .dialog-btns { display: flex; justify-content: center; gap: 12px; }
 .mt8 { margin-top: 8px; }
@@ -394,6 +409,19 @@ function handleHistoryOp(action: string, row: any, index: number) {
 .op-blue { color: #6366f1; margin-right: 8px; text-decoration: none; }
 .op-orange { color: #f59e0b; margin-right: 8px; text-decoration: none; }
 .op-red { color: #ce6c6c; text-decoration: none; }
+:deep(.history-row-deleted td) {
+  background: #f4f5f7 !important;
+  color: #b6bcc8 !important;
+}
+:deep(.history-row-deleted .op-blue),
+:deep(.history-row-deleted .op-red) {
+  color: #b6bcc8 !important;
+  pointer-events: none;
+}
+:deep(.history-row-deleted .op-orange) {
+  color: #f59e0b !important;
+  pointer-events: auto;
+}
 :deep(.el-pagination.is-background .el-pager li.is-active) { background-color: #e6a23c; }
 :deep(.el-input__inner),
 :deep(.el-checkbox__label),

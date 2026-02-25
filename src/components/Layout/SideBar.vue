@@ -4,7 +4,7 @@
       <div class="menu-group">
         <div class="group-title" @click="isExpanded = !isExpanded">
           <div class="title-left">
-            <img src="/路径@2.png" style="width: 16px; height: 16px;">
+            <img src="/路径@2.png" class="menu-icon" />
             <span>消息通知</span>
           </div>
           <span :class="['arrow-icon', { 'is-rotated': !isExpanded }]">&#9662;</span>
@@ -21,7 +21,7 @@
             <span class="red-dot-placeholder">
               <span v-if="shouldShowDot(item.dotKey)" class="red-dot"></span>
             </span>
-            <img :src="`/路径@${4+idx}.png`" style="width: 16px; height: 16px;">
+            <img :src="`/路径@${4 + idx}.png`" class="menu-icon" />
             <span>{{ item.label }}</span>
           </div>
         </div>
@@ -35,7 +35,7 @@
           :class="{ active: currentTargetId === session.target_id }"
           @click="handleSessionClick(session.target_id, session.target_name)"
         >
-          <img :src="session.avatar || '/头像框@7.png'" style="width: 32px; height: 32px; border-radius: 50%;"></img>
+          <img :src="session.avatar || '/头像框@7.png'" class="contact-avatar" />
           <div class="contact-info">
             <div class="contact-name">{{ session.target_name }}</div>
             <div class="contact-status">{{ session.last_msg || '点击查看聊天记录' }}</div>
@@ -65,40 +65,18 @@ const chatSessionStore = useChatSessionStore()
 
 type DotKey = MessageScope
 
-// 菜单项配置，dotKey加上类型断言
 const menuItems = [
-  {
-    label: '帖子动态',
-    route: '/StudentHome/message/activities',
-    dotKey: 'activity' as DotKey,
-  },
-  {
-    label: '招领进度',
-    route: '/StudentHome/message/progress',
-    dotKey: 'claim_progress' as DotKey,
-  },
-  {
-    label: '系统公告',
-    route: '/StudentHome/message/announce',
-    dotKey: 'announcement' as DotKey,
-  },
-  {
-    label: '公告栏',
-    route: '/StudentHome/message/notice_board',
-    dotKey: '' as DotKey,
-  },
+  { label: '帖子动态', route: '/StudentHome/message/activities', dotKey: 'activity' as DotKey },
+  { label: '招领进度', route: '/StudentHome/message/progress', dotKey: 'claim_progress' as DotKey },
+  { label: '系统公告', route: '/StudentHome/message/announce', dotKey: 'announcement' as DotKey },
+  { label: '公告栏', route: '/StudentHome/message/notice_board', dotKey: '' as DotKey },
 ]
 
-const shouldShowDot = (dotKey: DotKey) => {
-  return messageNoticeStore.hasScopeUnread(dotKey)
-}
+const shouldShowDot = (dotKey: DotKey) => messageNoticeStore.hasScopeUnread(dotKey)
 
-// 当前高亮index
 const activeIndex = ref(0)
 
-// 根据当前路由自动高亮
 const updateActiveIndex = () => {
-  // 主页和个人中心时不高亮任何侧栏item
   if (route.path === '/StudentHome' || route.path === '/StudentHome/' || route.path === '/StudentHome/profile') {
     activeIndex.value = -1
     return
@@ -119,7 +97,7 @@ watch(
     if (!matchedItem) return
     messageNoticeStore.clearScopeUnread(matchedItem.dotKey)
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 watch(
@@ -128,7 +106,7 @@ watch(
     if (!path.startsWith('/StudentHome/message')) return
     await chatSessionStore.fetchSessions()
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 onMounted(async () => {
@@ -136,7 +114,6 @@ onMounted(async () => {
   await chatSessionStore.fetchSessions()
 })
 
-// 点击跳转
 const handleMenuClick = (idx: number) => {
   activeIndex.value = idx
   const selected = menuItems[idx]
@@ -151,9 +128,7 @@ const handleMenuClick = (idx: number) => {
 const handleSessionClick = (targetId: number, targetName: string) => {
   router.push({
     path: `/StudentHome/message/chat/${targetId}`,
-    query: {
-      target_name: targetName
-    }
+    query: { target_name: targetName },
   })
 }
 </script>
@@ -161,20 +136,31 @@ const handleSessionClick = (targetId: number, targetName: string) => {
 <style scoped>
 .side-bar-container {
   display: flex;
+<<<<<<< HEAD
+=======
+  background-color: #fff;
+>>>>>>> a6092cebaf040125bcab67fd236cbd0d439b05b1
   min-width: 240px;
   height: 100%;
 }
+
 .side-bar {
   width: 240px;
-  background-color: #fff; /* 白色*/
+  background-color: #fff;
   padding: 20px 0;
   display: flex;
   flex-direction: column;
   gap: 20px;
+<<<<<<< HEAD
   border-right: 1px solid #f6e7d8; /* 增加分割线 */
   flex: 1 1 0;
   min-height: 100vh;
   box-sizing: border-box;
+=======
+  border-right: 1px solid #f6e7d8;
+  height: 100%;
+  overflow-y: auto;
+>>>>>>> a6092cebaf040125bcab67fd236cbd0d439b05b1
 }
 
 .menu-group {
@@ -189,7 +175,7 @@ const handleSessionClick = (targetId: number, targetName: string) => {
   padding: 10px 20px;
   cursor: pointer;
   color: #333;
-  font-weight: bold;
+  font-weight: 700;
   font-size: 15px;
 }
 
@@ -197,6 +183,11 @@ const handleSessionClick = (targetId: number, targetName: string) => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.menu-icon {
+  width: 16px;
+  height: 16px;
 }
 
 .arrow-icon {
@@ -220,15 +211,14 @@ const handleSessionClick = (targetId: number, targetName: string) => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 20px 12px 42px; /* 增加左缩进 */
+  padding: 12px 20px 12px 42px;
   cursor: pointer;
   color: #666;
   font-size: 15px;
   transition: all 0.2s;
   border-radius: 16px;
   position: relative;
-  background: transparent;
-  margin: 0;
+  margin: 0 6px;
 }
 
 .menu-item:hover {
@@ -240,10 +230,6 @@ const handleSessionClick = (targetId: number, targetName: string) => {
   background-color: #fff7ed;
   color: #f97316;
   border-right: 4px solid #f97316;
-  /* 关键：加白色外圈 */
-  box-shadow: 0 0 0 6px #fff;
-  z-index: 1;
-  margin: 0 6px; /* 让白色空隙可见 */
 }
 
 .red-dot-placeholder {
@@ -287,6 +273,12 @@ const handleSessionClick = (targetId: number, targetName: string) => {
   border: 1px solid #f6b65f;
 }
 
+.contact-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
 .contact-info {
   display: flex;
   flex-direction: column;
@@ -294,7 +286,7 @@ const handleSessionClick = (targetId: number, targetName: string) => {
 
 .contact-name {
   font-size: 14px;
-  font-weight: bold;
+  font-weight: 700;
   color: #333;
 }
 
@@ -328,26 +320,5 @@ const handleSessionClick = (targetId: number, targetName: string) => {
   color: #999;
   font-size: 13px;
   padding: 8px 0;
-}
-
-/* 联系人卡片左侧红色数字气泡 */
-.contact-card .contact-avatar {
-  position: relative;
-}
-.contact-card .contact-avatar-badge {
-  position: absolute;
-  left: -8px;
-  top: -8px;
-  width: 18px;
-  height: 18px;
-  background: #ff2222;
-  color: #fff;
-  border-radius: 50%;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  z-index: 2;
 }
 </style>

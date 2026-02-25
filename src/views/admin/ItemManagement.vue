@@ -29,144 +29,156 @@
       </el-button>
     </div>
 
-    <div class="filter-area">
-      <div class="filter-groups">
-        <div class="filter-row">
-          <el-button
-            v-for="opt in typeOptions"
-            :key="opt.value"
-            :type="filterType === opt.value ? 'warning' : 'default'"
-            round
-            size="small"
-            @click="filterType = opt.value; currentPage = 1; fetchItemList()"
-          >{{ opt.label }}</el-button>
-        </div>
+    <div class="filter-illustration-section">
+      <div class="filter-area">
+        <div class="filter-groups">
+          <div class="filter-row">
+            <el-button
+              v-for="opt in typeOptions"
+              :key="opt.value"
+              :type="filterType === opt.value ? 'warning' : 'default'"
+              round
+              size="small"
+              @click="applyFilter('type', opt.value)"
+            >{{ opt.label }}</el-button>
+          </div>
 
-        <div class="filter-row">
-          <el-button
-            v-for="opt in campusFilterOptions"
-            :key="opt.value"
-            :type="filterCampus === opt.value ? 'warning' : 'default'"
-            round
-            size="small"
-            @click="filterCampus = opt.value; currentPage = 1; fetchItemList()"
-          >{{ opt.label }}</el-button>
-        </div>
+          <div class="filter-row">
+            <el-button
+              v-for="opt in campusFilterOptions"
+              :key="opt.value"
+              :type="filterCampus === opt.value ? 'warning' : 'default'"
+              round
+              size="small"
+              @click="applyFilter('campus', opt.value)"
+            >{{ opt.label }}</el-button>
+          </div>
 
-        <div class="filter-row">
-          <el-button
-            v-for="opt in statusOptions"
-            :key="opt.value"
-            :type="filterStatus === opt.value ? 'warning' : 'default'"
-            round
-            size="small"
-            @click="filterStatus = opt.value; currentPage = 1; fetchItemList()"
-          >{{ opt.label }}</el-button>
-        </div>
+          <div class="filter-row">
+            <el-button
+              v-for="opt in statusOptions"
+              :key="opt.value"
+              :type="filterStatus === opt.value ? 'warning' : 'default'"
+              round
+              size="small"
+              @click="applyFilter('status', opt.value)"
+            >{{ opt.label }}</el-button>
+          </div>
 
-        <div class="filter-row">
-          <el-button
-            v-for="opt in timeOptions"
-            :key="opt.value"
-            :type="filterTime === opt.value ? 'warning' : 'default'"
-            round
-            size="small"
-            @click="filterTime = opt.value; currentPage = 1; fetchItemList()"
-          >{{ opt.label }}</el-button>
-        </div>
+          <div class="filter-row">
+            <el-button
+              v-for="opt in timeOptions"
+              :key="opt.value"
+              :type="filterTime === opt.value ? 'warning' : 'default'"
+              round
+              size="small"
+              @click="applyFilter('time', opt.value)"
+            >{{ opt.label }}</el-button>
+          </div>
 
-        <div class="filter-row">
-          <el-button
-            v-for="opt in categoryFilterOptions"
-            :key="opt.value"
-            :type="filterCategory === opt.value ? 'warning' : 'default'"
-            round
-            size="small"
-            @click="filterCategory = opt.value; currentPage = 1; fetchItemList()"
-          >{{ opt.label }}</el-button>
+          <div class="filter-row">
+            <el-button
+              v-for="opt in categoryFilterOptions"
+              :key="opt.value"
+              :type="filterCategory === opt.value ? 'warning' : 'default'"
+              round
+              size="small"
+              @click="applyFilter('category', opt.value)"
+            >{{ opt.label }}</el-button>
+          </div>
         </div>
+      </div>
+      <div class="filter-illustration" aria-hidden="true">
+        <img src="/6副.png" alt="物品示意图" />
       </div>
     </div>
 
-    <div class="card-grid" v-loading="loading">
-      <div
-        v-for="item in itemList"
-        :key="item.id ?? item.ID"
-        class="item-card"
-        :class="{ 'card-selected': batchMode && selectedIds.includes(item.id ?? item.ID) }"
-        @click="batchMode ? toggleSelect(item) : showItemDetail(item)"
-      >
-        <div v-if="batchMode" class="card-checkbox" @click.stop>
-          <el-checkbox
-            :model-value="selectedIds.includes(item.id ?? item.ID)"
-            @change="toggleSelect(item)"
-          />
-        </div>
+    <div class="list-shell" :class="{ 'is-switching': switching }">
+      <div class="card-grid" v-loading="loading">
+        <div
+          v-for="item in itemList"
+          :key="item.id ?? item.ID"
+          class="item-card"
+          :class="{ 'card-selected': batchMode && selectedIds.includes(item.id ?? item.ID) }"
+          @click="batchMode ? toggleSelect(item) : showItemDetail(item)"
+        >
+          <div v-if="batchMode" class="card-checkbox" @click.stop>
+            <el-checkbox
+              :model-value="selectedIds.includes(item.id ?? item.ID)"
+              @change="toggleSelect(item)"
+            />
+          </div>
 
-        <div class="card-body">
-          <div class="card-info">
-            <p class="card-title">物品名称：{{ item.title || item.category || '--' }}</p>
-            <p>{{ isLost(item) ? '丢失' : '拾取' }}时间：{{ item.time || '--' }}</p>
-            <p>{{ isLost(item) ? '丢失' : '拾取' }}地点：{{ item.location || '--' }}</p>
+          <div class="card-body">
+            <div class="card-info">
+              <p class="card-title">物品名称：{{ item.title || item.category || '--' }}</p>
+              <p>{{ isLost(item) ? '丢失' : '拾取' }}时间：{{ item.time || '--' }}</p>
+              <p>{{ isLost(item) ? '丢失' : '拾取' }}地点：{{ item.location || '--' }}</p>
+            </div>
+            <el-icon class="card-more" :size="20" color="#999"><MoreFilled /></el-icon>
           </div>
-          <el-icon class="card-more" :size="20" color="#999"><MoreFilled /></el-icon>
-        </div>
 
-        <div class="card-tags">
-          <div class="tag-item">
-            <span class="tag-dot" :class="canEditInfo(item) ? 'green' : 'gray'"></span>
-            <el-tag size="small" :type="canEditInfo(item) ? 'success' : 'info'" effect="plain" round>
-              {{ canEditInfo(item) ? '可编辑（招领帖）' : '不可编辑（失物帖）' }}
-            </el-tag>
+          <div class="card-tags">
+            <div class="tag-item">
+              <span class="tag-dot" :class="canEditInfo(item) ? 'green' : 'gray'"></span>
+              <el-tag size="small" :type="canEditInfo(item) ? 'success' : 'info'" effect="plain" round>
+                {{ canEditInfo(item) ? '可编辑（招领帖）' : '不可编辑（失物帖）' }}
+              </el-tag>
+            </div>
+            <div class="tag-item" v-if="item.campus">
+              <span class="tag-dot blue"></span>
+              <el-tag size="small" type="info" effect="plain" round>校区：{{ item.campus }}</el-tag>
+            </div>
+            <div class="tag-item" v-if="item.category">
+              <span class="tag-dot orange"></span>
+              <el-tag size="small" type="warning" effect="plain" round>物品类型：{{ item.category }}</el-tag>
+            </div>
+            <div class="tag-item">
+              <span class="tag-dot yellow"></span>
+              <el-tag size="small" type="warning" effect="plain" round>悬赏：{{ getBountyText(item) }}</el-tag>
+            </div>
+            <div class="tag-item">
+              <span class="tag-dot" :class="isPublisherClaimed(item) ? 'purple' : 'gray'"></span>
+              <el-tag size="small" :type="isPublisherClaimed(item) ? 'primary' : 'info'" effect="plain" round>
+                {{ isPublisherClaimed(item) ? '发帖者已认领' : '发帖者待认领' }}
+              </el-tag>
+            </div>
           </div>
-          <div class="tag-item" v-if="item.campus">
-            <span class="tag-dot blue"></span>
-            <el-tag size="small" type="info" effect="plain" round>校区：{{ item.campus }}</el-tag>
-          </div>
-          <div class="tag-item" v-if="item.category">
-            <span class="tag-dot orange"></span>
-            <el-tag size="small" type="warning" effect="plain" round>物品类型：{{ item.category }}</el-tag>
-          </div>
-          <div class="tag-item">
-            <span class="tag-dot yellow"></span>
-            <el-tag size="small" type="warning" effect="plain" round>悬赏：{{ getBountyText(item) }}</el-tag>
-          </div>
-        </div>
 
-        <div class="card-images" v-if="[item.img1, item.img2].filter(Boolean).length">
-          <el-image
-            v-for="(img, idx) in [item.img1, item.img2].filter(Boolean)"
-            :key="idx"
-            :src="img"
-            fit="cover"
-            class="card-img"
-            @click.stop
-          />
+          <div class="card-images" v-if="[item.img1, item.img2].filter(Boolean).length">
+            <el-image
+              v-for="(img, idx) in [item.img1, item.img2].filter(Boolean)"
+              :key="idx"
+              :src="img"
+              fit="cover"
+              class="card-img"
+              @click.stop
+            />
+          </div>
+          <div class="card-images" v-else>
+            <div class="card-img-placeholder">无图片</div>
+          </div>
+          <div class="card-footer">
+            <span class="card-date">{{ item.CreatedAt ? new Date(item.CreatedAt).toLocaleString('zh-CN') : '' }}发布</span>
+            <span class="card-status" :class="getStatusClass(item.status)">
+              {{ getStatusLabel(item.status) }}
+            </span>
+          </div>
         </div>
-        <div class="card-images" v-else>
-          <div class="card-img-placeholder">无图片</div>
-        </div>
-        <div class="card-footer">
-          <span class="card-date">{{ item.CreatedAt ? new Date(item.CreatedAt).toLocaleString('zh-CN') : '' }}发布</span>
-          <span class="card-status" :class="getStatusClass(item.status)">
-            {{ getStatusLabel(item.status) }}
-          </span>
+        <div v-if="!loading && itemList.length === 0" class="empty-state">
+          <el-empty description="暂无物品数据" />
         </div>
       </div>
 
-      <div v-if="!loading && itemList.length === 0" class="empty-state">
-        <el-empty description="暂无物品数据" />
+      <div class="pagination-wrapper">
+        <el-pagination
+          v-model:current-page="currentPage"
+          :page-size="pageSize"
+          :total="total"
+          layout="prev, pager, next"
+          @current-change="fetchItemList"
+        />
       </div>
-    </div>
-
-    <div class="pagination-wrapper">
-      <el-pagination
-        v-model:current-page="currentPage"
-        :page-size="pageSize"
-        :total="total"
-        layout="prev, pager, next"
-        @current-change="fetchItemList"
-      />
     </div>
 
     <el-dialog v-model="detailVisible" width="720px" :show-close="true" top="6vh" @closed="resetDetail">
@@ -283,6 +295,12 @@
             <span class="tag-dot yellow"></span>
             <el-tag type="warning" effect="plain" round>悬赏：{{ getBountyText(currentItem) }}</el-tag>
           </div>
+          <div class="tag-item">
+            <span class="tag-dot" :class="isPublisherClaimed(currentItem) ? 'purple' : 'gray'"></span>
+            <el-tag :type="isPublisherClaimed(currentItem) ? 'primary' : 'info'" effect="plain" round>
+              {{ isPublisherClaimed(currentItem) ? '发帖者已认领' : '发帖者待认领' }}
+            </el-tag>
+          </div>
         </div>
 
         <div class="detail-images">
@@ -322,6 +340,7 @@ const filterCampus = ref('')
 const filterStatus = ref('')
 const filterTime = ref('')
 const filterCategory = ref('')
+const switching = ref(false)
 const fullItemList = ref<any[]>([])
 
 const campusOptions = ['朝晖', '屏峰', '莫干山']
@@ -511,6 +530,16 @@ function canEditInfo(item: any) {
   return !isLost(item)
 }
 
+function isPublisherClaimed(item: any) {
+  const status = String(item?.status || '').toLowerCase()
+  return status === 'claimed'
+}
+
+function isVisibleStatus(item: any) {
+  const status = String(item?.status || '').toLowerCase()
+  return ['approved', 'matched', 'claimed'].includes(status)
+}
+
 
 async function fetchItemList() {
   loading.value = true
@@ -532,7 +561,7 @@ async function fetchItemList() {
     const list = (resData.list ?? resData.items ?? []).map((item: any) => ({
       ...item,
       id: item.id ?? item.ID,
-    }))
+    })).filter((item: any) => isVisibleStatus(item))
     if (!hasFilter) {
       itemList.value = list
       total.value = resData.total ?? list.length ?? 0
@@ -585,6 +614,31 @@ async function fetchItemList() {
 function handleSearch() {
   currentPage.value = 1
   fetchItemList()
+}
+
+async function applyFilter(key: 'type' | 'campus' | 'status' | 'time' | 'category', value: string) {
+  const currentMap: Record<'type' | 'campus' | 'status' | 'time' | 'category', string> = {
+    type: filterType.value,
+    campus: filterCampus.value,
+    status: filterStatus.value,
+    time: filterTime.value,
+    category: filterCategory.value,
+  }
+  if (currentMap[key] === value) return
+
+  if (key === 'type') filterType.value = value
+  if (key === 'campus') filterCampus.value = value
+  if (key === 'status') filterStatus.value = value
+  if (key === 'time') filterTime.value = value
+  if (key === 'category') filterCategory.value = value
+
+  currentPage.value = 1
+  switching.value = true
+  itemList.value = []
+  await fetchItemList()
+  requestAnimationFrame(() => {
+    switching.value = false
+  })
 }
 
 function parseTimeRange(val: string): { min: number; max: number | null } | null {
@@ -757,11 +811,40 @@ onMounted(() => {
   margin-right: auto;
 }
 
-.filter-area { display: flex; justify-content: space-between; margin-bottom: 20px; }
+.filter-illustration-section {
+  position: relative;
+  padding-right: 360px;
+  margin-bottom: 20px;
+}
+.filter-area { flex: 1; min-width: 0; }
 .filter-groups { flex: 1; }
 .filter-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.filter-illustration {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 340px;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+.filter-illustration img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
 
 .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.list-shell {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.list-shell.is-switching {
+  opacity: 0;
+  transform: translateY(6px);
+}
 
 .item-card {
   background: #fff;
@@ -771,6 +854,9 @@ onMounted(() => {
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 360px;
 }
 
 .item-card:hover { box-shadow: 0 4px 16px rgba(230, 162, 60, 0.2); }
@@ -800,12 +886,13 @@ onMounted(() => {
 .tag-dot.yellow { background: #f5c242; }
 .tag-dot.green { background: #67c23a; }
 .tag-dot.gray { background: #909399; }
+.tag-dot.purple { background: #8b5cf6; }
 
-.card-images { display: flex; gap: 8px; }
+.card-images { display: flex; gap: 8px; min-height: 90px; }
 .card-img { width: 120px; height: 90px; border-radius: 6px; background: #f5f5f5; }
 .card-img-placeholder { width: 120px; height: 90px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; border-radius: 6px; }
 
-.card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+.card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 10px; }
 .card-date { font-size: 12px; color: #999; }
 .card-status { font-size: 13px; font-weight: bold; }
 .status-pass { color: #e6a23c; }
@@ -834,4 +921,26 @@ onMounted(() => {
 .detail-time { text-align: center; color: #999; font-size: 13px; margin-top: 12px; }
 
 .edit-form { margin-top: 8px; }
+
+@media (max-width: 1200px) {
+  .filter-illustration-section {
+    padding-right: 0;
+    gap: 12px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .filter-illustration {
+    position: static;
+    width: 100%;
+    height: 180px;
+    justify-content: flex-end;
+  }
+
+  .filter-illustration img {
+    width: 180px;
+    height: 100%;
+    object-fit: contain;
+  }
+}
 </style>

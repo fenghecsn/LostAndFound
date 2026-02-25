@@ -15,14 +15,20 @@
         </nav>
       </div>
       <div class="nav-right">
-        <el-tag type="warning" effect="dark" size="small" style="margin-right: 8px;">超级管理员</el-tag>
-        <el-button type="danger" round size="small" @click="handleLogout">退出登录</el-button>
-        <div class="user-info">
-          <div class="avatar-wrapper">
-            <img src="/头像框@2.png" alt="avatar-frame" class="avatar-frame" />
+        <el-dropdown trigger="click" placement="bottom-end">
+          <div class="user-info">
+            <div class="avatar-wrapper">
+              <img src="/头像框@2.png" alt="avatar-frame" class="avatar-frame" />
+            </div>
+            <span class="user-name">{{ userStore.username || '超管' }}</span>
+            <el-icon class="arrow-icon"><ArrowDown /></el-icon>
           </div>
-          <span class="user-name">{{ userStore.username || '超管' }}</span>
-        </div>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item @click="handleLogout">退出登录</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </header>
 
@@ -39,6 +45,7 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowDown } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
@@ -80,14 +87,15 @@ async function handleLogout() {
 .nav-links a:hover, .nav-links a.active, .nav-links a.router-link-active {
   color: #e6a23c; border-bottom-color: #e6a23c;
 }
-.nav-right { display: flex; align-items: center; gap: 16px; }
-.user-info { display: flex; align-items: center; gap: 8px; }
+.nav-right { display: flex; align-items: center; }
+.user-info { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
 .avatar-wrapper {
   width: 36px; height: 36px; border-radius: 50%; overflow: hidden;
   display: flex; align-items: center; justify-content: center;
 }
 .avatar-frame { width: 100%; height: 100%; object-fit: cover; }
 .user-name { font-size: 14px; color: #333; }
+.arrow-icon { color: #999; font-size: 12px; }
 .main-content { padding: 24px 40px; max-width: 1400px; margin: 0 auto; }
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
