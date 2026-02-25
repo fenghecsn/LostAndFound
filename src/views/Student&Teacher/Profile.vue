@@ -469,7 +469,8 @@ const statusOptions: Array<{ label: string; value: MyItemStatus }> = [
 	{ label: '已通过', value: 'approved' },
 	{ label: '已匹配', value: 'matched' },
 	{ label: '已认领', value: 'archived' },
-	{ label: '已驳回', value: 'rejected' }
+	{ label: '已驳回', value: 'rejected' },
+	{ label: '已取消', value: 'cancelled' }
 ]
 
 const editableStatuses = ['待审核', '已通过', '已驳回']
@@ -530,21 +531,22 @@ const resolveTypeLabel = (type?: string) => {
 }
 
 const normalizeStatus = (status?: string | number): string => {
-	if (typeof status === 'number') {
-		if (status === 0) return '待审核'
-		if (status === 1) return '已通过'
-		if (status === 2) return '已匹配'
-		if (status === 3) return '已认领'
-		if (status === 4) return '已驳回'
-	}
-	const raw = String(status || '').trim().toLowerCase()
-	if (!raw) return '待审核'
-	if (raw === '待审核' || raw === 'pending' || raw === 'in' || raw === 'reviewing') return '待审核'
-	if (raw === '已通过' || raw === 'approved' || raw === 'pass' || raw === 'passed') return '已通过'
-	if (raw === '已匹配' || raw === 'matched') return '已匹配'
-	if (raw === '已认领' || raw === 'claimed' || raw === 'archived') return '已认领'
-	if (raw === '已驳回' || raw === 'rejected' || raw === 'reject') return '已驳回'
-	return String(status)
+	   if (typeof status === 'number') {
+		   if (status === 0) return '待审核'
+		   if (status === 1) return '已通过'
+		   if (status === 2) return '已匹配'
+		   if (status === 3) return '已认领'
+		   if (status === 4) return '已驳回'
+	   }
+	   const raw = String(status || '').trim().toLowerCase()
+	   if (!raw) return '待审核'
+	   if (raw === '待审核' || raw === 'pending' || raw === 'in' || raw === 'reviewing') return '待审核'
+	   if (raw === '已通过' || raw === 'approved' || raw === 'pass' || raw === 'passed') return '已通过'
+	   if (raw === '已匹配' || raw === 'matched') return '已匹配'
+	   if (raw === '已认领' || raw === 'claimed' || raw === 'archived') return '已认领'
+	   if (raw === '已驳回' || raw === 'rejected' || raw === 'reject') return '已驳回'
+	   if (raw === '已取消' || raw === 'cancelled' || raw === 'canceled') return '已取消'
+	   return String(status)
 }
 
 const normalizeClaimStatus = (status?: string | number): string => {
