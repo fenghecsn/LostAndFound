@@ -166,7 +166,7 @@ const getNoticeHint = (item: ClaimProgressItem) => {
 const getActionText = (item: ClaimProgressItem) => {
   const status = getClaimStatusType(item)
   if (status === 'approved') return '点此与对方进行沟通'
-  if (status === 'pending') return '点此查看原因'
+  if (status === 'rejected') return '点此查看原因'
   return ''
 }
 
@@ -219,7 +219,7 @@ const handlePageChange = (page: number) => {
 const handleAction = async (item: ClaimProgressItem) => {
   const status = getClaimStatusType(item)
   try {
-    if (status === 'pending') {
+    if (status === 'rejected') {
       if (!item.claim_id) {
         ElMessage.warning('缺少认领ID，无法查看原因')
         return
