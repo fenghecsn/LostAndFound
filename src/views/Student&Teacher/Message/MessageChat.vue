@@ -14,6 +14,9 @@
       <el-button v-if="showConfirmButton" type="warning" round class="confirm-btn" @click="handleConfirmClaim">
         确认招领
       </el-button>
+      <el-button v-else-if="String(route.query.can_confirm || '') === '1'" type="success" round class="confirm-btn" disabled>
+        已招领
+      </el-button>
     </div>
 
     <div class="message-list" ref="messageListRef">
@@ -65,12 +68,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getChatHistory, sendMessage, signRead, type GetChatHistoryResponse } from '@/api/chat'
 import { normalizeResourceUrl } from '@/utils/url'
 import { uploadImagesAndGetUrls } from '@/utils/imageUpload'
 import { useChatSessionStore } from '@/stores/chatSession'
-
+import { ca, tr } from 'element-plus/es/locales.mjs'
+import { confirmClaim } from '@/api/chat'
 const route = useRoute()
 const chatSessionStore = useChatSessionStore()
 
@@ -91,7 +95,8 @@ const itemInfo = computed(() => ({
   img: String(route.query.img || '')
 }))
 
-const showConfirmButton = computed(() => String(route.query.can_confirm || '') === '1')
+const claimConfirmed = ref(false)
+const showConfirmButton = computed(() => String(route.query.can_confirm || '') === '1' && !claimConfirmed.value)
 
 const getSelfName = () => String(localStorage.getItem('nickname') || localStorage.getItem('username') || '我')
 
@@ -330,10 +335,35 @@ const handleImageFileChange = async (event: Event) => {
   }
 }
 
-const handleConfirmClaim = () => {
-  ElMessage.info('确认招领逻辑待接入接口')
+const handleConfirmClaim = async () => {
+  const itemId = itemInfo.value.item_id
+  if (!itemId) {
+    ElMessage.warning('物品信息无效，无法确认招领')
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      '确认要认领该物品吗？此操作不可撤销。',
+      '确认招领',
+      {
+        confirmButtonText: '确认认领',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    const response = await confirmClaim(itemId)
+    if (Number(response?.data?.code) !== 200) {
+      ElMessage.warning(response?.data?.msg || '确认招领失败')
+      return
+    }
+    ElMessage.success(response?.data?.msg || '确认招领成功')
+    claimConfirmed.value = true
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('确认招领失败，请稍后重试')
+    }
+  }
 }
-
 watch(
   () => route.fullPath,
   async () => {
