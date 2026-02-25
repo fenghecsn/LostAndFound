@@ -136,10 +136,6 @@ const handleSessionClick = (targetId: number, targetName: string) => {
 <style scoped>
 .side-bar-container {
   display: flex;
-<<<<<<< HEAD
-=======
-  background-color: #fff;
->>>>>>> a6092cebaf040125bcab67fd236cbd0d439b05b1
   min-width: 240px;
   height: 100%;
 }
@@ -151,16 +147,10 @@ const handleSessionClick = (targetId: number, targetName: string) => {
   display: flex;
   flex-direction: column;
   gap: 20px;
-<<<<<<< HEAD
   border-right: 1px solid #f6e7d8; /* 增加分割线 */
   flex: 1 1 0;
   min-height: 100vh;
   box-sizing: border-box;
-=======
-  border-right: 1px solid #f6e7d8;
-  height: 100%;
-  overflow-y: auto;
->>>>>>> a6092cebaf040125bcab67fd236cbd0d439b05b1
 }
 
 .menu-group {
