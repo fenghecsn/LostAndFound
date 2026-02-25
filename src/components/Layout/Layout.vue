@@ -58,8 +58,7 @@ onBeforeUnmount(() => {
   position: sticky;
   top: 80px;
   align-self: flex-start;
-  max-height: calc(100vh - 100px);
-  overflow-y: auto;
+  overflow: visible;
   transition: all 0.3s ease;
 }
 
@@ -72,7 +71,7 @@ onBeforeUnmount(() => {
 
 .main-content {
   flex: 1;
-  background: white;
+  /* background: white; */
   border-radius: 8px;
   padding: 20px;
   min-width: 0;

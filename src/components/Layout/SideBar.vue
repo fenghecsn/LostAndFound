@@ -161,8 +161,8 @@ const handleSessionClick = (targetId: number, targetName: string) => {
 <style scoped>
 .side-bar-container {
   display: flex;
-  background-color: #fff; /* 白色*/
   min-width: 240px;
+  height: 100%;
 }
 .side-bar {
   width: 240px;
@@ -172,6 +172,9 @@ const handleSessionClick = (targetId: number, targetName: string) => {
   flex-direction: column;
   gap: 20px;
   border-right: 1px solid #f6e7d8; /* 增加分割线 */
+  flex: 1 1 0;
+  min-height: 100vh;
+  box-sizing: border-box;
 }
 
 .menu-group {

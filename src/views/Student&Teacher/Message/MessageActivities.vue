@@ -217,7 +217,6 @@ onMounted(() => {
 <style scoped>
 .activities-page {
   padding: 12px;
-  background: #fff3e4;
 }
 
 .activities-list {

@@ -228,6 +228,7 @@ onMounted(() => {
 
 <style scoped>
 .progress-page {
+  color: #fff3e4;
   padding: 12px;
 }
 
