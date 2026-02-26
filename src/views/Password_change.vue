@@ -121,8 +121,14 @@ const handleChangePassword = async () => {
 
       if (response?.data?.code === 200) {
         userStore.setFirstLogin(false)
-        ElMessage.success(response.data.msg || '密码修改成功')
-        router.push(getHomePathByRole(userStore.role))
+        ElMessage.success(response?.data?.msg || '密码修改成功')
+
+        // 如果是学生/老师角色，跳转到公告栏进行强制阅读
+        if (userStore.role === 1) {
+          router.push('/StudentHome/message/notice_board?mandatory=true')
+        } else {
+          router.push(getHomePathByRole(userStore.role))
+        }
         return
       }
 

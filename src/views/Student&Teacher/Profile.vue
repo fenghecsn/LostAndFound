@@ -1212,10 +1212,19 @@ const handleChangePassword = async () => {
 				new_password: passwordForm.new_password
 			})
 
-			if (hasCodeField(response?.data)) {
-				userStore.setFirstLogin(false)
+			if (response?.data?.code === 200) {
+				// 修改成功后清空表单，并提示成功，不进行页面跳转
+				passwordForm.old_password = ''
+				passwordForm.new_password = ''
+				passwordForm.confirm_password = ''
+				if (passwordFormRef.value) {
+					passwordFormRef.value.resetFields()
+				}
 				ElMessage.success(response.data.msg || '密码修改成功')
-				router.push(getHomePathByRole(userStore.role))
+				// 如果是从强制修改密码过来的状态，更新一下状态（虽然此处是个人中心，一般不是强制状态）
+				if (userStore.firstLogin) {
+					userStore.setFirstLogin(false)
+				}
 				return
 			}
 

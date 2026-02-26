@@ -49,8 +49,8 @@
         class="hidden-image-input"
         @change="handleImageFileChange"
       />
-      <el-button class="image-btn" :loading="sending" @click="triggerImageSelect">发图片</el-button>
       <el-input
+        class="message-input"
         v-model="content"
         type="textarea"
         :rows="2"
@@ -60,7 +60,10 @@
         placeholder="请输入消息"
         @keydown.enter.exact.prevent="handleSend"
       />
-      <el-button type="primary" class="send-btn" :loading="sending" @click="handleSend">发送</el-button>
+      <div class="action-col">
+        <el-button class="image-btn" :loading="sending" @click="triggerImageSelect">发图片</el-button>
+        <el-button type="primary" class="send-btn" :loading="sending" @click="handleSend">发送</el-button>
+      </div>
     </div>
   </div>
 </template>
@@ -389,7 +392,9 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  min-height: 70vh;
+  height: calc(100vh - 170px);
+  min-height: 560px;
+  overflow: hidden;
 }
 
 .item-info-card {
@@ -430,8 +435,7 @@ onMounted(async () => {
   border-radius: 8px;
   padding: 16px;
   overflow-y: auto;
-  min-height: 420px;
-  max-height: 62vh;
+  min-height: 0;
 }
 
 .message-row {
@@ -511,18 +515,50 @@ onMounted(async () => {
   display: flex;
   gap: 10px;
   align-items: flex-end;
+  position: sticky;
+  bottom: 0;
+  z-index: 12;
+  background: #fff;
+  border-top: 1px solid #edd7b9;
+  border-radius: 8px 8px 0 0;
+  padding: 10px 12px;
 }
 
 .hidden-image-input {
   display: none;
 }
 
-.image-btn {
+.message-input {
+  flex: 1;
+}
+
+.message-input :deep(.el-textarea) {
+  display: block;
+}
+
+.message-input :deep(.el-textarea__inner) {
+  min-height: 78px;
+}
+
+.action-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: flex-end;
   flex-shrink: 0;
+}
+
+.action-col :deep(.el-button + .el-button) {
+  margin-left: 0;
+}
+
+.image-btn {
+  width: 72px;
   height: 36px;
 }
 
 .send-btn {
+  width: 72px;
   height: 36px;
 }
 </style>
