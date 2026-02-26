@@ -26,8 +26,10 @@ export interface ChangePasswordParams {
   new_password: string
 }
 
+export type FeedbackType = '反馈' |  '投诉'
+
 export interface SubmitFeedbackParams {
-  type: string
+  type: FeedbackType
   content: string
   contact: string
 }
