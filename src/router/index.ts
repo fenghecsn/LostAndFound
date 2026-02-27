@@ -19,6 +19,11 @@ const router = createRouter({
       name: 'ForgetPassword',
       component: () => import('../views/ForgetPassword.vue'),
     },
+    {
+      path: '/notice_board',
+      name: 'NoticeBoard',
+      component: () => import('../views/Student&Teacher/Message/NoticeBoard.vue'),
+    },
     // --- 学生端 ---
     {
       path: '/StudentHome',
@@ -194,6 +199,18 @@ router.beforeEach((to, from, next) => {
   if (token) {
     if (userStore.firstLogin && to.path !== '/password_change') {
       next('/password_change')
+      return
+    }
+
+    // 非首次登录且未确认公告栏，强制跳转公告栏
+    if (!userStore.firstLogin && !userStore.noticeConfirmed && to.path !== '/notice_board') {
+      next('/notice_board?mandatory=true')
+      return
+    }
+
+    // 已确认公告栏后，不允许再以 mandatory 模式访问
+    if (userStore.noticeConfirmed && to.path === '/notice_board' && to.query.mandatory === 'true') {
+      next(getHomePathByRole(role))
       return
     }
 

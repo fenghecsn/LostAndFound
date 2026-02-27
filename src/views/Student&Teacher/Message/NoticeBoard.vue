@@ -62,12 +62,20 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
 const route = useRoute()
+const userStore = useUserStore()
 
 const isChecked = ref(false)
 const isMandatory = ref(false)
+
+const getHomePathByRole = (role: number) => {
+  if (role === 3) return '/super'
+  if (role === 2) return '/admin'
+  return '/StudentHome'
+}
 
 onMounted(() => {
   // 检查是否为强制必读模式
@@ -85,9 +93,11 @@ const handleConfirm = () => {
   if (!isChecked.value) return
 
   if (isMandatory.value) {
+    // 标记公告已确认
+    userStore.setNoticeConfirmed(true)
     ElMessage.success('欢迎使用失物招领云平台')
-    // 强制必读后跳转到学生主页
-    router.replace('/StudentHome')
+    // 根据角色跳转到对应主页
+    router.replace(getHomePathByRole(userStore.role))
   }
 }
 </script>

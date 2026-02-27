@@ -139,13 +139,17 @@ const handleLogin = async () => {
 
       userStore.setFirstLogin(Boolean(isFirstLogin))
 
+      // 每次登录重置公告确认状态
+      userStore.setNoticeConfirmed(false)
+
       ElMessage.success('登录成功！')
 
       if (Boolean(isFirstLogin)) {
         ElMessage.warning('首次登录请先修改密码')
         router.push('/password_change')
       } else {
-        router.push(getHomePathByRole(userRole))
+        // 非首次登录，跳转到公告栏强制阅读
+        router.push('/notice_board?mandatory=true')
       }
     }
     else {
