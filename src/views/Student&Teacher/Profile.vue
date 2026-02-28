@@ -273,11 +273,11 @@
                 message="确定要取消发布吗？取消后帖子将不可见，但不会删除记录。"
                 confirm-text="确认取消"
                 cancel-text="取消"
-								:type="(scope.row.statusLabel === '已取消' || cancellingIds.includes(scope.row.id)) ? 'info' : 'warning'"
-								:disabled="scope.row.statusLabel === '已取消' || cancellingIds.includes(scope.row.id)"
+								:type="(!scope.row.canCancel || scope.row.statusLabel === '已取消' || cancellingIds.includes(scope.row.id)) ? 'info' : 'warning'"
+								:disabled="!scope.row.canCancel || scope.row.statusLabel === '已取消' || cancellingIds.includes(scope.row.id)"
 								@confirm="handleCancelPublished(scope.row)"
 							>取消</ConfirmButton>
-							<el-button size="small" round class="detail-btn" @click="openPublishedDetail(scope.row)">修改</el-button>
+							<el-button size="small" round class="detail-btn" :disabled="scope.row.statusLabel !== '待审核' && scope.row.statusLabel !== '已通过'" @click="openPublishedDetail(scope.row)">修改</el-button>
 						</div>
 					</template>
 				</el-table-column>
@@ -837,7 +837,7 @@ const fetchManagePublishedList = async () => {
 				statusLabel,
 				typeLabel,
 				claimStatusLabel: getClaimStatusLabelForPost(item, statusLabel),
-				canDelete: apiId > 0,
+				canDelete: statusLabel === '待审核',
 				canCancel: statusLabel === '已通过',
 				viewItem
 			}
