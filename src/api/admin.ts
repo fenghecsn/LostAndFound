@@ -116,14 +116,15 @@ export function rejectClaim(id: number, data?: RejectRecordRequest) {
 /** 获取公告列表（SuperAdmin 接口，Admin 也调用） */
 export async function getAnnouncements(params?: PaginationParams) {
   const query = { page_num: params?.page || 1, page_size: params?.pageSize || 50 }
+  type RequestOptions = {
+    params?: Record<string, unknown>
+    silentError?: boolean
+  }
   try {
-    return await request.get('/api/v1/super/announcements', {
-      params: query,
-      silentError: true,
-    } as any)
-  } catch (error: any) {
+    return await request.get('/api/v1/super/announcements', { params: query, silentError: true } as RequestOptions)
+  } catch (error: unknown) {
     // 公告列表对管理员页面属于“附加信息”，接口不可用时不阻塞页面
-    const status = Number(error?.response?.status || 0)
+    const status = Number(((error as { response?: { status?: number } })?.response?.status) || 0)
     if ([401, 403, 404, 405].includes(status)) {
       return {
         data: {
@@ -131,7 +132,7 @@ export async function getAnnouncements(params?: PaginationParams) {
           msg: '公告接口不可用，返回空列表',
           data: { list: [], total: 0 }
         }
-      } as any
+      }
     }
     throw error
   }
@@ -141,11 +142,12 @@ export async function getAnnouncements(params?: PaginationParams) {
 export async function createAnnouncement(data: { title: string; content: string; region: string; is_top?: boolean }) {
   try {
     return await request.post('/api/v1/admin/announcements', data)
-  } catch (error: any) {
-    if (Number(error?.response?.status || 0) === 404) {
+  } catch (err: unknown) {
+    const httpError = err as { response?: { status?: number } } | undefined
+    if (Number(httpError?.response?.status || 0) === 404) {
       return request.post('/api/v1/admin/announcement', data)
     }
-    throw error
+    throw err
   }
 }
 
