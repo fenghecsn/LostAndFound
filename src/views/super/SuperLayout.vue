@@ -7,7 +7,7 @@
           <span class="logo-text">失物招领 · 超管</span>
         </div>
         <nav class="nav-links">
-          <router-link to="/super/dashboard" :class="{ active: route.path === '/super/dashboard' }">系统设置</router-link>
+          <router-link to="/super/dashboard" :class="{ active: route.path === '/super/dashboard' }">全局管理</router-link>
           <router-link to="/super/users" :class="{ active: route.path === '/super/users' }">用户管理</router-link>
           <router-link to="/super/notices" :class="{ active: route.path === '/super/notices' }">公告管理</router-link>
           <router-link to="/super/data" :class="{ active: route.path === '/super/data' }">数据管理</router-link>
