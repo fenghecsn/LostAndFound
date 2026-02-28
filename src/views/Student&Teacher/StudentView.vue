@@ -116,6 +116,16 @@ const buildQueryParams = (params: ItemQuery): ItemQuery => {
     return Object.fromEntries(entries) as ItemQuery
 }
 
+const getDayRangeByFilter = (days: number | undefined): { min: number; max: number | null } | null => {
+    if (days === undefined) return null
+    if (days === 3) return { min: 0, max: 3 }
+    if (days === 7) return { min: 3, max: 7 }
+    if (days === 15) return { min: 7, max: 15 }
+    if (days === 30) return { min: 15, max: 30 }
+    if (days === 999) return { min: 30, max: null }
+    return null
+}
+
 const fetchData = async () => {
     loading.value = true
     try {
@@ -129,17 +139,20 @@ const fetchData = async () => {
 
         const list = Array.isArray(res.data?.data?.list) ? res.data.data.list : []
         const normalized = list.map((item) => normalizeItem(item))
+        const dayRange = getDayRangeByFilter(queryParams.days)
 
-        if (queryParams.days === 999) {
+        if (dayRange) {
             const now = Date.now()
-            const olderThan30 = normalized.filter((item) => {
+            const filteredByDays = normalized.filter((item) => {
                 const t = new Date(item.create_time || item.event_time || '').getTime()
                 if (!t || Number.isNaN(t)) return false
                 const diffDays = Math.floor((now - t) / (24 * 3600 * 1000))
-                return diffDays > 30
+                if (diffDays < dayRange.min) return false
+                if (dayRange.max !== null && diffDays >= dayRange.max) return false
+                return true
             })
-            itemList.value = olderThan30
-            total.value = olderThan30.length
+            itemList.value = filteredByDays
+            total.value = filteredByDays.length
             return
         }
 
