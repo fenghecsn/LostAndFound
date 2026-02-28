@@ -633,6 +633,7 @@ const normalizeClaimStatus = (status?: string | number): string => {
 	if (raw === '已完成' || raw === 'claimed' || raw === 'done' || raw === 'completed' || raw === 'matched') return '已完成'
 	if (raw === '已驳回' || raw === 'rejected' || raw === 'reject') return '已驳回'
 	if (raw === '已取消' || raw === 'cancelled' || raw === 'canceled') return '已取消'
+	if (raw === '已归档' || raw === 'archived') return '已归档'
 	return String(status)
 }
 

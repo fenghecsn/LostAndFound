@@ -122,6 +122,7 @@ export interface MyClaimItem {
   claimant_id?: number
   claimant?: MyClaimUser
   reject_reason?: string | null
+  peer_user_id?: number | null
   status?: string
   proof?: string
 }
