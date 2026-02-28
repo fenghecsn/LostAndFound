@@ -1,6 +1,6 @@
 import request from '@/utils/request'
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   code: number
   msg: string
   data: T
@@ -110,14 +110,52 @@ export interface SendMessageRequest {
   item_id?: number
 }
 
+export interface SuperStats {
+  total_users?: number
+  active_users?: number
+  total_items?: number
+  solved_items?: number
+  total_claims?: number
+  today_items?: number
+  [key: string]: unknown
+}
+
+export interface UpdateUserRequest {
+  username?: string
+  name?: string
+  nickname?: string
+  phone?: string
+  role?: number
+  is_active?: boolean
+  avatar?: string
+}
+
+type UserListCompatParams = PaginationParams & {
+  page_num?: number
+  page_size?: number
+  role?: number
+  keyword?: string
+}
+
+type AnnouncementCompatParams = PaginationParams & {
+  page_num?: number
+  page_size?: number
+}
+
+type FeedbackCompatParams = PaginationParams & {
+  page_num?: number
+  page_size?: number
+  status?: string
+}
+
 export const getSuperStatsApi = () =>
-  request<ApiResponse<any>>({
+  request<ApiResponse<SuperStats>>({
     url: '/api/v1/super/stats',
     method: 'GET',
   })
 
 export const cleanupDataApi = (data: CleanupRequest) =>
-  request<ApiResponse<any>>({
+  request<ApiResponse<null>>({
     url: '/api/v1/super/data/cleanup',
     method: 'POST',
     data,
@@ -211,7 +249,7 @@ export const sendMessageApi = (data: SendMessageRequest) =>
     data,
   })
 
-export const updateUserApi = (id: number, data: any) =>
+export const updateUserApi = (id: number, data: UpdateUserRequest) =>
   request<ApiResponse<null>>({
     url: `/api/v1/super/users/${id}`,
     method: 'PUT',
@@ -224,25 +262,25 @@ export const deleteUserApi = (id: number) =>
     method: 'DELETE',
   })
 
-export const getUserList = (params?: any) => {
+export const getUserList = (params?: UserListCompatParams) => {
   const newParams = {
     ...params,
     page_num: params?.page || params?.page_num || 1,
     page_size: params?.pageSize || params?.page_size || 10,
   }
-  return getUsersApi(newParams)
+  return getUsersApi(newParams as GetUsersParams)
 }
 
 export const getSuperStats = getSuperStatsApi
 export const cleanupExpiredData = cleanupDataApi
 
-export const getAnnouncements = (params?: any) => {
+export const getAnnouncements = (params?: AnnouncementCompatParams) => {
   const newParams = {
     ...params,
     page_num: params?.page || params?.page_num || 1,
     page_size: params?.pageSize || params?.page_size || 10,
   }
-  return getAnnouncementsApi(newParams)
+  return getAnnouncementsApi(newParams as PageParams)
 }
 
 export const createSystemAnnouncement = createSystemAnnouncementApi
@@ -257,13 +295,13 @@ export const sendMessage = sendMessageApi
 export const updateUser = updateUserApi
 export const deleteUser = deleteUserApi
 
-export const getFeedbacks = (params?: any) => {
+export const getFeedbacks = (params?: FeedbackCompatParams) => {
   const newParams = {
     ...params,
     page_num: params?.page || params?.page_num || 1,
     page_size: params?.pageSize || params?.page_size || 10,
   }
-  return getFeedbacksApi(newParams)
+  return getFeedbacksApi(newParams as GetFeedbacksParams)
 }
 
 export const replyFeedback = replyFeedbackApi
