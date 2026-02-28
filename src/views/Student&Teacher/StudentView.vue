@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive, computed } from 'vue'
 import { Search } from '@element-plus/icons-vue'
 import { getItemDetail, getItems, type Item, type ItemQuery, type RawItemFromApi } from '@/api/ResearchItems'
 import { ElMessage } from 'element-plus'
@@ -10,8 +10,14 @@ import { uploadImageApi } from '@/api/Img'
 import { extractUploadedUrl } from '@/utils/imageUpload'
 // --- 状态管理 ---
 const loading = ref(false)
-const itemList = ref<Item[]>([])
-const total = ref(0)
+const allFilteredItems = ref<Item[]>([]) // 存储所有过滤后的数据（客户端分页用）
+const currentPage = ref(1)
+const displayPageSize = 12
+const itemList = computed(() => {
+    const start = (currentPage.value - 1) * displayPageSize
+    return allFilteredItems.value.slice(start, start + displayPageSize)
+})
+const total = computed(() => allFilteredItems.value.length)
 const detailVisible = ref(false)
 const currentItem = ref<Item | null>(null)
 const applyVisible = ref(false)
@@ -128,21 +134,22 @@ const getDayRangeByFilter = (days: number | undefined): { min: number; max: numb
 const fetchData = async () => {
     loading.value = true
     try {
-        const res = await getItems(buildQueryParams(queryParams))
+        // 使用大 page_size 一次性获取所有数据，在客户端做过滤和分页
+        const fetchParams = { ...buildQueryParams(queryParams), page_num: 1, page_size: 999 }
+        const res = await getItems(fetchParams)
         if (Number(res?.data?.code) !== 200) {
-            itemList.value = []
-            total.value = 0
+            allFilteredItems.value = []
             ElMessage.warning(res?.data?.msg || '获取数据失败')
             return
         }
 
         const list = Array.isArray(res.data?.data?.list) ? res.data.data.list : []
-        const normalized = list.map((item) => normalizeItem(item))
+        let filtered = list.map((item) => normalizeItem(item)).filter((item) => item.status !== 'pending')
         const dayRange = getDayRangeByFilter(queryParams.days)
 
         if (dayRange) {
             const now = Date.now()
-            const filteredByDays = normalized.filter((item) => {
+            filtered = filtered.filter((item) => {
                 const t = new Date(item.create_time || item.event_time || '').getTime()
                 if (!t || Number.isNaN(t)) return false
                 const diffDays = Math.floor((now - t) / (24 * 3600 * 1000))
@@ -150,13 +157,9 @@ const fetchData = async () => {
                 if (dayRange.max !== null && diffDays >= dayRange.max) return false
                 return true
             })
-            itemList.value = filteredByDays
-            total.value = filteredByDays.length
-            return
         }
 
-        itemList.value = normalized
-        total.value = Number(res.data?.data?.total || normalized.length)
+        allFilteredItems.value = filtered
     } catch (error) {
         console.error(error)
         ElMessage.error('获取数据失败')
@@ -167,14 +170,13 @@ const fetchData = async () => {
 
 // 筛选项变更
 const handleFilterChange = () => {
-    queryParams.page_num = 1
+    currentPage.value = 1
     fetchData()
 }
 
-// 分页变更
+// 分页变更（客户端分页，无需重新请求）
 const handlePageChange = (page: number) => {
-    queryParams.page_num = page
-    fetchData()
+    currentPage.value = page
 }
 
 const openDetailDialog = async (item: Item) => {
@@ -448,7 +450,7 @@ onMounted(() => {
             v-if="total > 0"
             layout="prev, pager, next"
             :total="total"
-            :page-size="queryParams.page_size"
+            :page-size="displayPageSize"
             @current-change="handlePageChange"
             style="margin-top: 20px; justify-content: center;"
         />

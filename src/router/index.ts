@@ -74,14 +74,19 @@ const router = createRouter({
             },
             {
               path: 'announce',
-              name: '系统公告',
+              name: '所有公告',
               component: () => import('../views/Student&Teacher/Message/MessageAnnounce.vue'),
             },
             {
               path: 'notice_board',
               name: '公告栏',
               component: () => import('../views/Student&Teacher/Message/NoticeBoard.vue'),
-            }
+            },
+            {
+              path: 'system_board',
+              name: '系统通知',
+              component: () => import('../views/Student&Teacher/Message/SystemBoard.vue'),
+            },
           ]
         },
         {
