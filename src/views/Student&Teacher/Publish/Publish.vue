@@ -119,7 +119,7 @@
         />
       </div>
 
-      <div class="upload-hint">照片最多上传4张（选填）</div>
+      <div class="upload-hint">照片最多上传4张{{ publishType === 'found' ? '（必填）' : '（选填）' }}</div>
 
       <div class="actions">
         <ConfirmButton
@@ -228,6 +228,11 @@ const handleSubmit = async () => {
   const title = form.title.trim()
   if (!title) {
     ElMessage.warning('请填写物品名称')
+    return
+  }
+
+  if (publishType.value === 'found' && imageFiles.value.length === 0) {
+    ElMessage.warning('捡到帖必须上传至少一张照片')
     return
   }
 
