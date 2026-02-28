@@ -374,6 +374,7 @@ onMounted(() => {
   font-size: 30px;
   line-height: 1.35;
   font-weight: 600;
+  color: #222;
 }
 
 .action-btn {
