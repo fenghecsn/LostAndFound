@@ -323,7 +323,7 @@
 						<div class="table-actions">
 							<el-button size="small" round :disabled="!scope.row.canDelete">删除</el-button>
 							<el-button size="small" round type="warning" :disabled="!scope.row.canTalk">沟通</el-button>
-							<el-button size="small" round class="detail-btn" @click="openClaimDetail(scope.row)">修改</el-button>
+							<el-button size="small" round class="detail-btn" @click="openClaimDetail(scope.row)">详细</el-button>
 						</div>
 					</template>
 				</el-table-column>
@@ -366,13 +366,8 @@
 					</div>
 
 					<div class="claim-detail-block">
-						<div class="claim-detail-title">帖子描述</div>
-						<div class="claim-detail-text">{{ claimDetailData.item?.description || '-' }}</div>
-					</div>
-
-					<div class="claim-detail-block">
-						<div class="claim-detail-title">驳回/处理信息</div>
-						<div class="claim-detail-text">{{ claimDetailData.item?.reject_reason || claimDetailData.item?.process_method || '-' }}</div>
+						<div class="claim-detail-title">驳回原因</div>
+						<div class="claim-detail-text">{{ claimDetailData.reject_reason || '-' }}</div>
 					</div>
 
 					<div class="dialog-images">
