@@ -7,6 +7,7 @@ import type { Item } from '@/api/ResearchItems'
 interface Props {
   modelValue: boolean
   item: Item | null
+  hideAction?: boolean
 }
 
 const props = defineProps<Props>()
@@ -59,7 +60,7 @@ const handleAction = () => {
             <div class="line"><span class="label">物品特征：</span><span class="feature">{{ item.description || '暂无描述' }}</span></div>
           </div>
           <button
-            v-if="!isMatchedPost"
+            v-if="!isMatchedPost && !props.hideAction"
             class="action-btn"
             type="button"
             @click="handleAction"

@@ -60,6 +60,7 @@
     <ItemDetailDialog
       v-model="showDetailDialog"
       :item="currentDetailItem"
+      hide-action
     />
   </div>
 </template>

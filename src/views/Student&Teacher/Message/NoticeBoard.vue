@@ -1,59 +1,62 @@
 <template>
   <div class="notice-board-bg">
     <div class="notice-board-card">
-      <div class="notice-title">公告栏</div>
+      <div class="notice-title-wrap">
+        <div class="notice-title">公告栏</div>
+      </div>
+      <div class="notice-divider"></div>
+
       <div class="notice-content">
-        <h3>平台简介</h3>
-        <p>亲爱的老师/同学：为提升失物招领效率，解决传统招领信息分散、响应滞后等问题，我们正式推出失物招领云平台。该平台集信息登记、智能匹配、实时通知于一体，让您的遗失物品“码码可循，拾获物品有处可交”。</p>
-        <h4>【使用指南】</h4>
-        <ul>
-          <li>首次登录：请妥善修改初始密码，建议设置包含字母、数字、符号的强密码</li>
-          <li>发布招领：填写物品信息→上传照片→提交审核→等待审核→物品通过审核后自动在平台展示</li>
-          <li>认领流程：查找信息→提交申请→等待审核→确认身份→线下交接</li>
-        </ul>
-        <h4>【重要提醒】</h4>
-        <ul class="warn-list">
-          <li>⚠️ 信息安全：请妥善保管个人账号，切勿将密码告知他人</li>
-          <li>⚠️ 图片规范：招领照片必须清晰展示物品特征，模糊照片将被驳回审核</li>
-          <li>⚠️ 审核时效：工作日内的招领审核一般在2小时内完成</li>
-          <li>⚠️ 物归原主：禁止发布虚假、恶意信息，违者将被封禁并通报所在单位</li>
-          <li>⚠️ 线下交付：平台已脱敏隐藏联系方式，双方沟通请注意人身财产安全，尽量选择公共场所交接</li>
-        </ul>
-        <h4>【技术支持】</h4>
-        <p>平台电话：010-12345678 邮箱：it@xxx.edu.cn<br>
-        失物招领中心：学生事务大厅3号窗口 电话：010-87654321<br>
-        值班时间：工作日 8:30-17:30（节假日另有通知）<br>
-        请广大师生积极使用并广泛宣传，共同营造互帮互助的校园氛围！</p>
+        <div class="section-title">平台简介</div>
+        <p>亲爱的老师/同学： 为提升失物招领效率，解决传统招领信息分散、响应滞后等问题，我们正式推出失物招领云平台。该平台集信息登记、智能匹配、实时通知于一体，让您的遗失物品"有踪可循"，拾获物品"有处可交"。</p>
+
+        <div class="section-header">[使用指南]</div>
+        <p>首次登录：请立即修改初始密码，建议设置包含字母、数字、符号的强密码</p>
+        <p>发布流程：填写信息 → 上传照片 → 提交审核 → 等待通过 → 智能匹配</p>
+        <p>认领流程：查找信息 → 提交申请 → 等待审核 → 确认身份 → 线下交接</p>
+
+        <div class="section-header">[重要提醒]</div>
+        <p class="warn-text">⚠️ 信息安全：请妥善保管个人账号，切勿将密码告知他人</p>
+        <p class="warn-text">⚠️ 照片规范：招领照片必须清晰展示物品特征，模糊照片将被驳回审核</p>
+        <p class="warn-text">⚠️ 审核时效：工作时段内提交的信息一般在2小时内完成审核</p>
+        <p class="warn-text">⚠️ 文明使用：禁止发布虚假、恶意信息，违者将禁封账号并通报所在单位</p>
+        <p class="warn-text">⚠️ 隐私保护：平台已隐藏敏感信息，双方沟通请注意人身财产安全，尽量选择公共场所交接</p>
+
+        <div class="section-header">[技术支持]</div>
+        <p>信息中心 电话：010-12345678 邮箱：it@xxx.edu.cn</p>
+        <p>失物招领中心：学生事务大厅3号窗口 电话：010-87654321</p>
+        <p>值班时间：工作日 8:30-17:30（节假日另行通知）</p>
+        <p>请广大师生积极使用并广泛宣传，共同营造互帮互助的校园氛围！</p>
       </div>
-      <div class="notice-confirm">
-        <label class="confirm-check">
-          <input
-            type="checkbox"
-            v-model="isChecked"
-            :disabled="!isMandatory"
-          >
-          我已阅读并同意
-        </label>
+
+      <div class="notice-footer">
+        <span class="footer-publisher">管理员发布</span>
+        <span class="footer-time">发布时间2026.1.13 13:00</span>
       </div>
+
       <div class="notice-confirm-btn">
-        <el-button
+        <button
           v-if="isMandatory"
-          type="primary"
-          class="confirm-btn-el"
+          class="confirm-btn"
           :disabled="!isChecked"
           @click="handleConfirm"
         >
           确认接收
-        </el-button>
-        <el-button
+        </button>
+        <button
           v-else
-          type="success"
-          class="confirm-btn-el"
+          class="confirm-btn confirmed"
           disabled
         >
           已确认
-        </el-button>
+        </button>
       </div>
+
+      <!-- 强制模式下保留勾选逻辑 -->
+      <label v-if="isMandatory" class="hidden-check-wrap">
+        <input type="checkbox" v-model="isChecked" />
+        我已阅读并同意
+      </label>
     </div>
   </div>
 </template>
@@ -103,91 +106,163 @@ const handleConfirm = () => {
 </script>
 
 <style scoped>
-.confirm-btn-el {
-  width: 160px;
-  height: 40px;
-  font-size: 16px;
-  font-weight: bold;
-}
-
 .notice-board-bg {
-  min-height: 100vh;
+  min-height: 80vh;
   background: #f7f3ee;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  padding: 12px 3px 8px;
 }
+
 .notice-board-card {
   background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-  padding: 36px 38px 24px;
-  max-width: 800px;
-  width: 100%;
-  margin: 40px auto;
+  border-radius: 6px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  padding: 0 48px 36px;
+  max-width: 1500px;
+  width: 90vw;
+  aspect-ratio: 3 / 2;
+  overflow-y: auto;
   position: relative;
 }
+
+.notice-title-wrap {
+  display: flex;
+  justify-content: center;
+  padding-top: 28px;
+  padding-bottom: 16px;
+}
+
 .notice-title {
-  position: absolute;
-  left: 50%;
-  top: -32px;
-  transform: translateX(-50%);
-  background: #ffab6c;
+  background: #f5a623;
   color: #fff;
-  font-size: 32px;
+  font-size: 28px;
   font-weight: bold;
-  border-radius: 32px;
-  padding: 8px 38px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border-radius: 28px;
+  padding: 8px 36px;
+  letter-spacing: 4px;
 }
+
+.notice-divider {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #f5a623, transparent);
+  margin-bottom: 24px;
+}
+
 .notice-content {
-  margin-top: 18px;
-  font-size: 16px;
-  color: #222;
+  font-size: 15px;
+  color: #333;
+  line-height: 1.9;
 }
-.notice-content h3 {
+
+.notice-content p {
+  margin: 0 0 2px;
+}
+
+.section-title {
   font-size: 20px;
   font-weight: bold;
-  margin-bottom: 10px;
+  color: #111;
+  margin-bottom: 8px;
 }
-.notice-content h4 {
-  font-size: 16px;
-  font-weight: bold;
-  margin: 18px 0 8px 0;
-}
-.notice-content ul {
-  margin: 0 0 0 18px;
-  padding: 0;
+
+.section-header {
   font-size: 15px;
+  font-weight: bold;
+  color: #333;
+  margin-top: 16px;
+  margin-bottom: 4px;
 }
-.warn-list li {
-  color: #e67c04;
-  margin-bottom: 2px;
+
+.warn-text {
+  color: #d48806;
 }
-.notice-confirm {
-  margin-top: 24px;
+
+.notice-footer {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
+  margin-top: 28px;
+  padding-top: 12px;
+  border-top: 1px solid #e0e0e0;
+  font-size: 14px;
+  color: #888;
 }
+
+.footer-publisher {
+  color: #666;
+}
+
+.footer-time {
+  color: #888;
+}
+
 .notice-confirm-btn {
   display: flex;
   justify-content: center;
-  margin-top: 10px;
+  margin-top: 24px;
 }
+
 .confirm-btn {
-  background: #409eff;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 32px;
-  font-size: 18px;
+  min-width: 160px;
+  height: 46px;
+  font-size: 20px;
   font-weight: bold;
+  letter-spacing: 2px;
+  border: 2px solid #3463d7;
+  border-radius: 6px;
+  background: #fff;
+  color: #3463d7;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
+  padding: 0 28px;
 }
-.confirm-btn:hover {
-  background: #ffab6c;
+
+.confirm-btn:hover:not(:disabled) {
+  background: #3463d7;
+  color: #fff;
+}
+
+.confirm-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.confirm-btn.confirmed {
+  border-color: #67c23a;
+  color: #67c23a;
+}
+
+.hidden-check-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 14px;
+  color: #666;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .notice-board-card {
+    padding: 0 20px 24px;
+  }
+
+  .notice-title {
+    font-size: 22px;
+    padding: 6px 24px;
+  }
+
+  .notice-content {
+    font-size: 14px;
+  }
+
+  .confirm-btn {
+    font-size: 16px;
+    min-width: 130px;
+    height: 40px;
+  }
 }
 </style>
