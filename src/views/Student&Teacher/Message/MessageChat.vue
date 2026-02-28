@@ -537,7 +537,8 @@ onMounted(async () => {
 }
 
 .message-input :deep(.el-textarea__inner) {
-  min-height: 78px;
+  min-height: 80px;
+  height: 80px;
 }
 
 .action-col {
@@ -546,6 +547,7 @@ onMounted(async () => {
   gap: 8px;
   justify-content: flex-end;
   flex-shrink: 0;
+  height: 80px;
 }
 
 .action-col :deep(.el-button + .el-button) {
