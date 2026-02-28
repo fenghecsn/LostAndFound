@@ -128,9 +128,23 @@ const fetchData = async () => {
         }
 
         const list = Array.isArray(res.data?.data?.list) ? res.data.data.list : []
-        const totalValue = Number(res.data?.data?.total || 0)
-        itemList.value = list.map((item) => normalizeItem(item))
-        total.value = totalValue
+        const normalized = list.map((item) => normalizeItem(item))
+
+        if (queryParams.days === 999) {
+            const now = Date.now()
+            const olderThan30 = normalized.filter((item) => {
+                const t = new Date(item.create_time || item.event_time || '').getTime()
+                if (!t || Number.isNaN(t)) return false
+                const diffDays = Math.floor((now - t) / (24 * 3600 * 1000))
+                return diffDays > 30
+            })
+            itemList.value = olderThan30
+            total.value = olderThan30.length
+            return
+        }
+
+        itemList.value = normalized
+        total.value = Number(res.data?.data?.total || normalized.length)
     } catch (error) {
         console.error(error)
         ElMessage.error('获取数据失败')
