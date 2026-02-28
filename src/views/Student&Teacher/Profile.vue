@@ -277,7 +277,7 @@
 								:disabled="scope.row.statusLabel === '已取消' || cancellingIds.includes(scope.row.id)"
 								@confirm="handleCancelPublished(scope.row)"
 							>取消</ConfirmButton>
-							<el-button size="small" round class="detail-btn" @click="openPublishedDetail(scope.row)">详情</el-button>
+							<el-button size="small" round class="detail-btn" @click="openPublishedDetail(scope.row)">修改</el-button>
 						</div>
 					</template>
 				</el-table-column>
@@ -323,7 +323,7 @@
 						<div class="table-actions">
 							<el-button size="small" round :disabled="!scope.row.canDelete">删除</el-button>
 							<el-button size="small" round type="warning" :disabled="!scope.row.canTalk">沟通</el-button>
-							<el-button size="small" round class="detail-btn" @click="openClaimDetail(scope.row)">详情</el-button>
+							<el-button size="small" round class="detail-btn" @click="openClaimDetail(scope.row)">修改</el-button>
 						</div>
 					</template>
 				</el-table-column>
