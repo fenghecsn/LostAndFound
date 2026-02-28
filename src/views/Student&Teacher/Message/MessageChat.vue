@@ -14,6 +14,9 @@
       <el-button v-if="showConfirmButton" type="warning" round class="confirm-btn" @click="handleConfirmClaim">
         确认招领
       </el-button>
+      <el-button v-else-if="String(route.query.can_confirm || '') === '1'" type="success" round class="confirm-btn" disabled>
+        已招领
+      </el-button>
     </div>
 
     <div class="message-list" ref="messageListRef">
@@ -46,8 +49,8 @@
         class="hidden-image-input"
         @change="handleImageFileChange"
       />
-      <el-button class="image-btn" :loading="sending" @click="triggerImageSelect">发图片</el-button>
       <el-input
+        class="message-input"
         v-model="content"
         type="textarea"
         :rows="2"
@@ -57,7 +60,10 @@
         placeholder="请输入消息"
         @keydown.enter.exact.prevent="handleSend"
       />
-      <el-button type="primary" class="send-btn" :loading="sending" @click="handleSend">发送</el-button>
+      <div class="action-col">
+        <el-button class="image-btn" :loading="sending" @click="triggerImageSelect">发图片</el-button>
+        <el-button type="primary" class="send-btn" :loading="sending" @click="handleSend">发送</el-button>
+      </div>
     </div>
   </div>
 </template>
@@ -65,12 +71,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getChatHistory, sendMessage, signRead, type GetChatHistoryResponse } from '@/api/chat'
 import { normalizeResourceUrl } from '@/utils/url'
 import { uploadImagesAndGetUrls } from '@/utils/imageUpload'
 import { useChatSessionStore } from '@/stores/chatSession'
-
+import { ca, tr } from 'element-plus/es/locales.mjs'
+import { confirmClaim } from '@/api/chat'
 const route = useRoute()
 const chatSessionStore = useChatSessionStore()
 
@@ -91,7 +98,8 @@ const itemInfo = computed(() => ({
   img: String(route.query.img || '')
 }))
 
-const showConfirmButton = computed(() => String(route.query.can_confirm || '') === '1')
+const claimConfirmed = ref(false)
+const showConfirmButton = computed(() => String(route.query.can_confirm || '') === '1' && !claimConfirmed.value)
 
 const getSelfName = () => String(localStorage.getItem('nickname') || localStorage.getItem('username') || '我')
 
@@ -330,10 +338,35 @@ const handleImageFileChange = async (event: Event) => {
   }
 }
 
-const handleConfirmClaim = () => {
-  ElMessage.info('确认招领逻辑待接入接口')
+const handleConfirmClaim = async () => {
+  const itemId = itemInfo.value.item_id
+  if (!itemId) {
+    ElMessage.warning('物品信息无效，无法确认招领')
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      '确认要认领该物品吗？此操作不可撤销。',
+      '确认招领',
+      {
+        confirmButtonText: '确认认领',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    const response = await confirmClaim(itemId)
+    if (Number(response?.data?.code) !== 200) {
+      ElMessage.warning(response?.data?.msg || '确认招领失败')
+      return
+    }
+    ElMessage.success(response?.data?.msg || '确认招领成功')
+    claimConfirmed.value = true
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('确认招领失败，请稍后重试')
+    }
+  }
 }
-
 watch(
   () => route.fullPath,
   async () => {
@@ -359,7 +392,9 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  min-height: 70vh;
+  height: calc(100vh - 170px);
+  min-height: 560px;
+  overflow: hidden;
 }
 
 .item-info-card {
@@ -400,8 +435,7 @@ onMounted(async () => {
   border-radius: 8px;
   padding: 16px;
   overflow-y: auto;
-  min-height: 420px;
-  max-height: 62vh;
+  min-height: 0;
 }
 
 .message-row {
@@ -481,18 +515,50 @@ onMounted(async () => {
   display: flex;
   gap: 10px;
   align-items: flex-end;
+  position: sticky;
+  bottom: 0;
+  z-index: 12;
+  background: #fff;
+  border-top: 1px solid #edd7b9;
+  border-radius: 8px 8px 0 0;
+  padding: 10px 12px;
 }
 
 .hidden-image-input {
   display: none;
 }
 
-.image-btn {
+.message-input {
+  flex: 1;
+}
+
+.message-input :deep(.el-textarea) {
+  display: block;
+}
+
+.message-input :deep(.el-textarea__inner) {
+  min-height: 78px;
+}
+
+.action-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: flex-end;
   flex-shrink: 0;
+}
+
+.action-col :deep(.el-button + .el-button) {
+  margin-left: 0;
+}
+
+.image-btn {
+  width: 72px;
   height: 36px;
 }
 
 .send-btn {
+  width: 72px;
   height: 36px;
 }
 </style>

@@ -62,7 +62,7 @@ export const updateMyItemApi = (id: number, data: UpdateMyItemPayload) => {
 		data
 	})
 }
-
+//删除发布接口
 export const deleteMyItemApi = (id: number) => {
 	return request<PublishItemResponse>({
 		headers: {
@@ -72,3 +72,13 @@ export const deleteMyItemApi = (id: number) => {
 		method: 'delete'
 	})
 }
+//取消发布接口
+export const cancelMyItemApi = (id: number) => {
+  return request<PublishItemResponse>({
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    url: `/api/v1/items/${id}/cancel`,
+    method: 'put',
+  })
+    }

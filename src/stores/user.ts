@@ -10,6 +10,7 @@ export const useUserStore = defineStore('user', () => {
   const firstLogin = ref<boolean>(localStorage.getItem('firstLogin') === 'true')
   const nickname = ref<string>(localStorage.getItem('nickname') || '')
   const avatar = ref<string>(localStorage.getItem('avatar') || '')
+  const noticeConfirmed = ref<boolean>(sessionStorage.getItem('noticeConfirmed') === 'true')
 
   const setRole = (newRole: number) => {
     role.value = newRole
@@ -32,12 +33,14 @@ export const useUserStore = defineStore('user', () => {
     token.value = ''
     username.value = ''
     role.value = 1
+    noticeConfirmed.value = false
     localStorage.removeItem('token')
     localStorage.removeItem('username')
     localStorage.removeItem('role')
     localStorage.removeItem('firstLogin')
     localStorage.removeItem('nickname')
     localStorage.removeItem('avatar')
+    sessionStorage.removeItem('noticeConfirmed')
   }
   const setNickname = (newNickname: string) => {
     nickname.value = newNickname
@@ -48,15 +51,21 @@ export const useUserStore = defineStore('user', () => {
     avatar.value = normalizedAvatar
     localStorage.setItem('avatar', normalizedAvatar)
   }
+  const setNoticeConfirmed = (confirmed: boolean) => {
+    noticeConfirmed.value = confirmed
+    sessionStorage.setItem('noticeConfirmed', String(confirmed))
+  }
   function clearUser() {
     token.value = ''
     username.value = ''
     role.value = 0
     firstLogin.value = false
+    noticeConfirmed.value = false
     nickname.value = ''
     localStorage.removeItem('nickname')
     localStorage.removeItem('avatar')
     localStorage.removeItem('token')
+    sessionStorage.removeItem('noticeConfirmed')
   }
 
   return {
@@ -73,6 +82,8 @@ export const useUserStore = defineStore('user', () => {
     setNickname,
     nickname,
     avatar,
+    noticeConfirmed,
+    setNoticeConfirmed,
     clearUser
   }
 })

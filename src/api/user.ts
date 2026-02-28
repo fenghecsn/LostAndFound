@@ -26,8 +26,10 @@ export interface ChangePasswordParams {
   new_password: string
 }
 
+export type FeedbackType = '反馈' |  '投诉'
+
 export interface SubmitFeedbackParams {
-  type: string
+  type: FeedbackType
   content: string
   contact: string
 }
@@ -38,7 +40,7 @@ export interface SubmitFeedbackResponse {
   data: null
 }
 
-export type MyItemStatus = '' | 'pending' | 'approved' | 'matched' | 'claimed' | 'archived' | 'rejected'
+export type MyItemStatus = '' | 'pending' | 'approved' | 'matched' | 'claimed' | 'archived' | 'rejected'|'cancelled'
 
 export interface MyItemsParams {
   status?: MyItemStatus

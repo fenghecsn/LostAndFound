@@ -112,3 +112,8 @@ export function sendMessage(data: SendMessageRequest) {
 export function signRead(target_id: number) {
     return request.put<SignReadResponse>('/api/v1/messages/read', { target_id }) // 必填，将与该用户(ID为2)的所有收到的消息标记为已读
 }
+
+//确认认领接口
+export function confirmClaim(id: number) {
+    return request.put(`/api/v1/claims/${id}/confirm`)
+}

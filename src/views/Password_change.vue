@@ -121,8 +121,10 @@ const handleChangePassword = async () => {
 
       if (response?.data?.code === 200) {
         userStore.setFirstLogin(false)
-        ElMessage.success(response.data.msg || '密码修改成功')
-        router.push(getHomePathByRole(userStore.role))
+        ElMessage.success(response?.data?.msg || '密码修改成功')
+
+        // 修改密码后跳转到公告栏进行强制阅读
+        router.push('/notice_board?mandatory=true')
         return
       }
 

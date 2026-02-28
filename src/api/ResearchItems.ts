@@ -94,7 +94,7 @@ export const getItems = (params: ItemQuery) => {
     params: params
   })
 }
-
+// 获取物品详情接口
 export const getItemDetail = (id: number) => {
   return request<ItemDetailResponse>({
     headers: {

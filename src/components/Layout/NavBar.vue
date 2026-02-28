@@ -52,7 +52,8 @@
       <div class="user-dropdown-wrapper">
         <div class="user-trigger">
           <div class="user-info" style="padding-top: 3px; display: flex; align-items: center;">
-             <img :src="userStore.avatar || '/头像框@7.png'" style="align-items: center; padding: 0; width: 16px; height: 16px;">
+             <img :src="userStore.avatar || '/头像框@7.png'" style="align-items: center; padding: 0; width: 32px; height: 32px;  border-radius: 50%;
+">
           </div>
           <span class="user-name">{{ userStore.nickname}}</span>
         </div>

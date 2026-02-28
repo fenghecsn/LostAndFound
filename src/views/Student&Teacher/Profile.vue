@@ -111,20 +111,81 @@
 				</el-form>
 			</div>
 
+
 			<div ref="feedbackSectionRef" class="section-block">
-				<div class="section-title">反馈意见</div>
-				<el-input
-					v-model="feedbackText"
-					type="textarea"
-					:rows="4"
-					maxlength="500"
-					show-word-limit
-					placeholder="请输入你的反馈意见"
-				/>
+				<div class="section-title">反馈与投诉</div>
+        <div class="feedback-type-wrapper">
+          <span class="fb-label">功能选择</span>
+          <div class="fb-type-options">
+            <div
+              class="fb-option"
+              :class="{ active: feedbackType === '反馈' }"
+              @click="feedbackType = '反馈'"
+            >
+              <div class="radio-circle"></div>
+              <span>反馈</span>
+            </div>
+            <div
+              class="fb-option"
+              :class="{ active: feedbackType === '投诉' }"
+              @click="feedbackType = '投诉'"
+            >
+              <div class="radio-circle"></div>
+              <span>投诉</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="feedback-type-wrapper">
+          <span class="fb-label">反馈类型</span>
+          <div class="fb-type-options">
+            <div
+              class="fb-option"
+              :class="{ active: feedbackCategory === '产品建议' }"
+              @click="feedbackCategory = '产品建议'"
+            >
+              <div class="radio-circle"></div>
+              <span>产品建议</span>
+            </div>
+            <div
+              class="fb-option"
+              :class="{ active: feedbackCategory === '功能故障' }"
+              @click="feedbackCategory = '功能故障'"
+            >
+              <div class="radio-circle"></div>
+              <span>功能故障</span>
+            </div>
+             <div
+              class="fb-option"
+              :class="{ active: feedbackCategory === '其他问题' }"
+              @click="feedbackCategory = '其他问题'"
+            >
+              <div class="radio-circle"></div>
+              <span>其他问题</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="feedback-input-wrapper">
+
+          <span class="fb-label" style="margin-top: 8px;">问题描述</span>
+          <el-input
+            v-model="feedbackText"
+            type="textarea"
+            :rows="6"
+            maxlength="500"
+            show-word-limit
+            placeholder="请输入六个字以上的文字描述"
+            class="custom-textarea"
+          />
+        </div>
+
+
 				<div class="feedback-actions">
-					<el-button type="warning" :loading="feedbackSubmitting" @click="handleFeedbackSubmit">提交反馈</el-button>
+					<el-button type="warning" class="submit-btn" :loading="feedbackSubmitting" @click="handleFeedbackSubmit">提交</el-button>
 				</div>
 			</div>
+
 		</el-card>
 
 		<el-dialog v-model="detailVisible" title="帖子详情" width="760px" destroy-on-close>
@@ -205,6 +266,17 @@
 								@confirm="handleDeletePublished(scope.row)"
 							/>
 							<el-button v-else size="small" round disabled>删除</el-button>
+							<ConfirmButton
+                class="table-confirm-btn"
+                label="取消"
+                title="确认取消发布"
+                message="确定要取消发布吗？取消后帖子将不可见，但不会删除记录。"
+                confirm-text="确认取消"
+                cancel-text="取消"
+								:type="(scope.row.statusLabel === '已取消' || cancellingIds.includes(scope.row.id)) ? 'info' : 'warning'"
+								:disabled="scope.row.statusLabel === '已取消' || cancellingIds.includes(scope.row.id)"
+								@confirm="handleCancelPublished(scope.row)"
+							>取消</ConfirmButton>
 							<el-button size="small" round class="detail-btn" @click="openPublishedDetail(scope.row)">详情</el-button>
 						</div>
 					</template>
@@ -357,7 +429,7 @@ import { useUserStore } from '@/stores/user'
 import ConfirmButton from '@/components/ConfirmButton.vue'
 import { uploadImagesAndGetUrls } from '@/utils/imageUpload'
 import { normalizeResourceUrl } from '@/utils/url'
-
+import {cancelMyItemApi} from "@/api/Publish";
 const userStore = useUserStore()
 const router = useRouter()
 
@@ -413,6 +485,9 @@ const pageNum = ref(1)
 const pageSize = 6
 const currentStatus = ref<MyItemStatus>('')
 const feedbackText = ref('')
+const feedbackType = ref<'反馈' | '投诉'>('反馈')
+const feedbackCategory = ref<'产品建议' | '功能故障' | '其他问题'>('产品建议')
+
 const feedbackSubmitting = ref(false)
 const detailVisible = ref(false)
 const activeItem = ref<ViewMyItem | null>(null)
@@ -469,7 +544,8 @@ const statusOptions: Array<{ label: string; value: MyItemStatus }> = [
 	{ label: '已通过', value: 'approved' },
 	{ label: '已匹配', value: 'matched' },
 	{ label: '已认领', value: 'archived' },
-	{ label: '已驳回', value: 'rejected' }
+	{ label: '已驳回', value: 'rejected' },
+	{ label: '已取消', value: 'cancelled' }
 ]
 
 const editableStatuses = ['待审核', '已通过', '已驳回']
@@ -530,21 +606,22 @@ const resolveTypeLabel = (type?: string) => {
 }
 
 const normalizeStatus = (status?: string | number): string => {
-	if (typeof status === 'number') {
-		if (status === 0) return '待审核'
-		if (status === 1) return '已通过'
-		if (status === 2) return '已匹配'
-		if (status === 3) return '已认领'
-		if (status === 4) return '已驳回'
-	}
-	const raw = String(status || '').trim().toLowerCase()
-	if (!raw) return '待审核'
-	if (raw === '待审核' || raw === 'pending' || raw === 'in' || raw === 'reviewing') return '待审核'
-	if (raw === '已通过' || raw === 'approved' || raw === 'pass' || raw === 'passed') return '已通过'
-	if (raw === '已匹配' || raw === 'matched') return '已匹配'
-	if (raw === '已认领' || raw === 'claimed' || raw === 'archived') return '已认领'
-	if (raw === '已驳回' || raw === 'rejected' || raw === 'reject') return '已驳回'
-	return String(status)
+	   if (typeof status === 'number') {
+		   if (status === 0) return '待审核'
+		   if (status === 1) return '已通过'
+		   if (status === 2) return '已匹配'
+		   if (status === 3) return '已认领'
+		   if (status === 4) return '已驳回'
+	   }
+	   const raw = String(status || '').trim().toLowerCase()
+	   if (!raw) return '待审核'
+	   if (raw === '待审核' || raw === 'pending' || raw === 'in' || raw === 'reviewing') return '待审核'
+	   if (raw === '已通过' || raw === 'approved' || raw === 'pass' || raw === 'passed') return '已通过'
+	   if (raw === '已匹配' || raw === 'matched') return '已匹配'
+	   if (raw === '已认领' || raw === 'claimed' || raw === 'archived') return '已认领'
+	   if (raw === '已驳回' || raw === 'rejected' || raw === 'reject') return '已驳回'
+	   if (raw === '已取消' || raw === 'cancelled' || raw === 'canceled') return '已取消'
+	   return String(status)
 }
 
 const normalizeClaimStatus = (status?: string | number): string => {
@@ -870,6 +947,27 @@ const handleDeletePublished = async (row: ManagePublishedRow) => {
 	}
 }
 
+const cancellingIds = ref<number[]>([])
+const handleCancelPublished = async (row: ManagePublishedRow) => {
+	if (row.statusLabel === '已取消' || cancellingIds.value.includes(row.id)) return;
+	cancellingIds.value.push(row.id);
+	try {
+		await cancelMyItemApi(row.id);
+		// 可根据实际情况刷新列表或更新状态
+    if (!hasCodeField({ code: 20000 })) {
+      ElMessage.error('取消失败');
+      return;
+    }
+		ElMessage.success('取消成功');
+		// 这里建议刷新managePublishedList或单独更新row.statusLabel为'已取消'
+		row.statusLabel = '已取消';
+	} catch (e) {
+		ElMessage.error('取消失败');
+	} finally {
+		cancellingIds.value = cancellingIds.value.filter(id => id !== row.id);
+	}
+}
+
 const openManagePublishedDialog = async () => {
 	managePublishedVisible.value = true
 	managePublishedPageNum.value = 1
@@ -1021,35 +1119,35 @@ const handleStaticAction = async (actionName: string) => {
 }
 const handleFeedbackSubmit = async () => {
 	const content = feedbackText.value.trim()
-	if (!content) {
-		ElMessage.warning('请先输入反馈内容')
+	if (!content || content.length < 6) {
+		ElMessage.warning('请输入六个字以上的描述')
 		return
 	}
 
 	if (feedbackSubmitting.value) return
-
 	feedbackSubmitting.value = true
+
 	try {
-		const contact = (profile.phone || userStore.username || '未填写').trim()
-		const response = await submitFeedbackApi({
-			type: 'suggestion',
-			content,
-			contact
-		})
+    const contact = (profile.phone || userStore.username || '未填写').trim()
+    const response = await submitFeedbackApi({
+      type: feedbackType.value,
+      content,
+      contact
+    })
 
-		if (!hasCodeField(response?.data)) {
-			ElMessage.error(response?.data?.msg || '提交反馈失败')
-			return
-		}
-
-		ElMessage.success(response.data.msg || '反馈提交成功')
-		feedbackText.value = ''
+    if (hasCodeField(response?.data)) {
+      ElMessage.success(response.data.msg || '提交成功')
+      feedbackText.value = ''
+    } else {
+      ElMessage.error(response?.data?.msg || '提交失败')
+    }
 	} catch {
 		ElMessage.error('提交反馈失败，请稍后重试')
 	} finally {
 		feedbackSubmitting.value = false
 	}
 }
+
 
 const statusClass = (status?: string) => {
 	const statusLabel = normalizeStatus(status)
@@ -1178,10 +1276,19 @@ const handleChangePassword = async () => {
 				new_password: passwordForm.new_password
 			})
 
-			if (hasCodeField(response?.data)) {
-				userStore.setFirstLogin(false)
+			if (response?.data?.code === 200) {
+				// 修改成功后清空表单，并提示成功，不进行页面跳转
+				passwordForm.old_password = ''
+				passwordForm.new_password = ''
+				passwordForm.confirm_password = ''
+				if (passwordFormRef.value) {
+					passwordFormRef.value.resetFields()
+				}
 				ElMessage.success(response.data.msg || '密码修改成功')
-				router.push(getHomePathByRole(userStore.role))
+				// 如果是从强制修改密码过来的状态，更新一下状态（虽然此处是个人中心，一般不是强制状态）
+				if (userStore.firstLogin) {
+					userStore.setFirstLogin(false)
+				}
 				return
 			}
 
@@ -1205,6 +1312,80 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.feedback-type-wrapper {
+	display: flex;
+	align-items: center;
+	margin-bottom: 24px;
+	gap: 24px;
+}
+.fb-label {
+	font-size: 14px;
+	color: #606266;
+	width: 80px;
+	text-align: right;
+  flex-shrink: 0;
+}
+.fb-type-options {
+	display: flex;
+	gap: 32px;
+}
+.fb-option {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+	font-size: 14px;
+	color: #303133;
+}
+.radio-circle {
+	width: 16px;
+	height: 16px;
+	border: 1px solid #dcdfe6;
+	border-radius: 50%;
+	position: relative;
+	transition: all 0.3s;
+}
+.fb-option.active .radio-circle {
+	border-color: #ff9900;
+	background: #ff9900;
+}
+.fb-option.active .radio-circle::after {
+	content: '';
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	width: 6px;
+	height: 6px;
+	background: #fff;
+	border-radius: 50%;
+}
+.feedback-input-wrapper {
+	background: #fff8eb;
+	border-radius: 8px;
+	padding: 16px;
+	position: relative;
+}
+.custom-textarea :deep(.el-textarea__inner) {
+	background: transparent;
+	border: none;
+	resize: none;
+	box-shadow: none !important;
+	padding: 0;
+	font-size: 14px;
+	color: #606266;
+}
+.custom-textarea :deep(.el-input__count) {
+	background: transparent;
+	bottom: -4px;
+	right: 0;
+}
+.submit-btn {
+	width: 140px;
+	height: 44px;
+	font-size: 16px;
+	border-radius: 8px;
+}
 .profile-page {
 	display: flex;
 	flex-direction: column;
@@ -1461,6 +1642,8 @@ onMounted(async () => {
 
 .feedback-actions {
 	margin-top: 12px;
+	display: flex;
+	justify-content: flex-end;
 }
 
 .dialog-images {

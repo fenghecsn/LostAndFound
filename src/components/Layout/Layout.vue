@@ -32,31 +32,35 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .main-layout {
+  height: 100vh;
   min-height: 100vh;
   max-width: 1800px;
   margin: 0 auto;
   background-color: #fdf6ec;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .content-wrapper {
   display: flex;
   flex: 1;
   width: 100%;
+  min-height: 0;
+  background-color: #fff;
   padding: 20px;
   gap: 20px;
   align-items: stretch;
+  box-sizing: border-box;
 }
 
 .sidebar-wrapper {
   width: 240px;
   flex-shrink: 0;
-  position: sticky;
-  top: 80px;
-  align-self: flex-start;
-  height: calc(100vh - 100px);
-  transition: all 0.25s ease;
+  height: 100%;
+  align-self: stretch;
+  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
 .sidebar-wrapper.collapsed {
@@ -68,10 +72,12 @@ onBeforeUnmount(() => {
 
 .main-content {
   flex: 1;
-  background: #fff;
+  background-color: #fdf6ec;
   border-radius: 8px;
   padding: 20px;
-  min-width: 0;
-  min-height: calc(100vh - 100px);
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  box-sizing: border-box;
 }
 </style>

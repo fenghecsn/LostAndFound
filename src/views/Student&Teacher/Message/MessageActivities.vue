@@ -63,14 +63,20 @@
         @current-change="handlePageChange"
       />
     </div>
+    <ItemDetailDialog
+      v-model="showDetailDialog"
+      :item="currentDetailItem"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import ItemDetailDialog from '@/components/ItemDetailDialog.vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getActivitiesApi, type ActivityItem } from '@/api/activities'
+import { getItemDetail, type Item, type RawItemFromApi } from '@/api/ResearchItems'
 import { normalizeResourceUrl } from '@/utils/url'
 import { useMessageNoticeStore } from '@/stores/messageNotice'
 import { useChatSessionStore } from '@/stores/chatSession'
@@ -84,11 +90,64 @@ const router = useRouter()
 const messageNoticeStore = useMessageNoticeStore()
 const chatSessionStore = useChatSessionStore()
 
+const showDetailDialog = ref(false)
+const currentDetailItem = ref<Item | null>(null)
+
 const statusSteps = [
   { value: 'pending', label: '待审核' },
   { value: 'approved', label: '已通过' },
   { value: 'matched', label: '已匹配' }
 ]
+
+const normalizeType = (type: RawItemFromApi['type'], fallback: Item['type'] = 1): Item['type'] => {
+  if (type === 'lost') return 1
+  if (type === 'found') return 2
+  if (type === 1 || type === 2) return type
+  return fallback
+}
+
+const normalizeStatusForDetail = (status: RawItemFromApi['status'], fallback: Item['status'] = 1): Item['status'] => {
+  if (status === 'pending') return 'pending'
+  if (status === 'approved') return 'approved'
+  if (status === 'displaying') return 1
+  if (status === 'matched') return 2
+  if (status === 'claimed') return 3
+  if (status === 'rejected') return 'rejected'
+  if (status === 'archived') return 'archived'
+  if (typeof status === 'number') return status
+  return fallback
+}
+
+const normalizeItemDetail = (raw: RawItemFromApi, fallback?: Item): Item => {
+  const imagesFromSlots = [raw?.img1, raw?.img2, raw?.img3, raw?.img4].filter((value): value is string => Boolean(value))
+  const safeFallback = fallback || ({} as Item)
+
+  return {
+    ...safeFallback,
+    ...raw,
+    id: raw.id ?? raw.ID ?? safeFallback.id ?? 0,
+    name: raw.name || raw.title || safeFallback.name || '未命名物品',
+    type: normalizeType(raw.type, safeFallback.type ?? 1),
+    status: normalizeStatusForDetail(raw.status, safeFallback.status ?? 1),
+    campus: raw.campus || safeFallback.campus || '',
+    location: raw.location || safeFallback.location || '',
+    event_time: raw.event_time || raw.time || safeFallback.event_time || '',
+    cover_image: raw.cover_image || raw.img1 || safeFallback.cover_image || '',
+    description: raw.description || safeFallback.description || '',
+    category: raw.category || safeFallback.category,
+    reward: raw.reward ?? raw.bounty ?? safeFallback.reward,
+    contact_method: raw.contact_method || raw.contact_phone || safeFallback.contact_method,
+    contact_person: raw.contact_person || raw.contact_name || safeFallback.contact_person,
+    images: raw.images?.filter(Boolean) || (imagesFromSlots.length > 0 ? imagesFromSlots : (safeFallback.images || [])),
+    img1: raw.img1 || safeFallback.img1,
+    img2: raw.img2 || safeFallback.img2,
+    img3: raw.img3 || safeFallback.img3,
+    img4: raw.img4 || safeFallback.img4,
+    time: raw.time || safeFallback.time,
+    create_time: raw.create_time || raw.CreatedAt || safeFallback.create_time,
+    CreatedAt: raw.CreatedAt || safeFallback.CreatedAt,
+  }
+}
 
 const normalizeStatus = (status?: string) => String(status || '').trim().toLowerCase()
 
@@ -196,16 +255,41 @@ const handleAction = async (item: ActivityItem) => {
 }
 
 const handleMore = async (item: ActivityItem) => {
-  const lines = [
-    `动态类型：${item.type || '-'}`,
-    `帖子状态：${item.item_status || '-'}`,
-    `物品ID：${item.item_id || '-'}`,
-    `认领ID：${item.claim_id || '-'}`,
-    `认领人：${item.claimant_name || '-'}`
-  ]
-  await ElMessageBox.alert(lines.join('\n'), '动态详情', {
-    confirmButtonText: '关闭'
-  })
+  const itemId = Number(item.item_id || 0)
+  if (!itemId) {
+    ElMessage.warning('缺少物品ID，无法查看详情')
+    return
+  }
+
+  const fallbackItem: Item = {
+    id: itemId,
+    name: item.item_name || '未命名物品',
+    type: 1,
+    campus: '',
+    location: item.location || '',
+    event_time: item.loss_time || item.time || '',
+    cover_image: item.img || '',
+    status: 1,
+    description: '',
+    images: item.img ? [item.img] : []
+  }
+
+  try {
+    const response = await getItemDetail(itemId)
+    if (Number(response?.data?.code) !== 200 || !response?.data?.data) {
+      currentDetailItem.value = fallbackItem
+      showDetailDialog.value = true
+      ElMessage.warning(response?.data?.msg || '获取详情失败，已显示基础信息')
+      return
+    }
+
+    currentDetailItem.value = normalizeItemDetail(response.data.data, fallbackItem)
+    showDetailDialog.value = true
+  } catch {
+    currentDetailItem.value = fallbackItem
+    showDetailDialog.value = true
+    ElMessage.warning('获取详情失败，已显示基础信息')
+  }
 }
 
 onMounted(() => {
@@ -217,7 +301,6 @@ onMounted(() => {
 <style scoped>
 .activities-page {
   padding: 12px;
-  background: #fff3e4;
 }
 
 .activities-list {

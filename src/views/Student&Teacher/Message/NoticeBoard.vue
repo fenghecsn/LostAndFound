@@ -26,20 +26,90 @@
         请广大师生积极使用并广泛宣传，共同营造互帮互助的校园氛围！</p>
       </div>
       <div class="notice-confirm">
-        <label class="confirm-check"><input type="checkbox"> 我已阅读并同意</label>
+        <label class="confirm-check">
+          <input
+            type="checkbox"
+            v-model="isChecked"
+            :disabled="!isMandatory"
+          >
+          我已阅读并同意
+        </label>
       </div>
       <div class="notice-confirm-btn">
-        <button class="confirm-btn">确认接收</button>
+        <el-button
+          v-if="isMandatory"
+          type="primary"
+          class="confirm-btn-el"
+          :disabled="!isChecked"
+          @click="handleConfirm"
+        >
+          确认接收
+        </el-button>
+        <el-button
+          v-else
+          type="success"
+          class="confirm-btn-el"
+          disabled
+        >
+          已确认
+        </el-button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-// 静态内容，无逻辑
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
+
+const router = useRouter()
+const route = useRoute()
+const userStore = useUserStore()
+
+const isChecked = ref(false)
+const isMandatory = ref(false)
+
+const getHomePathByRole = (role: number) => {
+  if (role === 3) return '/super'
+  if (role === 2) return '/admin'
+  return '/StudentHome'
+}
+
+onMounted(() => {
+  // 检查是否为强制必读模式
+  if (route.query.mandatory === 'true') {
+    isMandatory.value = true
+    // 强制模式下不自动勾选，等待用户操作
+  } else {
+    // 只是查看模式，默认已同意
+    isMandatory.value = false
+    isChecked.value = true
+  }
+})
+
+const handleConfirm = () => {
+  if (!isChecked.value) return
+
+  if (isMandatory.value) {
+    // 标记公告已确认
+    userStore.setNoticeConfirmed(true)
+    ElMessage.success('欢迎使用失物招领云平台')
+    // 根据角色跳转到对应主页
+    router.replace(getHomePathByRole(userStore.role))
+  }
+}
 </script>
 
 <style scoped>
+.confirm-btn-el {
+  width: 160px;
+  height: 40px;
+  font-size: 16px;
+  font-weight: bold;
+}
+
 .notice-board-bg {
   min-height: 100vh;
   background: #f7f3ee;
