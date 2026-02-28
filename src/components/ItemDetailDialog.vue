@@ -23,6 +23,7 @@ const close = () => {
 
 const isLostPost = computed(() => props.item?.type === 1 || props.item?.type === 'lost')
 const isMatchedPost = computed(() => props.item?.status === 2 || props.item?.status === 'matched')
+const isApproved = computed(() => props.item?.status === 'approved' || props.item?.status === 1 || props.item?.status === 'displaying')
 
 const timeLabel = computed(() => isLostPost.value ? '丢失时间' : '拾取时间')
 const locationLabel = computed(() => isLostPost.value ? '丢失地点' : '拾取地点')
@@ -60,7 +61,7 @@ const handleAction = () => {
             <div class="line"><span class="label">物品特征：</span><span class="feature">{{ item.description || '暂无描述' }}</span></div>
           </div>
           <button
-            v-if="!isMatchedPost && !props.hideAction"
+            v-if="isApproved && !isMatchedPost && !props.hideAction"
             class="action-btn"
             type="button"
             @click="handleAction"

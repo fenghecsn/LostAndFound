@@ -69,7 +69,7 @@ const menuItems = [
   { label: '帖子动态', route: '/StudentHome/message/activities', dotKey: 'activity' as DotKey },
   { label: '招领进度', route: '/StudentHome/message/progress', dotKey: 'claim_progress' as DotKey },
   { label: '所有公告', route: '/StudentHome/message/announce', dotKey: 'announcement' as DotKey },
-  { label: '系统通知', route: '/StudentHome/message/notice_board', dotKey: '' as DotKey },
+  { label: '系统通知', route: '/StudentHome/message/system_board', dotKey: '' as DotKey },
 ]
 
 const shouldShowDot = (dotKey: DotKey) => messageNoticeStore.hasScopeUnread(dotKey)
