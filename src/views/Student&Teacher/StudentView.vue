@@ -32,7 +32,6 @@ const queryParams = reactive<ItemQuery>({
 // --- 筛选项常量 ---
 const statusFilterOptions: Array<{ label: string; value: ItemQuery['status'] }> = [
     { label: '全部状态', value: undefined },
-    { label: '待审核', value: 'pending' },
     { label: '已通过', value: 'approved' },
     { label: '已匹配', value: 'matched' },
     { label: '已认领', value: 'claimed' },
