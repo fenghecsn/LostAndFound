@@ -879,7 +879,7 @@ const fetchManageClaimsList = async () => {
 				images: collectItemImages(item),
 				claimStatusLabel,
 				typeLabel: resolveTypeLabel(item.type) === '丢失' ? '失丢贴' : '拾取贴',
-				reasonText: claimStatusLabel === '已驳回' && rejectReason ? '点击查看原因' : '/',
+				reasonText: claimStatusLabel === '已驳回' && rejectReason ? '点详情查看原因' : '/',
 				canModify: claimStatusLabel === '待审核',
 				canDelete: claimStatusLabel === '待审核',
 				canTalk: claimStatusLabel === '已通过'
