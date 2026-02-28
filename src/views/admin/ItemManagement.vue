@@ -261,7 +261,7 @@
             <span class="status-label">更改为：</span>
             <el-select v-model="editStatus" size="small" style="width: 140px;">
               <el-option label="已归档" value="archived" />
-              <el-option label="已匹配" value="matched" />
+              <el-option label="已认领" value="matched" />
               <el-option label="无效（作废）" value="cancelled" />
             </el-select>
           </div>
