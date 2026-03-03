@@ -644,7 +644,9 @@ const hasCodeField = (data?: { code?: number }) => {
 }
 
 const collectItemImages = (item?: MyItem) => {
-	return [item?.img1, item?.img2, item?.img3, item?.img4].filter((img): img is string => Boolean(img))
+	return [item?.img1, item?.img2, item?.img3, item?.img4]
+		.filter((img): img is string => Boolean(img))
+		.map((img) => normalizeResourceUrl(img))
 }
 
 const getClaimStatusLabelForPost = (item: MyItem, statusLabel: string) => {
@@ -753,6 +755,10 @@ const fetchMyItems = async () => {
 					...item,
 					id,
 					title: item.title || (item as MyItem & { tilte?: string }).tilte || '未命名物品',
+					img1: normalizeResourceUrl(item.img1),
+					img2: normalizeResourceUrl(item.img2),
+					img3: normalizeResourceUrl(item.img3),
+					img4: normalizeResourceUrl(item.img4),
 					createdAt: formatTime(item.CreatedAt || item.UpdatedAt),
 					typeLabel: resolveTypeLabel(item.type),
 					statusLabel
