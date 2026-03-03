@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="notice-page">
     <div class="notice-layout">
       <aside class="notice-sidebar">
@@ -47,7 +47,7 @@
           <div v-if="regionSubTab === 'history'" class="notice-list" v-loading="loading">
             <div
               v-for="notice in noticeList"
-              :key="notice.ID || notice.id || notice._localId"
+              :key="notice.ID || notice.id"
               class="notice-card"
             >
               <h3 class="notice-title">{{ notice.title }}</h3>
@@ -147,13 +147,12 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Bell, ArrowDown, FolderOpened, Flag } from '@element-plus/icons-vue'
-import { useUserStore } from '@/stores/user'
 import { getAnnouncements, createAnnouncement } from '@/api/admin'
+import { useUserStore } from '@/stores/user'
 
 const currentTab = ref('region')
 const regionSubTab = ref('history')
 const sidebarExpanded = ref(true)
-const userStore = useUserStore()
 
 const loading = ref(false)
 const publishing = ref(false)
@@ -161,10 +160,11 @@ const confirmedNoticeIds = ref<number[]>([])
 const noticeList = ref<any[]>([])
 const systemNoticeList = ref<any[]>([])
 const localPublished = ref<any[]>([])
+const userStore = useUserStore()
+let localIdCounter = 0
 
 const hasUnread = computed(() => systemNoticeList.value.some((n: any) => !n.confirmed))
 
-let localIdCounter = 0
 
 const publishForm = reactive({
   title: '',
@@ -253,19 +253,6 @@ function getRegionLabel(notice: any): string {
   return region || '未指定'
 }
 
-function isNoticeOwnedByCurrentUser(notice: any): boolean {
-  const currentUsername = String(userStore.username || '').toLowerCase()
-  if (!currentUsername) return false
-  const publisherCandidates = [
-    notice?.publisher,
-    notice?.publisher_name,
-    notice?.publisher_username,
-    notice?.creator,
-    notice?.created_by,
-  ]
-  return publisherCandidates.some((v) => String(v ?? '').toLowerCase() === currentUsername)
-}
-
 async function fetchNoticeList() {
   loading.value = true
   try {
@@ -286,35 +273,37 @@ async function fetchNoticeList() {
       ...n,
       confirmed: confirmedNoticeIds.value.includes(Number(n.ID ?? n.id ?? 0)),
     }))
-
-    localPublished.value = localPublished.value.filter((local: any) => {
-      return !regionFromApi.some((apiItem: any) => {
-        const sameContent = apiItem.title === local.title && apiItem.content === local.content
-        const status = normalizeNoticeStatus(apiItem)
-        return sameContent && status !== 'pending'
+    localPublished.value = localPublished.value
+      .map((local: any) => {
+        const existsInApi = regionFromApi.some((apiItem: any) => {
+          const sameTitle = String(apiItem?.title ?? '').trim() === String(local?.title ?? '').trim()
+          const sameContent = String(apiItem?.content ?? '').trim() === String(local?.content ?? '').trim()
+          return sameTitle && sameContent
+        })
+        if (existsInApi) {
+          return { ...local, status: 'approved' }
+        }
+        return local
       })
-    })
+      .filter((local: any) => normalizeNoticeStatus(local) === 'pending')
     saveLocalPublished()
 
-    const mergedAfterSync = [...regionFromApi]
+    const merged = [...regionFromApi]
     localPublished.value.forEach((local: any) => {
-      const existsInApi = regionFromApi.some(
-        (apiItem: any) => apiItem.title === local.title && apiItem.content === local.content,
-      )
-      if (!existsInApi) {
-        mergedAfterSync.push(local)
-      }
+      const existsInApi = regionFromApi.some((apiItem: any) => {
+        const sameTitle = String(apiItem?.title ?? '').trim() === String(local?.title ?? '').trim()
+        const sameContent = String(apiItem?.content ?? '').trim() === String(local?.content ?? '').trim()
+        return sameTitle && sameContent
+      })
+      if (!existsInApi) merged.unshift(local)
     })
 
-    noticeList.value = mergedAfterSync.filter((n: any) => {
-      const status = normalizeNoticeStatus(n)
-      if (status === 'approved') return true
-      return isNoticeOwnedByCurrentUser(n) || Boolean(n._isLocal)
-    })
+    noticeList.value = merged
+
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : '获取公告失败'
     ElMessage.error(errMsg)
-    noticeList.value = [...localPublished.value]
+    noticeList.value = []
   } finally {
     loading.value = false
   }
@@ -328,10 +317,14 @@ async function handlePublish() {
 
   publishing.value = true
   try {
+    const publishTitle = publishForm.title.trim()
+    const publishContent = publishForm.content.trim()
+    const publishRegion = publishForm.region.trim()
     const res = await createAnnouncement({
-      title: publishForm.title,
-      content: publishForm.content,
-      region: publishForm.region,
+      title: publishTitle,
+      content: publishContent,
+      type: 'region',
+      region: publishRegion,
       is_top: publishForm.is_top,
     })
     const code = Number((res as any)?.data?.code ?? 200)
@@ -340,26 +333,32 @@ async function handlePublish() {
       throw new Error(msg)
     }
 
-    const newNotice = {
+    ElMessage.success('发布成功')
+    localPublished.value.unshift({
       _localId: ++localIdCounter,
       _isLocal: true,
       _localTime: new Date().toISOString(),
-      title: publishForm.title,
-      content: publishForm.content,
+      title: publishTitle,
+      content: publishContent,
       status: 'pending',
       type: 'region',
-      region: publishForm.region,
+      region: publishRegion,
       publisher: userStore.username,
-    }
-    localPublished.value.unshift(newNotice)
+    })
     saveLocalPublished()
-
-    ElMessage.success('发布成功')
     publishForm.title = ''
     publishForm.content = ''
     publishForm.region = ''
     regionSubTab.value = 'history'
     await fetchNoticeList()
+    const existsInServerList = noticeList.value.some((item: any) => {
+      const sameTitle = String(item?.title ?? '').trim() === publishTitle
+      const sameContent = String(item?.content ?? '').trim() === publishContent
+      return sameTitle && sameContent
+    })
+    if (!existsInServerList) {
+      ElMessage.warning('发布请求已提交，但列表未返回该公告，请联系后端检查公告写入与查询逻辑')
+    }
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : '发布失败'
     ElMessage.error(errMsg)
@@ -586,3 +585,5 @@ onMounted(() => {
   transform: translateY(6px);
 }
 </style>
+
+

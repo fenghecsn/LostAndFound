@@ -164,6 +164,10 @@ watch([filterStatus, keyword], () => {
   currentPage.value = 1
 })
 
+watch(filterStatus, () => {
+  fetchNotices()
+})
+
 watch(filteredNotices, (list) => {
   const maxPage = Math.max(1, Math.ceil(list.length / pageSize.value))
   if (currentPage.value > maxPage) currentPage.value = maxPage
@@ -206,7 +210,11 @@ function getRegionLabel(item: Partial<NoticeRow> | null | undefined) {
 async function fetchNotices() {
   loading.value = true
   try {
-    const res = await getAnnouncements({ page: 1, pageSize: 500 })
+    const res = await getAnnouncements({
+      page: 1,
+      pageSize: 500,
+      status: filterStatus.value || undefined,
+    })
     const data = res.data?.data ?? res.data ?? {}
     const list = data.list ?? []
     allNotices.value = Array.isArray(list)
@@ -262,11 +270,11 @@ async function handleAudit(status: 'approved' | 'rejected') {
   if (!currentNotice.value) return
   auditLoading.value = true
   try {
-    const payloadStatus = status === 'approved' ? 'published' : 'rejected'
-    await reviewAnnouncement({ id: currentNotice.value.ID, status: payloadStatus })
+    const apiStatus = status === 'approved' ? 'published' : 'rejected'
+    await reviewAnnouncement({ id: currentNotice.value.ID, status: apiStatus })
     ElMessage.success(status === 'approved' ? '已通过' : '已驳回')
     allNotices.value = allNotices.value.map((item) =>
-      item.ID === currentNotice.value?.ID ? { ...item, status } : item
+      item.ID === currentNotice.value?.ID ? { ...item, status: apiStatus } : item
     )
     auditVisible.value = false
     await fetchNotices()

@@ -1,24 +1,30 @@
-import request from '@/utils/request'
+﻿import request from '@/utils/request'
 
-// ==================== 类型定义 ====================
+// ==================== 绫诲瀷瀹氫箟 ====================
 
-/** 驳回审核请求 - internal_controllers.RejectRecordRequest */
+/** 椹冲洖瀹℃牳璇锋眰 - internal_controllers.RejectRecordRequest */
 export interface RejectRecordRequest {
   reject_reason: string
 }
 
-/** 归档帖子请求 - internal_controllers.ArchiveRecordRequest */
+/** 褰掓。甯栧瓙璇锋眰 - internal_controllers.ArchiveRecordRequest */
 export interface ArchiveRecordRequest {
   process_method: string
 }
 
-/** 分页参数 */
+/** 鍒嗛〉鍙傛暟 */
 export interface PaginationParams {
   page?: number
   pageSize?: number
 }
 
-/** 物品列表筛选参数 */
+export interface AnnouncementQueryParams extends PaginationParams {
+  status?: string
+  type?: string
+  region?: string
+}
+
+/** 鐗╁搧鍒楄〃绛涢€夊弬鏁?*/
 export interface ItemListParams extends PaginationParams {
   status?: string
   type?: string
@@ -29,7 +35,7 @@ export interface ItemListParams extends PaginationParams {
   category?: string
 }
 
-/** 管理员更新物品请求 - 与 UpdateRecordRequest 字段一致 */
+/** 绠＄悊鍛樻洿鏂扮墿鍝佽姹?- 涓?UpdateRecordRequest 瀛楁涓€鑷?*/
 export interface AdminUpdateItemRequest {
   title?: string
   category?: string
@@ -47,9 +53,9 @@ export interface AdminUpdateItemRequest {
   process_method?: string
 }
 
-// ==================== 物品管理 ====================
+// ==================== 鐗╁搧绠＄悊 ====================
 
-/** 管理员获取物品列表 */
+/** 绠＄悊鍛樿幏鍙栫墿鍝佸垪琛?*/
 export function getAllItems(params?: ItemListParams) {
   return request.get('/api/v1/admin/items', {
     params: {
@@ -65,81 +71,82 @@ export function getAllItems(params?: ItemListParams) {
   })
 }
 
-/** 管理员获取待审核物品 */
+/** 绠＄悊鍛樿幏鍙栧緟瀹℃牳鐗╁搧 */
 export function getPendingItems(params?: PaginationParams) {
   return request.get('/api/v1/admin/items/pending', {
     params: { page_num: params?.page || 1, page_size: params?.pageSize || 10 }
   })
 }
 
-/** 通过审核 */
+/** 閫氳繃瀹℃牳 */
 export function approveItem(id: number) {
   return request.put(`/api/v1/admin/items/${id}/approve`)
 }
 
-/** 驳回审核 */
+/** 椹冲洖瀹℃牳 */
 export function rejectItem(id: number, data: RejectRecordRequest) {
   return request.put(`/api/v1/admin/items/${id}/reject`, data)
 }
 
-/** 归档物品 */
+/** 褰掓。鐗╁搧 */
 export function archiveItem(id: number, data: ArchiveRecordRequest) {
   return request.put(`/api/v1/admin/items/${id}/archive`, data)
 }
 
-/** 管理员更新物品 */
+/** 绠＄悊鍛樻洿鏂扮墿鍝?*/
 export function updateItem(id: number, data: AdminUpdateItemRequest) {
   return request.put(`/api/v1/admin/items/${id}`, data)
 }
 
-// ==================== 认领管理 ====================
+// ==================== 璁ら绠＄悊 ====================
 
-/** 管理员获取待审核认领 */
+/** 绠＄悊鍛樿幏鍙栧緟瀹℃牳璁ら */
 export function getPendingClaims(params?: PaginationParams) {
   return request.get('/api/v1/admin/claims/pending', {
     params: { page_num: params?.page || 1, page_size: params?.pageSize || 10 }
   })
 }
 
-/** 通过认领 */
+/** 閫氳繃璁ら */
 export function approveClaim(id: number) {
   return request.put(`/api/v1/admin/claims/${id}/approve`)
 }
 
-/** 驳回认领（部分后端支持驳回原因） */
+/** 椹冲洖璁ら锛堥儴鍒嗗悗绔敮鎸侀┏鍥炲師鍥狅級 */
 export function rejectClaim(id: number, data?: RejectRecordRequest) {
   return request.put(`/api/v1/admin/claims/${id}/reject`, data)
 }
 
-// ==================== 公告管理 ====================
+// ==================== 鍏憡绠＄悊 ====================
 
-/** 获取公告列表（SuperAdmin 接口，Admin 也调用） */
-export async function getAnnouncements(params?: PaginationParams) {
-  const query = { page_num: params?.page || 1, page_size: params?.pageSize || 50 }
-  type RequestOptions = {
-    params?: Record<string, unknown>
-    silentError?: boolean
+/** 鑾峰彇鍏憡鍒楄〃锛圫uperAdmin 鎺ュ彛锛孉dmin 涔熻皟鐢級 */
+export async function getAnnouncements(params?: AnnouncementQueryParams) {
+  const query = {
+    page_num: params?.page || 1,
+    page_size: params?.pageSize || 50,
+    status: params?.status,
+    type: params?.type,
+    region: params?.region,
   }
   try {
-    return await request.get('/api/v1/super/announcements', { params: query, silentError: true } as RequestOptions)
+    return await request.get('/api/v1/super/announcements', { params: query, silentError: true } as any)
   } catch (error: unknown) {
-    // 公告列表对管理员页面属于“附加信息”，接口不可用时不阻塞页面
     const status = Number(((error as { response?: { status?: number } })?.response?.status) || 0)
-    if ([401, 403, 404, 405].includes(status)) {
-      return {
-        data: {
-          code: 200,
-          msg: '公告接口不可用，返回空列表',
-          data: { list: [], total: 0 }
-        }
-      }
+    if (status === 403 || status === 404) {
+      return request.get('/api/v1/announcements', {
+        params: {
+          page_num: query.page_num,
+          page_size: query.page_size,
+        },
+        silentError: true,
+      } as any)
     }
     throw error
   }
 }
 
-/** 管理员发布区域公告 */
-export async function createAnnouncement(data: { title: string; content: string; region: string; is_top?: boolean }) {
+/** 绠＄悊鍛樺彂甯冨尯鍩熷叕鍛?*/
+export async function createAnnouncement(data: { title: string; content: string; type?: string; region: string; is_top?: boolean }) {
   try {
     return await request.post('/api/v1/admin/announcements', data)
   } catch (err: unknown) {
@@ -151,16 +158,17 @@ export async function createAnnouncement(data: { title: string; content: string;
   }
 }
 
-// ==================== 数据统计 ====================
+// ==================== 鏁版嵁缁熻 ====================
 
-/** 获取系统统计数据 */
+/** 鑾峰彇绯荤粺缁熻鏁版嵁 */
 export function getDashboardStats() {
   return request.get('/api/v1/admin/stats')
 }
 
-/** 导出统计数据 (CSV) */
+/** 瀵煎嚭缁熻鏁版嵁 (CSV) */
 export function exportStatsCSV() {
   return request.get('/api/v1/admin/export', {
-    responseType: 'blob'  // CSV 文件需要 blob 类型
+    responseType: 'blob'  // CSV 鏂囦欢闇€瑕?blob 绫诲瀷
   })
 }
+
