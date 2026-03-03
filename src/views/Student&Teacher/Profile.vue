@@ -323,7 +323,7 @@
 						<div class="table-actions">
 							<el-button size="small" round :disabled="!scope.row.canDelete">删除</el-button>
 							<el-button size="small" round type="warning" :disabled="!scope.row.canTalk" @click="handleTalkToPeer(scope.row)">沟通</el-button>
-							<el-button size="small" round class="detail-btn" @click="openClaimDetail(scope.row)">详细</el-button>
+							<el-button size="small" round class="detail-btn" @click="openClaimDetail(scope.row)">详情</el-button>
 						</div>
 					</template>
 				</el-table-column>
