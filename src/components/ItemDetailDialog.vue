@@ -24,6 +24,21 @@ const close = () => {
 const isLostPost = computed(() => props.item?.type === 1 || props.item?.type === 'lost')
 const isMatchedPost = computed(() => props.item?.status === 2 || props.item?.status === 'matched')
 const isApproved = computed(() => props.item?.status === 'approved' || props.item?.status === 1 || props.item?.status === 'displaying')
+const isClaimedPost = computed(() => props.item?.status === 3 || props.item?.status === 'claimed')
+
+const footerStatusText = computed(() => {
+  if (isMatchedPost.value) return '已匹配'
+  if (isClaimedPost.value) return '已认领'
+  if (isApproved.value) return '已通过'
+  return ''
+})
+
+const footerStatusClass = computed(() => {
+  if (isMatchedPost.value) return 'status-matched'
+  if (isClaimedPost.value) return 'status-claimed'
+  if (isApproved.value) return 'status-approved'
+  return ''
+})
 
 const timeLabel = computed(() => isLostPost.value ? '丢失时间' : '拾取时间')
 const locationLabel = computed(() => isLostPost.value ? '丢失地点' : '拾取地点')
@@ -103,7 +118,7 @@ const handleAction = () => {
 
         <div class="dialog-footer">
           <span class="date">{{ item.create_time || item.CreatedAt || '' }}</span>
-          <span v-if="isMatchedPost" class="matched-status">已匹配</span>
+          <span v-if="footerStatusText" class="footer-status" :class="footerStatusClass">{{ footerStatusText }}</span>
         </div>
       </div>
     </div>
@@ -261,9 +276,20 @@ const handleAction = () => {
   font-size: 14px;
 }
 
-.matched-status {
-  color: #f56c6c;
+.footer-status {
   font-weight: 600;
+}
+
+.status-approved {
+  color: #67c23a;
+}
+
+.status-matched {
+  color: #f56c6c;
+}
+
+.status-claimed {
+  color: #67c23a;
 }
 
 @media (max-width: 768px) {
