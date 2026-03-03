@@ -324,6 +324,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, MoreFilled } from '@element-plus/icons-vue'
 import { getAllItems, archiveItem, updateItem } from '@/api/admin'
+import { normalizeResourceUrl } from '@/utils/url'
 
 const loading = ref(false)
 const saveLoading = ref(false)
@@ -561,6 +562,10 @@ async function fetchItemList() {
     const list = (resData.list ?? resData.items ?? []).map((item: any) => ({
       ...item,
       id: item.id ?? item.ID,
+      img1: normalizeResourceUrl(item.img1),
+      img2: normalizeResourceUrl(item.img2),
+      img3: normalizeResourceUrl(item.img3),
+      img4: normalizeResourceUrl(item.img4),
     })).filter((item: any) => isVisibleStatus(item))
     if (!hasFilter) {
       itemList.value = list

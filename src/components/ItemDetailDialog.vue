@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { Location, Tickets, Coin } from '@element-plus/icons-vue'
 import type { Item } from '@/api/ResearchItems'
+import { normalizeResourceUrl } from '@/utils/url'
 // 主页物品详情弹窗组件
 
 interface Props {
@@ -30,11 +31,11 @@ const locationLabel = computed(() => isLostPost.value ? '丢失地点' : '拾取
 const actionLabel = computed(() => isLostPost.value ? '我捡到了' : '是我的')
 
 const imageList = computed(() => {
-  const sources = props.item?.images?.filter(Boolean) ?? []
+  const sources = (props.item?.images?.filter(Boolean) ?? []).map((value) => normalizeResourceUrl(value))
   const legacyImages = [props.item?.img1, props.item?.img2, props.item?.img3, props.item?.img4].filter((value): value is string => Boolean(value))
-  sources.push(...legacyImages)
+  sources.push(...legacyImages.map((value) => normalizeResourceUrl(value)))
   if (props.item?.cover_image) {
-    sources.unshift(props.item.cover_image)
+    sources.unshift(normalizeResourceUrl(props.item.cover_image))
   }
   return [...new Set(sources)].slice(0, 4)
 })

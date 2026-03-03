@@ -171,6 +171,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Picture } from '@element-plus/icons-vue'
 import { getPendingItems, approveItem, rejectItem, getAllItems } from '@/api/admin'
 import { useAuditHistoryStore } from '@/stores/auditHistory'
+import { normalizeResourceUrl } from '@/utils/url'
 
 const router = useRouter()
 const auditHistoryStore = useAuditHistoryStore()
@@ -243,6 +244,10 @@ function normalizeItem(item: any) {
   return {
     ...item,
     id: item.id ?? item.ID,
+    img1: normalizeResourceUrl(item.img1),
+    img2: normalizeResourceUrl(item.img2),
+    img3: normalizeResourceUrl(item.img3),
+    img4: normalizeResourceUrl(item.img4),
   }
 }
 
