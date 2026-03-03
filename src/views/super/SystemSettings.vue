@@ -180,7 +180,7 @@
           <div v-for="n in previewImageSlots" :key="n" class="img-placeholder"><el-icon><Picture /></el-icon></div>
           <div class="img-placeholder add"><el-icon><Plus /></el-icon></div>
         </div>
-        <p class="tip-text">照片最多上传{{ form.maxImages }}张（选填）</p>
+        <p class="tip-text">照片最多上传{{ form.maxImages }}张（失物帖选填，捡到帖必填）</p>
         <div class="preview-config-tip">
           <span>认领时效：{{ form.claimDays }}天</span>
           <span v-if="form.limitEnabled">发布频率：每天最多{{ form.maxPostsPerDay }}帖</span>
