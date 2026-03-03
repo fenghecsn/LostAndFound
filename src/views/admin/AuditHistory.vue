@@ -45,8 +45,8 @@
         <el-table-column label="图片" width="100" align="center">
           <template #default="{ row }">
             <el-image
-              v-if="row.item?.img1"
-              :src="row.item.img1"
+              v-if="getPrimaryImage(row.item)"
+              :src="getPrimaryImage(row.item)"
               fit="cover"
               style="width: 60px; height: 60px; border-radius: 4px;"
             />
@@ -175,6 +175,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuditHistoryStore, type AuditRecord } from '@/stores/auditHistory'
+import { normalizeResourceUrl } from '@/utils/url'
 
 const router = useRouter()
 const auditHistoryStore = useAuditHistoryStore()
@@ -193,7 +194,13 @@ const pagedList = computed(() => {
 
 function getImages(item: any): string[] {
   if (!item) return []
-  return [item.img1, item.img2, item.img3, item.img4].filter(Boolean)
+  return [item.img1, item.img2, item.img3, item.img4]
+    .filter(Boolean)
+    .map((img) => normalizeResourceUrl(img))
+}
+
+function getPrimaryImage(item: any): string {
+  return getImages(item)[0] || ''
 }
 
 function getClaimSpeech(record: AuditRecord): string {

@@ -140,6 +140,9 @@ type UserListCompatParams = PaginationParams & {
 type AnnouncementCompatParams = PaginationParams & {
   page_num?: number
   page_size?: number
+  status?: string
+  type?: string
+  region?: string
 }
 
 type FeedbackCompatParams = PaginationParams & {

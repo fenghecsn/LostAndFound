@@ -8,6 +8,7 @@ import ClaimApplyDialog from '@/components/ClaimApplyDialog.vue'
 import { claimItemApi } from '@/api/Claim'
 import { uploadImageApi } from '@/api/Img'
 import { extractUploadedUrl } from '@/utils/imageUpload'
+import { normalizeResourceUrl } from '@/utils/url'
 // --- 状态管理 ---
 const loading = ref(false)
 const allFilteredItems = ref<Item[]>([]) // 存储所有过滤后的数据（客户端分页用）
@@ -96,8 +97,11 @@ const normalizeStatus = (status: RawItemFromApi['status'], fallback: Item['statu
 }
 
 const normalizeItem = (raw: RawItemFromApi, fallback?: Item): Item => {
-    const images = [raw?.img1, raw?.img2, raw?.img3, raw?.img4].filter((value): value is string => Boolean(value))
+    const images = [raw?.img1, raw?.img2, raw?.img3, raw?.img4]
+        .filter((value): value is string => Boolean(value))
+        .map((value) => normalizeResourceUrl(value))
     const fallbackSafe = fallback || ({} as Item)
+    const normalizedCover = normalizeResourceUrl(raw.cover_image || raw.img1 || fallbackSafe.cover_image || '')
 
     return {
         ...fallbackSafe,
@@ -108,11 +112,15 @@ const normalizeItem = (raw: RawItemFromApi, fallback?: Item): Item => {
         status: normalizeStatus(raw.status, fallbackSafe.status ?? 1),
         event_time: raw.event_time || raw.time || fallbackSafe.event_time || '',
         create_time: raw.create_time || raw.CreatedAt || fallbackSafe.create_time || '',
-        cover_image: raw.cover_image || raw.img1 || fallbackSafe.cover_image || '',
+        cover_image: normalizedCover,
+        img1: normalizeResourceUrl(raw.img1 || fallbackSafe.img1 || ''),
+        img2: normalizeResourceUrl(raw.img2 || fallbackSafe.img2 || ''),
+        img3: normalizeResourceUrl(raw.img3 || fallbackSafe.img3 || ''),
+        img4: normalizeResourceUrl(raw.img4 || fallbackSafe.img4 || ''),
         reward: raw.reward ?? raw.bounty ?? fallbackSafe.reward,
         contact_method: raw.contact_method || raw.contact_phone || fallbackSafe.contact_method,
         contact_person: raw.contact_person || raw.contact_name || fallbackSafe.contact_person,
-        images: raw.images?.filter(Boolean) || (images.length > 0 ? images : (fallbackSafe.images || []))
+        images: raw.images?.filter(Boolean).map((value) => normalizeResourceUrl(value)) || (images.length > 0 ? images : (fallbackSafe.images || []))
     }
 }
 
@@ -144,7 +152,9 @@ const fetchData = async () => {
         }
 
         const list = Array.isArray(res.data?.data?.list) ? res.data.data.list : []
-        let filtered = list.map((item) => normalizeItem(item)).filter((item) => item.status !== 'pending')
+        let filtered = list
+            .map((item) => normalizeItem(item))
+            .filter((item) => item.status !== 'pending' && item.status !== 'rejected')
         const dayRange = getDayRangeByFilter(queryParams.days)
 
         if (dayRange) {
