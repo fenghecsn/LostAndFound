@@ -144,7 +144,9 @@ const fetchData = async () => {
         }
 
         const list = Array.isArray(res.data?.data?.list) ? res.data.data.list : []
-        let filtered = list.map((item) => normalizeItem(item)).filter((item) => item.status !== 'pending')
+        let filtered = list
+            .map((item) => normalizeItem(item))
+            .filter((item) => item.status !== 'pending' && item.status !== 'rejected')
         const dayRange = getDayRangeByFilter(queryParams.days)
 
         if (dayRange) {
