@@ -322,7 +322,7 @@
 					<template #default="scope">
 						<div class="table-actions">
 							<el-button size="small" round :disabled="!scope.row.canDelete">删除</el-button>
-							<el-button size="small" round type="warning" :disabled="!scope.row.canTalk">沟通</el-button>
+							<el-button size="small" round type="warning" :disabled="!scope.row.canTalk" @click="handleTalkToPeer(scope.row)">沟通</el-button>
 							<el-button size="small" round class="detail-btn" @click="openClaimDetail(scope.row)">详细</el-button>
 						</div>
 					</template>
@@ -421,11 +421,13 @@ import { EditPen, UserFilled } from '@element-plus/icons-vue'
 import { updateUserInfoApi, changePasswordApi, getMyClaimDetailApi, getMyClaimsApi, getMyItemsApi, getUserInfoApi, logoutApi, submitFeedbackApi, type MyClaimItem, type MyItem, type MyItemStatus } from '@/api/user'
 import { deleteMyItemApi, updateMyItemApi } from '@/api/Publish'
 import { useUserStore } from '@/stores/user'
+import { useChatSessionStore } from '@/stores/chatSession'
 import ConfirmButton from '@/components/ConfirmButton.vue'
 import { uploadImagesAndGetUrls } from '@/utils/imageUpload'
 import { normalizeResourceUrl } from '@/utils/url'
 import {cancelMyItemApi} from "@/api/Publish";
 const userStore = useUserStore()
+const chatSessionStore = useChatSessionStore()
 const router = useRouter()
 
 const profile = reactive({
@@ -888,6 +890,48 @@ const fetchManageClaimsList = async () => {
 		manageClaimsTotal.value = 0
 	} finally {
 		manageClaimsLoading.value = false
+	}
+}
+
+const handleTalkToPeer = async (row: ManageClaimRow) => {
+	if (!row.claimId) {
+		ElMessage.warning('缺少认领ID，无法发起沟通')
+		return
+	}
+	try {
+		const response = await getMyClaimDetailApi(row.claimId)
+		if (!hasCodeField(response?.data)) {
+			ElMessage.warning(response?.data?.msg || '获取认领详情失败')
+			return
+		}
+		const detail = response.data?.data
+		const targetId = Number(detail?.peer_user_id || 0)
+		if (!targetId) {
+			ElMessage.warning('缺少沟通对象信息，无法打开会话')
+			return
+		}
+
+		const item = detail?.item
+		chatSessionStore.ensureSession({
+			target_id: targetId,
+			target_name: `用户${targetId}`
+		})
+
+		manageClaimsVisible.value = false
+		router.push({
+			path: `/StudentHome/message/chat/${targetId}`,
+			query: {
+				target_name: `用户${targetId}`,
+				item_id: String(item?.ID || item?.id || ''),
+				item_name: item?.title || '',
+				loss_time: item?.time || '',
+				location: item?.location || '',
+				img: item?.img1 || '',
+				can_confirm: '0'
+			}
+		})
+	} catch {
+		ElMessage.error('发起沟通失败，请稍后重试')
 	}
 }
 
