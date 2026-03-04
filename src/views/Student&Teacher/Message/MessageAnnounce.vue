@@ -42,6 +42,7 @@ import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getAnnouncements } from '@/api/super'
 import { useMessageNoticeStore } from '@/stores/messageNotice'
+import { getAnnouncementsApi, type AnnouncementResponse } from '@/api/announcements'
 
 type AnnouncementItem = {
   ID?: number
@@ -102,7 +103,7 @@ const sortNotices = (list: AnnouncementItem[]) => {
 const fetchAnnouncements = async () => {
   loading.value = true
   try {
-    const response = await getAnnouncements({ page: 1, pageSize: 200 })
+    const response = await getAnnouncementsApi({ page_num: 1, page_size: 200 })
     if (!isSuccessResponse(response?.data)) {
       announceList.value = []
       return
